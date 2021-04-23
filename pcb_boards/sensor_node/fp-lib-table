@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name 3d_models)(type KiCad)(uri ${KIPRJMOD}/3d_models)(options "")(descr ""))
+  (lib (name gems_footprints)(type KiCad)(uri ${KIPRJMOD}/../gems_footprints.pretty)(options "")(descr ""))
+)
