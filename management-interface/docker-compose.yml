@@ -1,0 +1,58 @@
+version: '3'
+services:
+  # Start up SQL and use initial data backup -DONE
+  #data:
+  #  build: /home/opieters/management-interface/docker/data/
+  db:
+    image: mysql:5.7.25
+    container_name: "gems_mysql"
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: toon-me-eens-een-sterk-wachtwoord
+      MYSQL_DATABASE: mms
+      MYSQL_USER: grafana
+      MYSQL_PASSWORD: "grafana-d!t-is-3cht-tOp_veilig"
+      #MYSQL_ROOT_HOST: 192.168.0.0/255.255.0.0
+      #MYSQL_HOST: 193.190.127.163/255.255.255.0
+    volumes:
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/home/opieters/management-interface/docker/data
+      #- /home/opieters/management-interface/docker/data:/docker-entrypoint-initdb.d
+
+  # Start up MQTT
+  mqtt_broker:
+    image: eclipse-mosquitto:1.6.3
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+  web:
+    build: 
+      context: /home/opieters/webserver/
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - mosquitto
+      - db
+  mqtt_parser:
+    build:
+      context: /home/opieters/webserver/mqtt_parser/
+      dockerfile: Dockerfile
+    ports:
+      "3306:3306"
+    depends_on: 
+      - db
+      - mqtt_broker
+
+  # Start up Grafana -DONE
+  grafana:
+      restart: always
+      image: grafana/grafana:6.3.1
+      ports:
+        - "3000:3000"
+      container_name: "gems_grafana"
+      depends_on:
+        - db
+volumes:
+  db_data: {}
