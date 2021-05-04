@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Forest management</a>
+    </li>
+    <li class="breadcrumb-item active">Add Forest</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card">
+    <div class="card-header">Add a forest</div>
+    <div class="card-body">
+        <form action="/forest_management/" method="POST">
+            <div class="form-group">
+                <label for="forest_name">Forest name</label>
+                <input type="text" class="form-control" id="forest_name" placeholder="Enter forest name">
+            </div>
+            <div class="form-group">
+                <h6>More data like (coords, name,...?)</h6>
+            </div>
+            <input value="Add Forest" type="submit" class="btn btn-primary">
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Forest Management</a>
+    </li>
+    <li class="breadcrumb-item active"> Forest overview</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card">
+    <div class="card-header">Forest Management</div>
+    <div class="card-body">
+
+        {% for forest in forests %}
+        <div class="card">
+            <div class="card-header"><i class="fa fa-tree tree"></i> {{forest.name}}</div>
+            <ul class="list-group list-group-flush">
+                {% for sensor in sensors if sensor.forest_id == forest.id %}
+                <li class="list-group-item">
+                    <button class="collapsible">
+                        <i class="fa fa-microchip"></i>
+                        {{sensor.friendly_name}}
+                        <small>({{sensor.name}})</small>
+                    </button>
+
+                    <div class="content">
+                        <ul>
+                            <li>
+                                <i class="fa fa-map-marker-alt"></i>    <a href="https://www.google.com/maps/search/?api=1&query={{sensor.lat}},{{sensor.lng}}">
+                                    {{'%0.3f' % sensor.lat|float}} {{'%0.3f' % sensor.lng|float}}
+                                </a>
+                            </li>
+                            <li>
+                                {% if sensor.latest_measurements|length %}
+                                <p><i class="fa fa-chart-line"></i>    Latest Measurements</p>
+                                <table class="table">
+                                    <thead>
+                                    <tr>
+                                        <th scope="col">timestamp</th>
+                                        <th scope="col">gateway id</th>
+                                        <th scope="col">Value</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for measurement in sensor.latest_measurements %}
+                                    <tr>
+                                        <td>{{measurement.timestamp}}</td>
+                                        <td>{{measurement.gateway_id}}</td>
+                                        <td>{{'%0.3f' % measurement.value|float}} ± {{measurement.accuracy|round(1, 'ceil')}} {{measurement.unit}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <b>Latest Measurements</b>
+                                <p style="color: #b21f2d;">There are no measurements in the last week! Please check sensor
+                                    health!</p>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <br>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .collapsible {
+        background-color: #FFFFFF;
+        color: black;
+        cursor: pointer;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+    }
+
+    div > .active, .collapsible:hover {
+        background-color: #c4c4c4;
+    }
+
+    .collapsible:after {
+        content: '\002B';
+        color: black;
+        font-weight: bold;
+        float: right;
+        margin-left: 5px;
+    }
+
+    .active:after {
+        content: "\2212";
+    }
+
+    .content {
+        /*padding: 0 18px;*/
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+        background-color: #FFFFFF;
+    }
+</style>
+
+<script>
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    }
+</script>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Sensor Module Management</a>
+    </li>
+    <li class="breadcrumb-item active">Assign unclaimed gateways</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Claim a gateway</div>
+    <div class="card-body">
+        <form action="{{ url_for('assign_gateway')}}" method="POST">
+            <div class="form-group">
+                <label for="gateway_select"> Gateway</label>
+                <select class="form-control" required="required" id="gateway_select" name="gateway">
+                    {% for gateway in unclaimed_gateways %}
+                    <option value="{{ gateway.id }}">{{ gateway.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="gateway_friendly_name"> Choose an easy to recognize name for the gateway</label>
+                <input type="text" class="form-control" required="required" id="gateway_friendly_name" placeholder="Enter friendly name" name="gateway_friendly_name">
+            </div>
+            <hr>
+            <div class="form-group">
+                <label> Location</label>
+                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat">
+                <br>
+                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng">
+            </div>
+            <hr>
+            <input value="Claim" type="submit" class="btn btn-primary">
+        </form>
+    </div>
+</div>
+
+{% endblock %}

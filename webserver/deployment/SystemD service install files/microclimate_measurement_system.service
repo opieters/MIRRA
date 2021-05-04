@@ -1,0 +1,24 @@
+# This file contains the SystemD service setting to make the software into a service that is automatically loaded on startup
+# Please edit the parameters to the correct values of the specific configuration of your system.
+
+## INSTALL INSTRUCTIONS
+# 1. To install this service, place this file under /lib/systemd/system/
+# 2. Reload systemd: sudo systemctl daemon-reload
+# 3. Enable auto start: sudo systemctl enable microclimate_measurement_system.service 
+
+
+[Unit]
+Description=Microclimate measurement monitoring system SystemD service
+
+
+[Service]
+Type=simple
+
+# Fill in the correct path to the startup script (can be found in the master code folder and should be in an accessible and different folder).
+ExecStart=/home/thibault/mms_start_script.sh
+#WorkingDirectory=/home/thibault/
+
+
+[Install]
+WantedBy=multi-user.target
+Alias=microclimate_measurement_system.service

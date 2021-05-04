@@ -1,0 +1,81 @@
+version: '3'
+services:
+  # Start up SQL and use initial data backup -DONE
+  #data:
+  #  build: /users/opieters/webserver/management_interface/docker/data/
+  db:
+    image: mysql:5.7.25
+    container_name: "gems_mysql"
+    networks:
+      - no-internet
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: toon-me-eens-een-sterk-wachtwoord
+      MYSQL_DATABASE: mms
+      MYSQL_USER: grafana
+      MYSQL_PASSWORD: "grafana-d!t-is-3cht-tOp_veilig"
+      #MYSQL_ROOT_HOST: 192.168.0.0/255.255.0.0
+      #MYSQL_HOST: 193.190.127.143/255.255.255.0
+    volumes:
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/users/opieters/webserver/management_interface/docker/data
+      #- /users/opieters/webserver/management_interface/docker/data:/docker-entrypoint-initdb.d
+
+  # Start up MQTT
+  mqtt_broker:
+    image: eclipse-mosquitto:1.6.3
+    container_name: "mqtt_broker"
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    networks:
+      - internet
+      - no-internet
+  web:
+    container_name: "web"
+    build: 
+      context: /users/opieters/webserver/management_interface/
+      #dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - db
+    networks:
+      - internet
+      - no-internet
+  mqtt_parser:
+    container_name: "mqtt_parser"
+    build:
+      context: /users/opieters/webserver/mqtt_parser/
+      #dockerfile: Dockerfile
+    #ports:
+    #  - "3306:3306"
+    #  - "1883:1883"
+    depends_on: 
+      - db
+      - mqtt_broker
+    networks:
+      - internet
+      - no-internet
+  # Start up Grafana -DONE
+  grafana:
+      restart: always
+      image: grafana/grafana:6.3.1
+      ports:
+        - "3000:3000"
+      container_name: "gems_grafana"
+      depends_on:
+        - db
+      networks:
+        - internet
+        - no-internet
+volumes:
+  db_data: {}
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge

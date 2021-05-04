@@ -1,0 +1,78 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Reports</a>
+    </li>
+    <li class="breadcrumb-item active">Reports generator</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Upload a csv to the database</div>
+    <div class="card-body">
+
+        <form action="/reports/" method="POST">
+            <div class="form-group">
+                <label for="forest_select">Forest(s)</label>
+                <select multiple class="form-control" required="required" id="forest_select" name="forests">
+                    {% for forest in forests %}
+                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <div class="form-label-group">
+                    <input type="date" name="start_date" min="{{ min_date }}" class="form-control"
+                           required="required">
+                    <label for="start_date">From</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="form-label-group">
+                    <input type="date" name="end_date" max="{{ max_date }}" class="form-control"
+                           required="required">
+                    <label for="start_date">To</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="panel-group" id="accordion">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <p class="panel-title">
+                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse1">Advanced
+                                    options</a>
+                            </p>
+                        </div>
+                        <div id="collapse1" class="panel-collapse collapse in">
+                            <small> Select the sensor reading types you want to include</small>
+                            <div class="panel-body">
+                                {% for sensor_type in sensor_types %}
+                                <div class="checkbox">
+                                    <label><input type="checkbox" name="sensor_types" value="{{sensor_type.class}}"
+                                                  checked> {{sensor_type.class.lower() | replace("_", " ")}}</label>
+                                </div>
+                                    {% endfor %}
+                                <small> Other options</small>
+                                <div class="checkbox">
+                                    <label><input type="checkbox" name="advanced_options" value="csv_header_row"
+                                                  checked> CSV header row</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <input value="Generate report" type="submit" class="btn btn-primary">
+        </form>
+    </div>
+</div>
+{% endblock %}

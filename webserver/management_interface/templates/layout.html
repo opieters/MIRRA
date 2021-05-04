@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="theme-color" content="#343a40"/>
+    <meta name="description" content="Microclimate Measuring System - Mechatronics UGent case 12 - 2018">
+    <meta name="author" content="">
+
+    <title>Microclimate Monitoring System</title>
+
+    <!-- Bootstrap core CSS-->
+    <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Custom fonts for this template-->
+    <link href="{{ url_for('static', filename='vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.css') }}" rel="stylesheet">
+    <!-- Custom styles for this template-->
+    <link href="{{ url_for('static', filename='css/sb-admin.css') }}" rel="stylesheet">
+
+    <script
+            src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+    {% block head %} {% endblock %}
+
+
+</head>
+
+<body id="page-top">
+
+<nav class="navbar navbar-expand navbar-dark bg-dark static-top">
+
+    <a class="navbar-brand mr-1" href="{{ url_for('index') }}">Microclimate Monitoring system</a>
+
+    <button class="btn btn-link btn-sm text-white order-1 order-sm-0" id="sidebarToggle" href="#">
+        <i class="fas fa-bars"></i>
+    </button>
+
+</nav>
+
+<div id="wrapper">
+
+    <!-- Sidebar -->
+    <ul class="sidebar navbar-nav">
+
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index') }}">
+                <i class="fas fa-fw fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown" role="button" data-toggle="dropdown"
+               aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-fw fa-tree"></i>
+                <span>Forest Management</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="pagesDropdown">
+                <a class="dropdown-item" href="{{ url_for('forest_overview')}}">Forest overview</a>
+                <a class="dropdown-item" href="{{ url_for('add_forest')}}">Add Forest</a>
+                <a class="dropdown-item" href="{{ url_for('remove_forest')}}">Remove Forest</a>
+            </div>
+        </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown2" role="button" data-toggle="dropdown"
+               aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-fw fa-thermometer-three-quarters"></i>
+                <span>Sensor Management</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="pagesDropdown">
+                <a class="dropdown-item" href="{{ url_for('assign')}}">Assign Sensors</a>
+                <a class="dropdown-item" href="{{ url_for('remove_sensor')}}">Remove Sensors</a>
+
+
+            </div>
+        </li>
+         <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown3" role="button" data-toggle="dropdown"
+               aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-fw fa-broadcast-tower"></i>
+                <span style="font-size: 0.94rem">Gateway Management</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="pagesDropdown">
+                <a class="dropdown-item" href="{{ url_for('assign_gateway')}}">Claim gateways</a>
+                <a class="dropdown-item" href="{{ url_for('remove_gateway')}}">Remove gateways</a>
+            </div>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('generate_report')}}">
+                <i class="fas fa-fw fa-table"></i>
+                <span>Reports</span></a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('help')}}">
+                <i class="fas fa-fw fa-question-circle"></i>
+                <span>Help</span></a>
+        </li>
+
+    </ul>
+
+    <div id="content-wrapper">
+        <div class="container-fluid">
+            {% block body %} {% endblock %}
+            <!-- Sticky Footer -->
+        </div>
+        <!-- /.content-wrapper -->
+    </div>
+    <!-- /#wrapper -->
+
+    <footer class="sticky-footer">
+        <div class="container my-auto">
+            <div class="copyright text-center my-auto">
+                <span>Copyright © Ugent Mechatronics Case 12 - 2018 - </span>
+                <a target="_blank" href="{{url_for('get_documentation', path='index.html') }}">Code Documentation</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Custom scripts for all pages-->
+    <script src="{{ url_for('static', filename='js/sb-admin.min.js') }}"></script>
+
+</body>
+
+</html>
+
+

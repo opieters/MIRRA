@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Forest Management</a>
+    </li>
+    <li class="breadcrumb-item active">Delete Forest</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Remove A Forest</div>
+    <div class="card-body">
+
+        <form action="{{url_for('remove_forest')}}" method="POST"
+              onsubmit="return confirm('Are you sure you want to delete this forest? This cannot be undone and it will have to be added again, as well as reassigning the sensors!')">
+            <div class="form-group">
+                <label for="forest_id">Forest</label>
+                <select class="form-control" required="required" id="forest_id" name="forest_id">
+                    {% for forest in forests %}
+                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <small id="emailHelp" class="form-text text-muted">
+                <small class="fa fa-info-circle"></small> The forest will be removed from the database and
+                can be easily added again using <a href="{{url_for('add_forest')}}">this link</a>.
+                The forests' sensors will become unassigned again and will have to be reclaimed again in order to get
+                their data.
+                The sensor and their data will <b>not</b> be deleted when removing a forest!
+            </small>
+            <hr>
+            <input value="Delete Forest" type="submit" class="btn btn-primary">
+            </form>
+    </div>
+</div>
+
+{% endblock %}

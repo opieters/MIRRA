@@ -1,0 +1,9 @@
+Flask==1.1.1
+flask_basicauth==0.2.0
+paho_mqtt==1.4.0
+pymysql==0.9.3
+
+
+# for generating documentation
+sphinx==2.2.0
+sphinx-rtd-theme==0.4.3

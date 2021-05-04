@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Sensor Module Management</a>
+    </li>
+    <li class="breadcrumb-item active">Assign unclaimed sensor modules</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Assign a sensor to a forest</div>
+    <div class="card-body">
+        <form action="{{ url_for('assign')}}" method="POST">
+            <div class="form-group">
+                <label for="sensor_module_select"> Sensor module</label>
+                <select class="form-control" required="required" id="sensor_module_select" name="sensor">
+                    {% for sensor in unclaimed_sensors %}
+                    <option value="{{ sensor.id }}">{{ sensor.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="sensor_module_name"> Choose an easy to recognize name for the module</label>
+                <input type="text" class="form-control" required="required" id="sensor_module_name" placeholder="Enter friendly name" name="sensor_module_name">
+            </div>
+            <hr>
+            <div class="form-group">
+                <label> Location</label>
+                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat">
+                <br>
+                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng">
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="forest_select">Select the forest you want to assign the sensor(s) to</label>
+                <select class="form-control" required="required" id="forest_select" name="forest">
+                    {% for forest in forests %}
+                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input value="Assign" type="submit" class="btn btn-primary">
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Help</a>
+    </li>
+    <li class="breadcrumb-item active">Platform information</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card">
+    <div class="card-header">Help section</div>
+    <div class="card-body">
+        This page contains articles and information that help to clarify the working of the Microclimate Measurement
+        System's online platform. The articles range from explaining the use of the platform on a high level, as well as
+        providing guidance into the technical modifications that can be made on the platform.
+
+        <div style="margin-top: 15px;">
+            <p>Table of contents:</p>
+            <ul>
+                <li><a href="#links">Links</a></li>
+                <li><a href="#forests">What are forests in this system?</a></li>
+                <li><a href="#newsensor">Adding a new sensor to the forest</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+<br>
+<div class="card" id="links">
+    <div class="card-header">Links</div>
+    <div class="card-body">
+        Usefull links with information about the project:
+
+        <div style="margin-top: 15px;">
+            <ul>
+                <li><a target="_blank" href="{{url_for('get_documentation', path='index.html') }}">The code's documentation</a></li>
+                <li><a href="https://github.ugent.be/epdprost/microklimaat_meetsysteem">Github</a></li>
+                <li><a href="https://github.ugent.be/epdprost/microklimaat_meetsysteem/wiki">Project wiki</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+</br>
+<div class="card" id="forests">
+    <div class="card-header">What are forests in this system?</div>
+    <div class="card-body">
+        A forest is a virtual grouping of sensor modules. When generating reports, a forest must be selected thus
+        meaning the report will include all the measurements of the sensor modules that are assigned to the forest.
+    </div>
+</div>
+</br>
+<div class="card" id="newsensor">
+    <div class="card-header">Adding a new sensor to the system</div>
+    <div class="card-body">
+        To add a new sensor to the system, first create a new entry in the database. The following steps will guide you
+        to the process.
+        </hr>
+        <ol class="list-group list-group-flush">
+            <li class="list-group-item">
+                <b>Step 1:</b> Add a new entry into the <i>sensor_classes</i> table.
+                This entry should consist of only a class name, as the id will be assigned automatically.</br>
+                The class name should be an all capital letters and underscores name describing the sensor type.</br>
+                Concrete examples are AIR_TEMPERATURE or SOIL_HUMIDITY.
+                Please take note of the id and remember it for further steps.
+            </li>
+            <li class="list-group-item">
+                <b>Step 2:</b> Add a new entry into the <i>sensor_types</i> table.
+                This entry contains 5 fields:
+                <ul>
+                    <li><b>id</b>: the id of the sensor in the table, must be set to NULL to let the database create the new ID itself.</li>
+                    <li><b>name</b>: the official name of the sensor (eg. HIH8121, LM35,...)</li>
+                    <li><b>class</b>: the id generated in the previous steps, this is the reference to the class this
+                        sensor has
+                    </li>
+                    <li><b>unit</b>: the unit of the measurements made by the sensor (eg. °C, %RH,...)</li>
+                    <li><b>accuracy</b>: The accuracy which the sensor provides, without the unit from the previous
+                        field (eg. 0.1, 2)
+                    </li>
+                    <li><b>description</b>: A text string with a short explanation of what the sensor measures.</li>
+                </ul>
+            </li>
+            <li class="list-group-item">
+                <b>Step 3:</b> Refer to the <a href="https://github.ugent.be/epdprost/microklimaat_meetsysteem">documentation
+                of the sensor modules</a> to learn how to add the new
+                sensor to the system.
+                Please use the new ID number created by the newly inserted sensor class in the sensor module code to
+                allow correct uploading and interpreting of the measurements by the platform.
+            </li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

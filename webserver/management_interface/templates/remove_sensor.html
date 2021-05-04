@@ -1,0 +1,69 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Sensor Module Management</a>
+    </li>
+    <li class="breadcrumb-item active">Remove sensor modules from forests</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card">
+    <div class="card-header">Remove sensor modules from forests</div>
+    <div class="card-body">
+
+        {% for forest in forests %}
+        <div class="card">
+            <div class="card-header"><i class="fa fa-tree tree"></i> {{forest.name}}</div>
+            <ul class="list-group list-group-flush">
+                {% for sensor in sensors if sensor.forest_id == forest.id %}
+                <li class="list-group-item"> {{sensor.friendly_name}}
+                    <i class="fa fa-minus-square removeButton" data-sensor-id="{{sensor.id}}"></i>
+                    <br>
+                    <small>({{sensor.name}})</small>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <br>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .removeButton {
+        color: red;
+        font-size: 1.75em;
+        float: right;
+        margin-top: 9px;
+    }
+
+    .tree {
+        color: #017a00
+    }
+</style>
+<script>
+    $(".removeButton").click(function () {
+        if (confirm("Are you sure you want to remove this sensor from the forest? This does not delete any measurements and makes the sensor unclaimed again.")) {
+            var sensor_id_to_remove = $(this).attr('data-sensor-id');
+            $.post("{{ url_for('remove_sensor')}}", {sensor_id: sensor_id_to_remove}, function (result) {
+                if (result['success']) {
+                    location.reload();
+                } else {
+                    alert('Error: could not unassign sensor');
+                }
+            });
+        }
+    });
+</script>
+
+{% endblock %}

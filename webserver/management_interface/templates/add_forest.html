@@ -1,0 +1,38 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Forest Management</a>
+    </li>
+    <li class="breadcrumb-item active">Add Forest</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Add a forest</div>
+    <div class="card-body">
+        <form action="{{url_for('add_forest')}}" method="POST">
+            <div class="form-group">
+                <label for="forest_name">Forest name</label>
+                <input type="text" class="form-control" id="forest_name" name="forest_name" placeholder="Enter forest name">
+            </div>
+             <div class="form-group">
+                <label> Location</label>
+                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat">
+                <br>
+                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng">
+            </div>
+            <input value="Add Forest" type="submit" class="btn btn-primary">
+        </form>
+    </div>
+</div>
+
+{% endblock %}
