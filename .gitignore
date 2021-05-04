@@ -1,0 +1,5 @@
+pcb_boards/sensor_node/sensor_node-cache.lib
+pcb_boards/sensor_node/sensor_node-rescue.lib
+pcb_boards/gateway/pcb_gateway-cache.lib
+pcb_boards/gateway/pcb_gateway
+pcb_boards/sensor_node/sensors_module-rescue.dcm
