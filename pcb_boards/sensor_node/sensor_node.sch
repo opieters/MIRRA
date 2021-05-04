@@ -1,5 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:sensors_module-cache
+LIBS:sensor_node-cache
 EELAYER 26 0
 EELAYER END
 $Descr A3 16535 11693
@@ -26,8 +26,9 @@ F 4 "NXP - PCF2129T/2,518 - REAL TIME CLOCK/CALENDAR, I2C/SPI, SOIC" H 2950 1700
 F 5 "2.65" H 2950 1600 50  0001 L CNN "Height"
 F 6 "NXP" H 2950 1500 50  0001 L CNN "Manufacturer_Name"
 F 7 "" H 2950 1400 50  0001 L CNN "Manufacturer_Part_Number"
-F 8 "771-PCF2129T/2,518" H 2950 1100 50  0001 L CNN "Mouser Part Number"
-F 9 "PCF2129T/2,518" H 0   0   50  0001 C CNN "Mouser"
+F 8 "" H 2950 1100 50  0001 L CNN "Mouser Part Number"
+F 9 "771-PCF2129T/2,518" H 0   0   50  0001 C CNN "Mouser"
+F 10 "2.57" H 0   0   50  0001 C CNN "Price"
 	1    1800 1800
 	1    0    0    -1  
 $EndComp
@@ -116,6 +117,8 @@ F 0 "OWI1" H 13980 1142 50  0000 L CNN
 F 1 "Conn_01x03" H 13980 1051 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B03B-XH-A_1x03_P2.50mm_Vertical" H 13900 1100 50  0001 C CNN
 F 3 "~" H 13900 1100 50  0001 C CNN
+F 4 "Farnell: 1516277" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.0968" H 0   0   50  0001 C CNN "Price"
 	1    13900 1100
 	1    0    0    -1  
 $EndComp
@@ -143,9 +146,11 @@ L Device:R R10
 U 1 1 5C302A9D
 P 13450 1000
 F 0 "R10" V 13243 1000 50  0000 C CNN
-F 1 "R4.7k" V 13334 1000 50  0000 C CNN
+F 1 "4.7k" V 13334 1000 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 13380 1000 50  0001 C CNN
 F 3 "~" H 13450 1000 50  0001 C CNN
+F 4 "71-CRCW06034K70JNEAC" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    13450 1000
 	0    1    1    0   
 $EndComp
@@ -171,6 +176,8 @@ F 0 "IO2" H 14480 4292 50  0000 L CNN
 F 1 "Conn_01x03" H 14480 4201 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B03B-XH-A_1x03_P2.50mm_Vertical" H 14400 4250 50  0001 C CNN
 F 3 "~" H 14400 4250 50  0001 C CNN
+F 4 "Farnell: 1516277" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.0968" H 0   0   50  0001 C CNN "Price"
 	1    14400 4250
 	1    0    0    -1  
 $EndComp
@@ -182,6 +189,8 @@ F 0 "IO3" H 15430 4342 50  0000 L CNN
 F 1 "Conn_01x03" H 15430 4251 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B03B-XH-A_1x03_P2.50mm_Vertical" H 15350 4300 50  0001 C CNN
 F 3 "~" H 15350 4300 50  0001 C CNN
+F 4 "Farnell: 1516277" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.0968" H 0   0   50  0001 C CNN "Price"
 	1    15350 4300
 	1    0    0    -1  
 $EndComp
@@ -208,7 +217,8 @@ F 0 "IO4" H 3850 4835 50  0000 C CNN
 F 1 "BOOT OPTION" H 3850 4744 50  0000 C CNN
 F 2 "Button_Switch_SMD:SW_SPST_KMR2" H 3850 4750 50  0001 C CNN
 F 3 "" H 3850 4750 50  0001 C CNN
-F 4 "Button_Switch_SMD:SW_SPST_KMR2" H 3850 4550 50  0001 C CNN "Mouser"
+F 4 "611-KMR621NGLFS" H 3850 4550 50  0001 C CNN "Mouser"
+F 5 "0.33" H 0   0   50  0001 C CNN "Price"
 	1    3850 4550
 	1    0    0    -1  
 $EndComp
@@ -220,7 +230,8 @@ F 0 "RESET1" H 3950 5735 50  0000 C CNN
 F 1 "RESET" H 3950 5644 50  0000 C CNN
 F 2 "Button_Switch_SMD:SW_SPST_KMR2" H 3950 5650 50  0001 C CNN
 F 3 "" H 3950 5650 50  0001 C CNN
-F 4 "Button_Switch_SMD:SW_SPST_KMR2" H 3950 5450 50  0001 C CNN "Mouser"
+F 4 "611-KMR621NGLFS" H 3950 5450 50  0001 C CNN "Mouser"
+F 5 "0.33" H 0   0   50  0001 C CNN "Price"
 	1    3950 5450
 	1    0    0    -1  
 $EndComp
@@ -256,6 +267,8 @@ F 0 "R15" H 3620 5246 50  0000 L CNN
 F 1 "10k" H 3620 5155 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 3480 5200 50  0001 C CNN
 F 3 "~" H 3550 5200 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    3550 5200
 	1    0    0    -1  
 $EndComp
@@ -285,6 +298,7 @@ F 1 "Conn_Coaxial" H 4449 8335 50  0000 L CNN
 F 2 "Connector_Coaxial:SMA_Amphenol_901-144_Vertical" H 4350 8450 50  0001 C CNN
 F 3 " ~" H 4350 8450 50  0001 C CNN
 F 4 "523-901-144-8RFX" H 4350 8450 50  0001 C CNN "Mouser"
+F 5 "4.15" H 0   0   50  0001 C CNN "Price"
 	1    4350 8450
 	1    0    0    -1  
 $EndComp
@@ -311,6 +325,8 @@ F 0 "SPI1" H 13630 3292 50  0000 L CNN
 F 1 "Conn_01x06" H 13630 3201 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B06B-XH-A_1x06_P2.50mm_Vertical" H 13550 3300 50  0001 C CNN
 F 3 "~" H 13550 3300 50  0001 C CNN
+F 4 "Farnell:      1516282 " H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.151" H 0   0   50  0001 C CNN "Price"
 	1    13550 3300
 	1    0    0    -1  
 $EndComp
@@ -371,6 +387,8 @@ F 0 "I2C3" H 15550 2600 50  0000 L CNN
 F 1 "Conn_01x05" H 15400 2500 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B05B-XH-A_1x05_P2.50mm_Vertical" H 15650 2250 50  0001 C CNN
 F 3 "~" H 15650 2250 50  0001 C CNN
+F 4 "Farnell: 1516281" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.138" H 0   0   50  0001 C CNN "Price"
 	1    15650 2250
 	1    0    0    -1  
 $EndComp
@@ -382,6 +400,8 @@ F 0 "I2C1" H 13650 2600 50  0000 L CNN
 F 1 "Conn_01x05" H 13550 2500 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B05B-XH-A_1x05_P2.50mm_Vertical" H 13750 2250 50  0001 C CNN
 F 3 "~" H 13750 2250 50  0001 C CNN
+F 4 "Farnell: 1516281" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.138" H 0   0   50  0001 C CNN "Price"
 	1    13750 2250
 	1    0    0    -1  
 $EndComp
@@ -393,6 +413,8 @@ F 0 "I2C2" H 14600 2600 50  0000 L CNN
 F 1 "Conn_01x05" H 14500 2500 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B05B-XH-A_1x05_P2.50mm_Vertical" H 14700 2250 50  0001 C CNN
 F 3 "~" H 14700 2250 50  0001 C CNN
+F 4 "Farnell: 1516281" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.138" H 0   0   50  0001 C CNN "Price"
 	1    14700 2250
 	1    0    0    -1  
 $EndComp
@@ -406,6 +428,8 @@ F 0 "C9" H 1650 8800 50  0000 L CNN
 F 1 "100nF" H 1600 8700 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 1938 8600 50  0001 C CNN
 F 3 "~" H 1900 8750 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    1900 8750
 	1    0    0    -1  
 $EndComp
@@ -417,6 +441,8 @@ F 0 "R3" V 2650 1150 50  0000 R CNN
 F 1 "330R" V 2750 1200 50  0000 R CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 2780 1150 50  0001 C CNN
 F 3 "~" H 2850 1150 50  0001 C CNN
+F 4 "603-RC0603JR-07330RL" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    2850 1150
 	-1   0    0    1   
 $EndComp
@@ -428,6 +454,8 @@ F 0 "C4" H 3200 1850 50  0000 R CNN
 F 1 "100nF" H 3300 1750 50  0000 R CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 3038 1700 50  0001 C CNN
 F 3 "~" H 3000 1850 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    3000 1850
 	-1   0    0    1   
 $EndComp
@@ -439,6 +467,8 @@ F 0 "C6" H 3365 1246 50  0000 L CNN
 F 1 "6.8µF" H 3365 1155 50  0000 L CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 3288 1050 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/2685157.pdf?_ga=2.93751133.1980158222.1546082704-168170976.1540463017" H 3250 1200 50  0001 C CNN
+F 4 "810-CGA5L1X7R1C685MC" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.364" H 0   0   50  0001 C CNN "Price"
 	1    3250 1200
 	0    1    1    0   
 $EndComp
@@ -472,6 +502,8 @@ F 0 "C7" V 12748 8050 50  0000 C CNN
 F 1 "100nF" V 12839 8050 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 13038 7900 50  0001 C CNN
 F 3 "~" H 13000 8050 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    13000 8050
 	-1   0    0    1   
 $EndComp
@@ -484,6 +516,7 @@ F 1 "USB_B_Micro" H 6505 1626 50  0000 C CNN
 F 2 "Connector_USB:USB_Micro-B_Molex-105017-0001" H 6600 1200 50  0001 C CNN
 F 3 "~" H 6600 1200 50  0001 C CNN
 F 4 "538-105017-0001" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.70" H 0   0   50  0001 C CNN "Price"
 	1    6450 1250
 	1    0    0    -1  
 $EndComp
@@ -540,6 +573,7 @@ F 2 "gems_footprints:Renata_Battery_Holder_SMTM1125" V 3250 1960 50  0001 C CNN
 F 3 "https://www.mouser.be/datasheet/2/346/3.9226.4-3_SMTM1225-258011.pdf" V 3250 1960 50  0001 C CNN
 F 4 "BR-1225/BN" H 3250 1900 50  0001 C CNN "Notes"
 F 5 "614-SMTM1225" H 3250 1900 50  0001 C CNN "Mouser"
+F 6 "0.529" H 0   0   50  0001 C CNN "Price"
 	1    3250 1900
 	1    0    0    -1  
 $EndComp
@@ -551,6 +585,8 @@ F 0 "BT3" H 6868 2796 50  0000 L CNN
 F 1 "Battery_Cell" H 6868 2705 50  0000 L CNN
 F 2 "gems_footprints:Eagle_Battery_Holder_A_12BH311P-GR" V 6750 2760 50  0001 C CNN
 F 3 "https://www.mouser.be/datasheet/2/215/228-744875.pdf" V 6750 2760 50  0001 C CNN
+F 4 "Farnell 1365937" H 0   0   50  0001 C CNN "Mouser"
+F 5 "9.23" H 0   0   50  0001 C CNN "Price"
 	1    6750 2700
 	1    0    0    -1  
 $EndComp
@@ -589,6 +625,7 @@ F 1 "RP604x" H 9100 1874 50  0000 C CNN
 F 2 "gems_footprints:DFN_12_Pin_2.7x3mm_P0.5mm" H 9100 1450 50  0001 C CNN
 F 3 "https://www.mouser.be/datasheet/2/792/rp604-ea-1307773.pdf" H 9100 1450 50  0001 C CNN
 F 4 "848-RP604K331A-TR" H 0   0   50  0001 C CNN "Mouser"
+F 5 "1.8" H 0   0   50  0001 C CNN "Price"
 	1    9100 1450
 	1    0    0    -1  
 $EndComp
@@ -641,6 +678,7 @@ F 1 "2.2uH" H 10253 1405 50  0000 L CNN
 F 2 "gems_footprints:L_L4mm_D4mm_H1.8mm" H 10200 1450 50  0001 C CNN
 F 3 "https://www.mouser.be/datasheet/2/223/TYS40181R0N-10-1134685.pdf" H 10200 1450 50  0001 C CNN
 F 4 "TYS40182R2M-10" H 10200 1450 50  0001 C CNN "Mouser"
+F 5 "0.169" H 0   0   50  0001 C CNN "Price"
 	1    10200 1450
 	1    0    0    -1  
 $EndComp
@@ -676,6 +714,8 @@ F 0 "C14" H 7985 1304 50  0000 R CNN
 F 1 "10uF" H 7985 1395 50  0000 R CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 8138 1200 50  0001 C CNN
 F 3 "~" H 8100 1350 50  0001 C CNN
+F 4 "963-TMK325BJ106KM-P" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.415" H 0   0   50  0001 C CNN "Price"
 	1    8100 1350
 	-1   0    0    1   
 $EndComp
@@ -690,6 +730,8 @@ F 0 "C16" H 10365 1896 50  0000 L CNN
 F 1 "22uF" H 10365 1805 50  0000 L CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 10288 1700 50  0001 C CNN
 F 3 "~" H 10250 1850 50  0001 C CNN
+F 4 "963-TMK316BBJ226ML-T" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.449" H 0   0   50  0001 C CNN "Price"
 	1    10250 1850
 	1    0    0    -1  
 $EndComp
@@ -729,6 +771,8 @@ F 0 "JP2" V 7696 2636 50  0000 L CNN
 F 1 "Jumper_3_Open" V 7605 2636 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 7650 2550 50  0001 C CNN
 F 3 "~" H 7650 2550 50  0001 C CNN
+F 4 "571-4-103321-5" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.237" H 0   0   50  0001 C CNN "Price"
 	1    7650 2550
 	0    -1   -1   0   
 $EndComp
@@ -801,6 +845,7 @@ F 1 "SiP32431" H 1700 3474 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-363_SC-70-6" H 1700 3150 50  0001 C CNN
 F 3 "https://www.vishay.com/docs/66597/sip32431.pdf" H 1700 3150 50  0001 C CNN
 F 4 "781-SIP32431DR3-GE3" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.51" H 0   0   50  0001 C CNN "Price"
 	1    1700 3150
 	1    0    0    -1  
 $EndComp
@@ -823,6 +868,8 @@ F 0 "R1" V 2293 3000 50  0000 C CNN
 F 1 "10k" V 2384 3000 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 2430 3000 50  0001 C CNN
 F 3 "~" H 2500 3000 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    2500 3000
 	0    1    1    0   
 $EndComp
@@ -834,6 +881,8 @@ F 0 "R2" H 2870 3246 50  0000 L CNN
 F 1 "10k" H 2870 3155 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 2730 3200 50  0001 C CNN
 F 3 "~" H 2800 3200 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    2800 3200
 	1    0    0    -1  
 $EndComp
@@ -886,6 +935,8 @@ F 0 "OWI2" H 15430 1142 50  0000 L CNN
 F 1 "Conn_01x03" H 15430 1051 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B03B-XH-A_1x03_P2.50mm_Vertical" H 15350 1100 50  0001 C CNN
 F 3 "~" H 15350 1100 50  0001 C CNN
+F 4 "Farnell: 1516277" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.0968" H 0   0   50  0001 C CNN "Price"
 	1    15350 1100
 	1    0    0    -1  
 $EndComp
@@ -913,9 +964,11 @@ L Device:R R12
 U 1 1 5CEBB4EE
 P 14900 1000
 F 0 "R12" V 14693 1000 50  0000 C CNN
-F 1 "R4.7k" V 14784 1000 50  0000 C CNN
+F 1 "4.7k" V 14784 1000 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 14830 1000 50  0001 C CNN
 F 3 "~" H 14900 1000 50  0001 C CNN
+F 4 "71-CRCW06034K70JNEAC" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    14900 1000
 	0    1    1    0   
 $EndComp
@@ -941,6 +994,8 @@ F 0 "SPI2" H 14830 3292 50  0000 L CNN
 F 1 "Conn_01x06" H 14830 3201 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B06B-XH-A_1x06_P2.50mm_Vertical" H 14750 3300 50  0001 C CNN
 F 3 "~" H 14750 3300 50  0001 C CNN
+F 4 "Farnell:      1516282 " H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.151" H 0   0   50  0001 C CNN "Price"
 	1    14750 3300
 	1    0    0    -1  
 $EndComp
@@ -1002,6 +1057,7 @@ F 1 "D_Schottky" H 7200 925 50  0000 C CNN
 F 2 "Diode_SMD:D_SMB" H 7200 1050 50  0001 C CNN
 F 3 "~" H 7200 1050 50  0001 C CNN
 F 4 "621-B340LB-F" H 7200 1050 50  0001 C CNN "Mouser"
+F 5 "0.36" H 0   0   50  0001 C CNN "Price"
 	1    7200 1050
 	-1   0    0    1   
 $EndComp
@@ -1014,6 +1070,7 @@ F 1 "Ferrite_Bead" V 7317 1050 50  0000 C CNN
 F 2 "Inductor_SMD:L_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 7430 1050 50  0001 C CNN
 F 3 "~" H 7500 1050 50  0001 C CNN
 F 4 "875-MI0805K400R-10" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.09" H 0   0   50  0001 C CNN "Price"
 	1    7500 1050
 	0    1    1    0   
 $EndComp
@@ -1025,6 +1082,8 @@ F 0 "C13" H 7235 1254 50  0000 R CNN
 F 1 "10uF" H 7235 1345 50  0000 R CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 7388 1150 50  0001 C CNN
 F 3 "~" H 7350 1300 50  0001 C CNN
+F 4 "963-TMK325BJ106KM-P" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.415" H 0   0   50  0001 C CNN "Price"
 	1    7350 1300
 	-1   0    0    1   
 $EndComp
@@ -1065,6 +1124,8 @@ F 0 "C5" H 3450 900 50  0000 R CNN
 F 1 "100nF" H 3550 800 50  0000 R CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 3288 750 50  0001 C CNN
 F 3 "~" H 3250 900 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    3250 900 
 	0    -1   -1   0   
 $EndComp
@@ -1130,6 +1191,7 @@ F 1 "LED" V 4147 8783 50  0000 R CNN
 F 2 "LED_SMD:LED_0603_1608Metric" H 4200 8900 50  0001 C CNN
 F 3 "https://www.mouser.be/datasheet/2/427/tlmo1000-279842.pdf" H 4200 8900 50  0001 C CNN
 F 4 "78-TLMY1000" V 4200 8900 50  0001 C CNN "Mouser"
+F 5 "0.36" H 0   0   50  0001 C CNN "Price"
 	1    4200 8900
 	0    -1   -1   0   
 $EndComp
@@ -1152,6 +1214,8 @@ F 0 "R7" V 3743 8750 50  0000 C CNN
 F 1 "750R" V 3834 8750 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 3880 8750 50  0001 C CNN
 F 3 "~" H 3950 8750 50  0001 C CNN
+F 4 "603-RC0603FR-07750RL" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    3950 8750
 	0    1    1    0   
 $EndComp
@@ -1190,6 +1254,8 @@ F 0 "R14" H 3570 4446 50  0000 L CNN
 F 1 "10k" H 3570 4355 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 3430 4400 50  0001 C CNN
 F 3 "~" H 3500 4400 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    3500 4400
 	1    0    0    -1  
 $EndComp
@@ -1231,6 +1297,7 @@ F 1 "SiP32431" H 1650 4674 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-363_SC-70-6" H 1650 4350 50  0001 C CNN
 F 3 "https://www.vishay.com/docs/66597/sip32431.pdf" H 1650 4350 50  0001 C CNN
 F 4 "781-SIP32431DR3-GE3" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.51" H 0   0   50  0001 C CNN "Price"
 	1    1650 4350
 	1    0    0    -1  
 $EndComp
@@ -1586,6 +1653,8 @@ F 0 "R4" V 11693 2100 50  0000 C CNN
 F 1 "10k" V 11784 2100 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 11830 2100 50  0001 C CNN
 F 3 "~" H 11900 2100 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    11900 2100
 	0    1    1    0   
 $EndComp
@@ -1597,6 +1666,8 @@ F 0 "R5" V 11693 2450 50  0000 C CNN
 F 1 "10k" V 11784 2450 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 11830 2450 50  0001 C CNN
 F 3 "~" H 11900 2450 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    11900 2450
 	0    1    1    0   
 $EndComp
@@ -1692,6 +1763,7 @@ F 1 "SHTC3" H 10300 8524 50  0000 C CNN
 F 2 "gems_footprints:DFN_4_Pin_2x2mm" H 10300 8250 50  0001 C CNN
 F 3 "https://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/0_Datasheets/Humidity/Sensirion_Humidity_Sensors_SHTC3_Datasheet.pdf" H 10300 8250 50  0001 C CNN
 F 4 "403-SHTC3" H 8700 -1950 50  0001 C CNN "Mouser"
+F 5 "2.07" H 0   0   50  0001 C CNN "Price"
 	1    10300 8250
 	1    0    0    -1  
 $EndComp
@@ -1724,6 +1796,8 @@ F 0 "C15" H 12165 8346 50  0000 L CNN
 F 1 "100nF" H 12165 8255 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 12088 8150 50  0001 C CNN
 F 3 "~" H 12050 8300 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    12050 8300
 	1    0    0    -1  
 $EndComp
@@ -1751,6 +1825,8 @@ F 0 "BT2" H 10318 2896 50  0000 L CNN
 F 1 "Battery_Cell" H 10318 2805 50  0000 L CNN
 F 2 "Connector_JST:JST_EH_B02B-EH-A_1x02_P2.50mm_Vertical" V 10200 2860 50  0001 C CNN
 F 3 "~" V 10200 2860 50  0001 C CNN
+F 4 "485-1769" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.635" H 0   0   50  0001 C CNN "Price"
 	1    10200 2800
 	1    0    0    -1  
 $EndComp
@@ -1789,6 +1865,7 @@ F 0 "AE1" H 3780 8241 50  0000 L CNN
 F 1 "Antenna" H 3780 8150 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical" H 3700 8250 50  0001 C CNN
 F 3 "~" H 3700 8250 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    3700 8250
 	1    0    0    -1  
 $EndComp
@@ -1818,6 +1895,8 @@ F 0 "C18" H 10765 1896 50  0000 L CNN
 F 1 "22uF" H 10765 1805 50  0000 L CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 10688 1700 50  0001 C CNN
 F 3 "~" H 10650 1850 50  0001 C CNN
+F 4 "963-TMK316BBJ226ML-T" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.449" H 0   0   50  0001 C CNN "Price"
 	1    10650 1850
 	1    0    0    -1  
 $EndComp
@@ -1841,6 +1920,8 @@ F 0 "C17" H 7735 1304 50  0000 R CNN
 F 1 "10uF" H 7735 1395 50  0000 R CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 7888 1200 50  0001 C CNN
 F 3 "~" H 7850 1350 50  0001 C CNN
+F 4 "963-TMK325BJ106KM-P" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.415" H 0   0   50  0001 C CNN "Price"
 	1    7850 1350
 	-1   0    0    1   
 $EndComp
@@ -1866,6 +1947,7 @@ F 0 "H1" H 900 6096 50  0000 L CNN
 F 1 "MountingHole" H 900 6005 50  0000 L CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 800 6050 50  0001 C CNN
 F 3 "~" H 800 6050 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    800  6050
 	1    0    0    -1  
 $EndComp
@@ -1877,6 +1959,7 @@ F 0 "H2" H 900 6346 50  0000 L CNN
 F 1 "MountingHole" H 900 6255 50  0000 L CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 800 6300 50  0001 C CNN
 F 3 "~" H 800 6300 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    800  6300
 	1    0    0    -1  
 $EndComp
@@ -1889,6 +1972,7 @@ F 1 "LED" V 6297 2533 50  0000 R CNN
 F 2 "LED_SMD:LED_0603_1608Metric" H 6350 2650 50  0001 C CNN
 F 3 "~" H 6350 2650 50  0001 C CNN
 F 4 "78-TLMS1000" V 6350 2650 50  0001 C CNN "Mouser"
+F 5 "0.36" H 0   0   50  0001 C CNN "Price"
 	1    6350 2650
 	0    -1   -1   0   
 $EndComp
@@ -1900,6 +1984,8 @@ F 0 "R16" V 6143 2350 50  0000 C CNN
 F 1 "750R" V 6234 2350 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 6280 2350 50  0001 C CNN
 F 3 "~" H 6350 2350 50  0001 C CNN
+F 4 "603-RC0603FR-07750RL" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    6350 2350
 	-1   0    0    1   
 $EndComp
@@ -1951,6 +2037,8 @@ F 0 "J1" H 12050 1367 50  0000 C CNN
 F 1 "Conn_02x03_Counter_Clockwise" H 12050 1276 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical" H 12000 1050 50  0001 C CNN
 F 3 "~" H 12000 1050 50  0001 C CNN
+F 4 "571-5-146258-3" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.432" H 0   0   50  0001 C CNN "Price"
 	1    12000 1050
 	1    0    0    -1  
 $EndComp
@@ -1974,6 +2062,7 @@ F 0 "H4" H 1950 6596 50  0000 L CNN
 F 1 "MountingHole" H 1950 6505 50  0000 L CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 1850 6550 50  0001 C CNN
 F 3 "~" H 1850 6550 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    1850 6550
 	1    0    0    -1  
 $EndComp
@@ -1985,6 +2074,7 @@ F 0 "H3" H 1950 6296 50  0000 L CNN
 F 1 "MountingHole" H 1950 6205 50  0000 L CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 1850 6250 50  0001 C CNN
 F 3 "~" H 1850 6250 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    1850 6250
 	1    0    0    -1  
 $EndComp
@@ -1997,6 +2087,7 @@ F 1 "ESP32-WROOM-32" H 14100 8937 50  0000 C CNN
 F 2 "RF_Module:ESP32-WROOM-32" H 14100 5950 50  0001 C CNN
 F 3 "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf" H 13800 7500 50  0001 C CNN
 F 4 "356-ES32WROOM32D16MB" H 0   0   50  0001 C CNN "Mouser"
+F 5 "3.81" H 14100 7450 50  0001 C CNN "Price"
 	1    14100 7450
 	1    0    0    -1  
 $EndComp
@@ -2103,6 +2194,7 @@ F 0 "H7" H 900 6596 50  0000 L CNN
 F 1 "MountingHole" H 900 6505 50  0000 L CNN
 F 2 "MountingHole:MountingHole_3.2mm_M3" H 800 6550 50  0001 C CNN
 F 3 "~" H 800 6550 50  0001 C CNN
+F 4 "0" H 0   0   50  0001 C CNN "Price"
 	1    800  6550
 	1    0    0    -1  
 $EndComp
@@ -2114,6 +2206,8 @@ F 0 "J4" H 13530 4192 50  0000 L CNN
 F 1 "Conn_01x02" H 13530 4101 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 13450 4200 50  0001 C CNN
 F 3 "~" H 13450 4200 50  0001 C CNN
+F 4 "571-4-103328-1" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.212" H 0   0   50  0001 C CNN "Price"
 	1    13450 4200
 	1    0    0    -1  
 $EndComp
@@ -2129,6 +2223,8 @@ F 0 "C10" H 1500 5150 50  0000 R CNN
 F 1 "100nF" H 1600 5050 50  0000 R CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 1338 5000 50  0001 C CNN
 F 3 "~" H 1300 5150 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    1300 5150
 	1    0    0    -1  
 $EndComp
@@ -2140,6 +2236,8 @@ F 0 "C11" H 1965 5196 50  0000 L CNN
 F 1 "6.8µF" H 1965 5105 50  0000 L CNN
 F 2 "Capacitor_SMD:C_1206_3216Metric" H 1888 5000 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/2685157.pdf?_ga=2.93751133.1980158222.1546082704-168170976.1540463017" H 1850 5150 50  0001 C CNN
+F 4 "810-CGA5L1X7R1C685MC" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.364" H 0   0   50  0001 C CNN "Price"
 	1    1850 5150
 	1    0    0    -1  
 $EndComp
@@ -2195,6 +2293,8 @@ F 0 "J5" H 4930 5392 50  0000 L CNN
 F 1 "Conn_01x02" H 4930 5301 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4850 5400 50  0001 C CNN
 F 3 "~" H 4850 5400 50  0001 C CNN
+F 4 "571-4-103328-1" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.212" H 0   0   50  0001 C CNN "Price"
 	1    4850 5400
 	1    0    0    -1  
 $EndComp
@@ -2206,6 +2306,8 @@ F 0 "J2" H 4930 4342 50  0000 L CNN
 F 1 "Conn_01x02" H 4930 4251 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 4850 4350 50  0001 C CNN
 F 3 "~" H 4850 4350 50  0001 C CNN
+F 4 "571-4-103328-1" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.212" H 0   0   50  0001 C CNN "Price"
 	1    4850 4350
 	1    0    0    -1  
 $EndComp
@@ -2309,6 +2411,8 @@ F 0 "U3" H 3000 9628 50  0000 C CNN
 F 1 "RF-LORA-868-SO" H 3000 9537 50  0000 C CNN
 F 2 "gems_footprints:RF-LORA-868-SMT" H 5700 9100 50  0001 C CNN
 F 3 "" H 5700 9100 50  0001 C CNN
+F 4 "Farnell: 2500100" H 0   0   50  0001 C CNN "Mouser"
+F 5 "17.11" H 0   0   50  0001 C CNN "Price"
 	1    3000 8800
 	1    0    0    -1  
 $EndComp
@@ -2370,6 +2474,8 @@ F 0 "R8" H 920 996 50  0000 L CNN
 F 1 "10k" H 920 905 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 780 950 50  0001 C CNN
 F 3 "~" H 850 950 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    850  950 
 	1    0    0    -1  
 $EndComp
@@ -2411,6 +2517,8 @@ F 0 "R9" H 920 4696 50  0000 L CNN
 F 1 "10M" H 920 4605 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 780 4650 50  0001 C CNN
 F 3 "~" H 850 4650 50  0001 C CNN
+F 4 "71-CRCW060310M0FKEAC" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    850  4650
 	1    0    0    -1  
 $EndComp

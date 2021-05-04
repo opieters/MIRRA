@@ -1,5 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:light_sensor-cache
+LIBS:radiation_shield-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
@@ -22,6 +22,8 @@ F 0 "U1" H 1825 2765 50  0000 C CNN
 F 1 "APDS-9306-065" H 1825 2674 50  0000 C CNN
 F 2 "gems_footprints:APDS-9306-065" H 1850 2350 50  0001 C CNN
 F 3 "https://www.mouser.com/datasheet/2/678/V02-4755EN_DS_APDS-9306_2016-10-21-1130983.pdf" H 1850 2350 50  0001 C CNN
+F 4 "630-APDS-9306-065" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.983" H 0   0   50  0001 C CNN "Price"
 	1    1850 2350
 	1    0    0    -1  
 $EndComp
@@ -33,6 +35,8 @@ F 0 "J1" H 7830 2292 50  0000 L CNN
 F 1 "Conn_01x05" H 7830 2201 50  0000 L CNN
 F 2 "Connector_JST:JST_XH_B05B-XH-A_1x05_P2.50mm_Vertical" H 7750 2250 50  0001 C CNN
 F 3 "~" H 7750 2250 50  0001 C CNN
+F 4 "Farnell: 1516281" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.138" H 0   0   50  0001 C CNN "Price"
 	1    7750 2250
 	1    0    0    -1  
 $EndComp
@@ -94,6 +98,8 @@ F 0 "C1" H 1365 2696 50  0000 L CNN
 F 1 "1uF" H 1365 2605 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 1288 2500 50  0001 C CNN
 F 3 "~" H 1250 2650 50  0001 C CNN
+F 4 "710-885012206083" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.085" H 0   0   50  0001 C CNN "Price"
 	1    1250 2650
 	1    0    0    -1  
 $EndComp
@@ -169,6 +175,8 @@ F 0 "U2" H 4550 2765 50  0000 C CNN
 F 1 "SHT35" H 4550 2674 50  0000 C CNN
 F 2 "gems_footprints:8P-1EP-DFN_2.5x2.5" H 4550 2300 50  0001 C CNN
 F 3 "https://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/0_Datasheets/Humidity/Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf" H 4550 2300 50  0001 C CNN
+F 4 "403-SHT35-DIS-F" H 4550 2300 50  0001 C CNN "Mouser"
+F 5 "8.16" H 4550 2300 50  0001 C CNN "Price"
 	1    4550 2300
 	1    0    0    -1  
 $EndComp
@@ -230,6 +238,8 @@ F 0 "C2" H 6115 2296 50  0000 L CNN
 F 1 "0.1uF" H 6115 2205 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric" H 6038 2100 50  0001 C CNN
 F 3 "~" H 6000 2250 50  0001 C CNN
+F 4 "810-CGA3E2X8R1E104K" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.136" H 0   0   50  0001 C CNN "Price"
 	1    6000 2250
 	1    0    0    -1  
 $EndComp
@@ -263,6 +273,8 @@ F 0 "R1" H 6620 2296 50  0000 L CNN
 F 1 "10k" H 6620 2205 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric" V 6480 2250 50  0001 C CNN
 F 3 "~" H 6550 2250 50  0001 C CNN
+F 4 "284-APC0603B10K0N" H 0   0   50  0001 C CNN "Mouser"
+F 5 "0.102" H 0   0   50  0001 C CNN "Price"
 	1    6550 2250
 	1    0    0    -1  
 $EndComp
