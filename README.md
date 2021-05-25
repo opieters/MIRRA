@@ -1,6 +1,6 @@
-# GEMS
+# MIRRA 
 
-GEMS Microclimate Monitoring System
+Microclimate Instrument for Real-time Remote Applications
 
 ## 3D Designs
 
