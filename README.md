@@ -16,4 +16,4 @@ All PCBs are designed with KiCAD and located in the `pcb_boards` directory. Comp
 
 ## Licence
 
-Apache-2.0 License , see LICENSE file.
+Apache-2.0 License, see LICENSE file.
