@@ -8,3 +8,4 @@ webserver/_build/
 !init.sql
 webserver/deployment/database/microclimate_measurement_system_database_structure.pdf
 webserver/management_interface/static/vendor/
+*.sch-bak
