@@ -21,6 +21,7 @@ LIBRARIES
 #include "gateway.h"
 #include "CommunicationCommon.h"
 
+#define USE_WIFI
 
 // Pin assignments
 #define SS_PIN 13       // Slave select pin
@@ -150,7 +151,7 @@ void setup(void){
 
     delay(1000);
 
-    if (!SPIFFS.begin(true)) {
+    if (!SPIFFS.begin(true)){
         Serial.println("Mounting SPIFFS failed");
         SPIFFS.format();
         ESP.restart(); 
@@ -291,12 +292,12 @@ void loop(void){
             break;
         case GateWayState::UPLOAD_DATA:
             Serial.println("Uploading data to the server.");
-
-            selectModule(ModuleSelector::GPRSModule);
-
+            
             #ifdef USE_WIFI
             WiFi.begin(ssid, password);
             #else
+            selectModule(ModuleSelector::GPRSModule);
+
             gsmModule.startGPRS();
             #endif
 
