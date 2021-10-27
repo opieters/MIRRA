@@ -12,7 +12,11 @@ All PCBs are designed with KiCAD and located in the `pcb_boards` directory. Comp
 
 ## Embedded Code
 
+The software for the sensor node and gateway are located in the `firmware` folder. The easiest way to build and upload the code is using PlaformIO. 
+
 ## Server / web-interface
+
+Use docker-compose to start the webserver and related components (such as MQTT server, graphena...) from the `webserver` folder. Some services are password protected, the passwords are (for now) also included in the docker-compose file.
 
 ## Licence
 
