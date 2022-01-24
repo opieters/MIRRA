@@ -1,6 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:radiation_shield-cache
-EELAYER 26 0
+EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -167,24 +166,10 @@ F 3 "" H 1250 1100 50  0001 C CNN
 	1    1250 1100
 	-1   0    0    1   
 $EndComp
-$Comp
-L GEMS:SHT35 U2
-U 1 1 5D31D79D
-P 4550 2300
-F 0 "U2" H 4550 2765 50  0000 C CNN
-F 1 "SHT35" H 4550 2674 50  0000 C CNN
-F 2 "gems_footprints:8P-1EP-DFN_2.5x2.5" H 4550 2300 50  0001 C CNN
-F 3 "https://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/0_Datasheets/Humidity/Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf" H 4550 2300 50  0001 C CNN
-F 4 "403-SHT35-DIS-F" H 4550 2300 50  0001 C CNN "Mouser"
-F 5 "8.16" H 4550 2300 50  0001 C CNN "Price"
-	1    4550 2300
-	1    0    0    -1  
-$EndComp
 Text Label 5550 2250 2    50   ~ 0
 SCL
 Text Label 5550 2400 2    50   ~ 0
 SDA
-NoConn ~ 5200 2550
 NoConn ~ 3900 2250
 Wire Wire Line
 	7350 2350 7550 2350
@@ -200,8 +185,6 @@ Wire Wire Line
 	5550 2400 5200 2400
 Wire Wire Line
 	4550 2850 3900 2850
-Wire Wire Line
-	3900 2550 3900 2850
 $Comp
 L power:GND #PWR03
 U 1 1 5D31E046
@@ -213,10 +196,6 @@ F 3 "" H 4550 2850 50  0001 C CNN
 	1    4550 2850
 	1    0    0    -1  
 $EndComp
-Connection ~ 4550 2850
-Wire Wire Line
-	3900 2400 3900 2550
-Connection ~ 3900 2550
 $Comp
 L power:+3.3V #PWR06
 U 1 1 5D31E28E
@@ -308,4 +287,27 @@ Wire Wire Line
 	6800 2500 6550 2500
 Wire Wire Line
 	6550 2500 6550 2400
+Connection ~ 4550 2850
+Wire Wire Line
+	3900 2550 3900 2850
+Wire Wire Line
+	3900 2400 3900 2550
+Connection ~ 3900 2550
+$Comp
+L GEMS:SHT35 U2
+U 1 1 5D31D79D
+P 4550 2300
+F 0 "U2" H 4550 2765 50  0000 C CNN
+F 1 "SHT35" H 4550 2674 50  0000 C CNN
+F 2 "gems_footprints:8P-1EP-DFN_2.5x2.5" H 4550 2300 50  0001 C CNN
+F 3 "https://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/0_Datasheets/Humidity/Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf" H 4550 2300 50  0001 C CNN
+F 4 "403-SHT35-DIS-F" H 4550 2300 50  0001 C CNN "Mouser"
+F 5 "8.16" H 4550 2300 50  0001 C CNN "Price"
+	1    4550 2300
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4550 2850 5200 2850
+Wire Wire Line
+	5200 2850 5200 2550
 $EndSCHEMATC
