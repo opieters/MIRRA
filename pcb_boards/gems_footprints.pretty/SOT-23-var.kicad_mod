@@ -1,4 +1,4 @@
-(module SOT-23-var (layer F.Cu) (tedit 5D03C2E6)
+(module SOT-23-var (layer F.Cu) (tedit 61F9008E)
   (descr "SOT-23, Standard")
   (tags SOT-23)
   (attr smd)

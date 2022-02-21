@@ -1,4 +1,5 @@
-(module L_L4mm_D4mm_H1.8mm (layer F.Cu) (tedit 5D8CEA81)
+(module L_L4mm_D4mm_H1.8mm (layer F.Cu) (tedit 61F90078)
+  (attr smd)
   (fp_text reference REF** (at 0 3.13) (layer F.SilkS)
     (effects (font (size 1 1) (thickness 0.15)))
   )
