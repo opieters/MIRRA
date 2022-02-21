@@ -8,6 +8,7 @@
 #include "PCF2129_RTC.h"
 #include "Radio.h"
 #include "pins.h"
+#include "ESPCam.h"
 
 // The time between gateway activations / sample time 
 const uint32_t gateway_receive_window = 20*60; // 20 minutes in seconds 
@@ -16,65 +17,22 @@ const uint32_t gateway_receive_window = 20*60; // 20 minutes in seconds
 // This time is unknown before any valid communication
 RTC_DATA_ATTR uint32_t gateway_next_on;
 
-// TODO
-const uint8_t oneWirePin = 15;
-const uint8_t soilMoisturePin = 39;
+
 
 extern PCF2129_RTC rtc;
 extern RadioModule radio;
 
-SoilMoistureSensor soilMoisture(soilMoisturePin);
-TempRHSensor airTempRHSensor;
-LightSensor lightSensor;
-SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
 
 
-Sensor* sensors[] = {
-    &airTempRHSensor,
-    &soilTempSensor, 
-    &soilMoisture, 
-    &lightSensor};
 
-const size_t n_sensors = ARRAY_LENGTH(sensors);
+
 
 float sleep_time;
 extern uint32_t next_sample_time, next_communication_time, sample_interval, communication_interval;
 
-void initialiseSensors(void){
-    size_t i;
 
-    Serial.println("Initialising ");
-    Serial.print(n_sensors);
-    Serial.println(" sensors");
 
-    for(i = 0; i < n_sensors; i++){
-        sensors[i]->setup();
-    }
-}
-
-void startMeasurements(void){
-    size_t i;
-
-    Serial.println("Starting measurements");
-
-    for(i = 0; i < n_sensors; i++){
-        sensors[i]->start_measurement();
-    }
-}
-
-void stopMeasurements(void){
-    size_t i;
-
-    Serial.println("Stop measurements.");
-
-    for(i = 0; i < n_sensors; i++){
-        sensors[i]->stop_measurement();
-    }
-
-    digitalWrite(16, LOW);
-}
-
-size_t readoutToBuffer(uint8_t* buffer, size_t max_length, uint32_t ctime) {
+size_t readoutToBuffer(uint8_t* buffer, size_t max_length, uint32_t ctime, Sensor** sensorArray, uint8_t n_sensors) {
     size_t nBytesWritten = 0, nSensorValuesLocation;
     uint8_t nSensorValues = 0;
 
@@ -96,19 +54,19 @@ size_t readoutToBuffer(uint8_t* buffer, size_t max_length, uint32_t ctime) {
     for (size_t i = 0; i < n_sensors; ++i){
         Serial.print("Sensor ");
 
-        Serial.print(sensors[i]->getID());
+        Serial.print(sensorArray[i]->getID());
         Serial.print(" (");
         Serial.print(i);
         Serial.print("): ");
 
         // read sensor data
-        nValues = sensors[i]->read_measurement(sensorReadout, ARRAY_LENGTH(sensorReadout));     
+        nValues = sensorArray[i]->read_measurement(sensorReadout, ARRAY_LENGTH(sensorReadout));     
         nSensorValues += nValues; 
 
         // copy sensor data to the buffer
         for(size_t j = 0; j < nValues; j++){
             // read sensor id and copy to the buffer
-            buffer[nBytesWritten] = sensors[i]->getID() + j;
+            buffer[nBytesWritten] = sensorArray[i]->getID() + j;
             nBytesWritten++;
 
             memcpy(&buffer[nBytesWritten], &sensorReadout[j], sizeof(sensorReadout[j]));
@@ -182,8 +140,10 @@ bool checkCommand(LoRaMessage& message, CommunicationCommand command){
     return message.getData()[6] == cmd;
 }
 
-bool readTimeData(LoRaMessage& message){
+bool readTimeData(LoRaMessage& message, Sensor** sensors, size_t n_sensors){
     uint32_t time;
+    size_t i;
+
     if(message.getLength() != 27){
         return false;
     }
@@ -195,13 +155,17 @@ bool readTimeData(LoRaMessage& message){
     memcpy(&sample_interval, &message.getData()[7+4+4+4], sizeof(sample_interval));
     memcpy(&communication_interval, &message.getData()[7+4+4+4+4], sizeof(communication_interval));
 
+    for(i = 0; i < n_sensors; i++){
+        sensors[i]->set_sample_interval(sample_interval);
+    }
+
     return true;
 }
 
 
 size_t readMeasurementData(uint8_t* buffer, const size_t max_length, File& file){
-    size_t length = 0;
-    size_t prev_idx = 0;
+    size_t length = 0; // current length of buffer
+    size_t prev_idx = 0; // last full data entry of sample event
 
     // read timestamp and data length
     while(length < max_length){

@@ -6,6 +6,13 @@
 #include "pins.h"
 #include <algorithm>
 #include "SPIFFS.h"
+#include "Sensor.h"
+#include "TempRHSensor.h"
+#include "SoilMoistureSensor.h"
+#include "LightSensor.h"
+#include "SoilTempSensor.h"
+#include "ESPCam.h"
+#include <math.h>
 
 #define SS_PIN 27       // Slave select pin
 #define RST_PIN 32      // Reset pin
@@ -48,6 +55,36 @@ size_t measurementDataSize = 0;
 
 RTC_DATA_ATTR uint8_t gatewayMAC[6];
 
+LoRaMessage message;
+bool status;
+
+// TODO
+const uint8_t oneWirePin = 15;
+const uint8_t soilMoisturePin = 39;
+
+SoilMoistureSensor soilMoisture(soilMoisturePin);
+TempRHSensor airTempRHSensor;
+LightSensor lightSensor;
+SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
+ESPCam espCamera1(4, 17);
+ESPCam espCamera2(4, 14);
+
+Sensor* sensors[] = {
+    &airTempRHSensor,
+    &soilTempSensor, 
+    &soilMoisture, 
+    &lightSensor,
+    &espCamera1,
+    //&espCamera2
+};
+
+const size_t n_sensors = ARRAY_LENGTH(sensors);
+
+RTC_DATA_ATTR Sensor* sampleSensors[n_sensors] = {nullptr};
+RTC_DATA_ATTR uint8_t n_sampleSensors = 0;
+
+size_t i;
+
 void openDataFileWriteMode(void){
     // open the file with the sensor data
     if(SPIFFS.exists(measurementDataFN)){
@@ -61,8 +98,32 @@ void openDataFileWriteMode(void){
     }
 }
 
-LoRaMessage message;
-bool status;
+void initialiseSensors(void){
+    size_t i;
+
+    Serial.println("Initialising ");
+    Serial.print(n_sensors);
+    Serial.println(" sensors");
+
+    for(i = 0; i < n_sensors; i++){
+        sensors[i]->setup();
+    }
+}
+
+
+void stopMeasurements(void){
+    size_t i;
+
+    Serial.println("Stop measurements.");
+
+    for(i = 0; i < n_sensors; i++){
+        sensors[i]->stop_measurement();
+    }
+
+    digitalWrite(16, LOW);
+}
+
+
 
 void setup() {
     // Forcing GPIO16 ON to put power on VPP
@@ -139,11 +200,14 @@ void setup() {
 
         initialiseSensors();
 
-        startMeasurements();
+                        
+        for(i = 0; i < n_sensors; i++){
+                sensors[i]->start_measurement();
+            }
 
         delay(100);
 
-        readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch());
+        readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch(), sensors, n_sensors);
 
         stopMeasurements();
     } else {
@@ -158,13 +222,20 @@ void setup() {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 }
 
+
+
 void loop() {
     status = false;
 
     switch (state){
         case CommunicationState::READ_SENSOR_DATA: {
             Serial.println("State: Reading all sensors.");
-            startMeasurements();
+
+            Serial.println("Starting measurements");
+
+            for(i = 0; i < n_sampleSensors; i++){
+                sampleSensors[i]->start_measurement();
+            }
 
             // if there is not enough space left, delete data
             if((SPIFFS.usedBytes() > 0) && (SPIFFS.usedBytes() > (SPIFFS.totalBytes()-0x100))){
@@ -178,7 +249,7 @@ void loop() {
             openDataFileWriteMode();
 
             // wait until the timepoint is correct
-            if(rtc.read_time_epoch() <  next_sample_time){
+            if(rtc.read_time_epoch() < next_sample_time){
                 int64_t sleep_time;
                 sleep_time = next_sample_time - rtc.read_time_epoch();
                 sleep_time *= 500000;
@@ -191,12 +262,14 @@ void loop() {
                 } while(rtc.read_time_epoch() <  next_sample_time );
             }
 
-            size_t length = readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch());
+            size_t length = readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch(), sampleSensors, n_sampleSensors);
             stopMeasurements();
 
             // store data
+            #ifdef __DEBUG__
             Serial.print("Wrote from ");
             Serial.print(nBytesWritten);
+            #endif
             nBytesWritten += measurementData.write(message.getData(), length);
             Serial.print(" to ");
             Serial.println(nBytesWritten);
@@ -207,9 +280,26 @@ void loop() {
                 Serial.print(" ");
             }
             Serial.println();
+
+            // update sensor list
+            uint32_t interval = ~0;
+            for(i = 0; i < n_sensors; i++){
+                interval = min(interval, sensors[i]->adaptive_sample_interval_update(next_sample_time));
+            }
+
+            n_sampleSensors = 0;
+            for(i = 0; i < n_sensors; i++){
+                if(interval == sensors[i]->adaptive_sample_interval_update(next_sample_time)){
+                    sampleSensors[n_sampleSensors] = sensors[i];
+                    n_sampleSensors++;
+                }
+            }
             
             // set next measurement time
-            next_sample_time += sample_interval;
+            next_sample_time += interval;
+
+            Serial.print("Time until next sample event: ");
+            Serial.println(interval);
 
             measurementData.close();
             
@@ -248,7 +338,7 @@ void loop() {
             }
 
             break;
-        case CommunicationState::GET_SAMPLE_CONFIG:{
+        case CommunicationState::GET_SAMPLE_CONFIG: {
             Serial.println("Waiting for time configuration.");
             status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::TIME_CONFIG);
             #ifdef __DEBUG_COMM__
@@ -262,7 +352,7 @@ void loop() {
 
             if(status){
                 Serial.println("Received time configuration.");
-                if(readTimeData(message)){
+                if(readTimeData(message, sensors, n_sensors)){
                     state = CommunicationState::SLEEP;
                 } else {
                     state = CommunicationState::SEARCHING_GATEWAY;
@@ -313,13 +403,13 @@ void loop() {
 
                     Serial.println("Received ACK and timing update.");
 
-                    readTimeData(message);
+                    readTimeData(message, sensors, n_sensors);
 
                     buffer[6] = CommunicationCommandToInt(CommunicationCommand::ACK_DATA);
                     message.setData(buffer, 7);
                     radio.sendMessage(message);
 
-                    if(nBytesRead == nBytesWritten){
+                    /*if(nBytesRead == nBytesWritten){
                         SPIFFS.remove(measurementDataFN);
                         
                         nBytesRead = 0;
@@ -328,7 +418,7 @@ void loop() {
                         // create file
                         openDataFileWriteMode();
                         measurementData.close();
-                    }
+                    }*/
                 } else {
                     n_errors++;
 

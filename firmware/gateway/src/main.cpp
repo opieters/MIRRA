@@ -62,7 +62,7 @@ constexpr uint32_t shortDiscoverySendInterval = 10;
 #else
 constexpr uint32_t discoveryInterval = 10*60;       // seconds
 constexpr uint32_t discoverySendInterval = 1000;    // ms
-constexpr uint32_t shortDiscoverySendInterval = 10;
+constexpr uint32_t shortDiscoverySendInterval = 10; // seconds
 #endif
 
 RTC_DATA_ATTR uint32_t uploadDataTime;

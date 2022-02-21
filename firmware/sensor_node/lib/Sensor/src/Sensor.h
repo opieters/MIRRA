@@ -2,6 +2,7 @@
 #define SENSOR_H
 
 #include <stdint.h>
+#include <time.h>
 
 /**
  * Sensor interface, this interface has to be overriden by all the sensor classes. This class allows to 
@@ -21,6 +22,15 @@ public:
     virtual void stop_measurement(void) = 0;
 
     virtual const uint8_t getID() = 0;
+
+    virtual uint32_t adaptive_sample_interval_update(time_t ctime);
+
+    virtual void set_sample_interval(uint32_t sample_interval) { this->sample_interval = sample_interval; }; 
+
+private:
+
+    uint32_t sample_interval = 60*60; // sample every hour by default
+
 };
 
 
