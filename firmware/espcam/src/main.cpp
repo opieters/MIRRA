@@ -104,6 +104,8 @@ void setup() {
     //return;
   }
 
+  // since GPIO13 can be used for the SD card and is modfied by the above command,
+  // we need to re-set the status here
   pinMode(GPIO_NUM_13, INPUT);
 
   // Define GPIO 12 (overwrite) as output and set to LOW
@@ -169,6 +171,7 @@ void setup() {
 } 
  
 void loop() {
+  // always sleep in the loop-state
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 1);
  
   Serial.println("Going to sleep now");

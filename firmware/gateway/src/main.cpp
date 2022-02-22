@@ -34,6 +34,10 @@ LIBRARIES
 PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
 RadioModule radioModule(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_POWER, TX_POWER);
 
+
+// the gatway can use both a GSM and WiFi uplink
+// however, due to the lack of a GSM module, we rely
+// on the wifi uplink for now
 UplinkModule gsmModule(Serial2, 26);
 
 const char* ssid = "procyon";

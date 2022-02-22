@@ -88,11 +88,15 @@ size_t i;
 void openDataFileWriteMode(void){
     // open the file with the sensor data
     if(SPIFFS.exists(measurementDataFN)){
+        #ifdef __DEBUG__
         Serial.println("Opening existing file.");
+        #endif
         measurementData = SPIFFS.open(measurementDataFN, FILE_APPEND);
         measurementDataSize = measurementData.size();
     } else {
+        #ifdef __DEBUG__
         Serial.println("Creating new file.");
+        #endif
         measurementData = SPIFFS.open(measurementDataFN, FILE_WRITE);
         measurementDataSize = 0;
     }
@@ -101,9 +105,11 @@ void openDataFileWriteMode(void){
 void initialiseSensors(void){
     size_t i;
 
+    #ifdef __DEBUG__
     Serial.println("Initialising ");
     Serial.print(n_sensors);
     Serial.println(" sensors");
+    #endif
 
     for(i = 0; i < n_sensors; i++){
         sensors[i]->setup();
@@ -114,7 +120,9 @@ void initialiseSensors(void){
 void stopMeasurements(void){
     size_t i;
 
+    #ifdef __DEBUG__
     Serial.println("Stop measurements.");
+    #endif
 
     for(i = 0; i < n_sensors; i++){
         sensors[i]->stop_measurement();
@@ -141,37 +149,52 @@ void setup() {
 
     // mount file system
     if (!SPIFFS.begin(true)) {
+        #ifdef __DEBUG__
         Serial.println("Mounting SPIFFS failed");
+        #endif
         SPIFFS.format();
         ESP.restart(); 
     }
 
+    // try to open data file
     openDataFileWriteMode();
 
     if(!measurementData){
+        #ifdef __DEBUG__
         Serial.println("There was an error with the data file.");
+        #endif
         SPIFFS.format();
         ESP.restart();        
     }
     
-
+    // connect with RTC
     while(rtc.begin() != I2C_ERROR_OK){    
+        #ifdef __DEBUG__
         Serial.println("Connecting to RTC...");
         Serial.print("Error code: ");
         Serial.println(rtc.begin());
+        #endif
 
         delay(100);
     }
 
+    // start radio module
     radio.init();
     
+    // in case of the very first boot event, we need to set the clock, find the gateway and the correct time
+    // sensor connections are also checked
     if (firstBoot){
+        #ifdef __DEBUG__
         Serial.print("First boot. Setting time...");
+        #endif
 
         // Writing the initial time
         rtc.write_time_epoch(1546300800);
+        #ifdef __DEBUG__
         Serial.println(" done.");
+        #endif
 
+        // MAC address is used for identification
         Serial.print("MAC address: ");
         for(int i = 0; i < 6; i++){
             Serial.print(radio.getMACAddress()[i]);
@@ -184,22 +207,30 @@ void setup() {
         }
 
         firstBoot = false;
+
+        // if file exists, we append to it. It is assumed all data is sent after a full restart-event
+        // i.e. when the state of the RTC_DATA_ATTR variables is also lost
         nBytesWritten = measurementDataSize;
         nBytesRead = measurementDataSize;
 
+        #ifdef __DEBUG__
         Serial.print("nBytesWritten: ");
         Serial.println(nBytesWritten);
 
         Serial.print("nBytesRead: ");
         Serial.println(nBytesRead);
+        #endif
 
+        // default sample interval: 10 minutes
         sample_interval = 10*60;
+        // default communication interval: 20 minutes
+        // communication always occurs between sample timepoint, never at the same time!
         communication_interval = 20*60;
 
+        #ifdef __DEBUG__
         Serial.println("Testing sensor readout.");
-
+        #endif
         initialiseSensors();
-
                         
         for(i = 0; i < n_sensors; i++){
                 sensors[i]->start_measurement();
@@ -213,7 +244,9 @@ void setup() {
     } else {
         initialiseSensors();
 
+        #ifdef __DEBUG__
         Serial.print("Wakeup cause: ");
+        #endif
         Serial.println(esp_sleep_get_wakeup_cause());
     }
 
@@ -227,28 +260,35 @@ void setup() {
 void loop() {
     status = false;
 
+    // the main event-loop is implemented as a state-machine
+    // the default state is the SLEEP state, which determines the next state
+
     switch (state){
+        // sensor readout state
+        // note that not all sensors are read out at every timestep
         case CommunicationState::READ_SENSOR_DATA: {
+            #ifdef __DEBUG__
             Serial.println("State: Reading all sensors.");
 
             Serial.println("Starting measurements");
+            #endif
 
             for(i = 0; i < n_sampleSensors; i++){
                 sampleSensors[i]->start_measurement();
             }
 
-            // if there is not enough space left, delete data
+            // if there is not enough space left, stop measuring until after the next communication event
             if((SPIFFS.usedBytes() > 0) && (SPIFFS.usedBytes() > (SPIFFS.totalBytes()-0x100))){
-                Serial.println("Removing all data.");
-                SPIFFS.remove(measurementDataFN);
-
-                nBytesWritten = 0;
-                nBytesRead = 0;
+                state = CommunicationState::SLEEP;
+                next_sample_time += communication_interval;
             }
 
+            // open file to store the measurement data
             openDataFileWriteMode();
 
             // wait until the timepoint is correct
+            // implemented with a 0.5s sleep delay because reading the RTC state too fast
+            // can result into an errorous readout and thus cause the system to fail
             if(rtc.read_time_epoch() < next_sample_time){
                 int64_t sleep_time;
                 sleep_time = next_sample_time - rtc.read_time_epoch();
@@ -262,6 +302,7 @@ void loop() {
                 } while(rtc.read_time_epoch() <  next_sample_time );
             }
 
+            // copy sensor data into the buffer and stop the measurements
             size_t length = readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch(), sampleSensors, n_sampleSensors);
             stopMeasurements();
 
@@ -271,22 +312,29 @@ void loop() {
             Serial.print(nBytesWritten);
             #endif
             nBytesWritten += measurementData.write(message.getData(), length);
+            #ifdef __DEBUG__
             Serial.print(" to ");
             Serial.println(nBytesWritten);
+            #endif
 
+            #ifdef __DEBUG__
             Serial.print("Wrote the following data: ");
             for(size_t i = 0; i < length; i++){
                 Serial.print(message.getData()[i], HEX);
                 Serial.print(" ");
             }
             Serial.println();
+            #endif
 
-            // update sensor list
+            // update sensor list that must be read at next sample event
+
+            // find closest sample event
             uint32_t interval = ~0;
             for(i = 0; i < n_sensors; i++){
                 interval = min(interval, sensors[i]->adaptive_sample_interval_update(next_sample_time));
             }
 
+            // find sensors that need to be sampled then
             n_sampleSensors = 0;
             for(i = 0; i < n_sensors; i++){
                 if(interval == sensors[i]->adaptive_sample_interval_update(next_sample_time)){
@@ -298,22 +346,34 @@ void loop() {
             // set next measurement time
             next_sample_time += interval;
 
+            #ifdef __DEBUG__
             Serial.print("Time until next sample event: ");
             Serial.println(interval);
+            #endif
 
             measurementData.close();
             
             state = CommunicationState::SLEEP;
             break;
         }
+
+        // a serious error occurred -> sleep for 60 seconds
+        // currently, this state cannot be reached, but might
+        // be useful for future error-recovery
         case CommunicationState::ERROR:
+            #ifdef __DEBUG__
             Serial.println("State: CommunicationState::ERROR");
             Serial.flush();
+            #endif
             
             deepSleep(60);
             break;
+
+        // first boot -> look for gateway
         case CommunicationState::SEARCHING_GATEWAY:
+            #ifdef __DEBUG__
             Serial.println("State: Searching for gateway.");
+            #endif
 
             status = radio.receiveAnyMessage(gatewaySearchWindow, message);
             #ifdef __DEBUG_COMM__
@@ -323,7 +383,9 @@ void loop() {
                 uint8_t data[7];
 
                 // we send our MAC address
+                #ifdef __DEBUG__
                 Serial.println("Received hello message");
+                #endif
 
                 // store the MAC of the gateway
                 memcpy(gatewayMAC, message.getData(), ARRAY_LENGTH(gatewayMAC));
@@ -338,8 +400,11 @@ void loop() {
             }
 
             break;
+        // after locating the gateway, we need to acquire the current time ans sample rate from the gateway
         case CommunicationState::GET_SAMPLE_CONFIG: {
+            #ifdef __DEBUG__
             Serial.println("Waiting for time configuration.");
+            #endif
             status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::TIME_CONFIG);
             #ifdef __DEBUG_COMM__
             uint8_t data[] = {180, 230, 45, 221, 58, 89, //180, 230, 45, 220, 28, 45, // 
@@ -351,7 +416,9 @@ void loop() {
             #endif
 
             if(status){
+                #ifdef __DEBUG__
                 Serial.println("Received time configuration.");
+                #endif
                 if(readTimeData(message, sensors, n_sensors)){
                     state = CommunicationState::SLEEP;
                 } else {
@@ -364,8 +431,9 @@ void loop() {
             
             break;
 
+        // send sensor data to the gateway
         case CommunicationState::UPLOAD_SENSOR_DATA:
-            // wait for the command from the gateway
+            // wait for the command from the gateway, the gateway always takes initiative!
             status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::REQUEST_MEASUREMENT_DATA);
 
             if(status){
@@ -373,7 +441,9 @@ void loop() {
                 uint8_t buffer[256];
                 size_t readLength = ARRAY_LENGTH(buffer) - 7;
 
+                #ifdef __DEBUG__
                 Serial.println("Uploading data to gateway.");
+                #endif
 
                 // prepare fixed part of header
                 memcpy(buffer, radio.getMACAddress(), 6);
@@ -401,7 +471,9 @@ void loop() {
                 if(status){
                     nBytesRead += readLength;
 
+                    #ifdef __DEBUG__
                     Serial.println("Received ACK and timing update.");
+                    #endif
 
                     readTimeData(message, sensors, n_sensors);
 
@@ -426,14 +498,20 @@ void loop() {
                 }
                 
             } else {
+                #ifdef __DEBUG__
                 Serial.println("No reply received.");
+                #endif
                 n_errors++;
 
+                #ifdef __DEBUG__
                 Serial.print("Communication time from ");
                 Serial.print(next_communication_time);
+                #endif
                 next_communication_time += communication_interval;
+                #ifdef __DEBUG__
                 Serial.print(" to ");
                 Serial.println(next_communication_time);
+                #endif
             }
             
             state = CommunicationState::SLEEP;
@@ -441,8 +519,10 @@ void loop() {
             break;
 
         case CommunicationState::SLEEP: {
-            // TODO: determine sleep time and determine the next state
+            // Determine sleep time and determine the next state
+            #ifdef __DEBUG__
             Serial.println("Sleep state");
+            #endif
 
             uint32_t now = rtc.read_time_epoch();
 
@@ -450,15 +530,18 @@ void loop() {
             if((next_sample_time - sleepThreshold) < now){
                 state = CommunicationState::READ_SENSOR_DATA;
 
+                #ifdef __DEBUG__
                 Serial.println("Directly switching to sensor read state.");
                 Serial.flush();
+                #endif
                 break;
             }
             
             // check if the next communication time is close at hand
             if((next_communication_time - sleepThreshold) < now){
                 state = CommunicationState::UPLOAD_SENSOR_DATA;
-
+                
+                #ifdef __DEBUG__
                 Serial.print("left value: ");
                 Serial.println(next_communication_time - sleepThreshold);
                 Serial.print("Right value: ");
@@ -466,6 +549,7 @@ void loop() {
 
                 Serial.println("Directly switching to communication state.");
                 Serial.flush();
+                #endif
                 break;
             }
 
@@ -479,21 +563,25 @@ void loop() {
             }
 
             if(sleepTime > maxSleepTime){
+                #ifdef __DEBUG__
                 Serial.print("Max sleep time exceeded. Limiting sleep time from ");
                 Serial.print(sleepTime);
                 Serial.print(" to ");
                 Serial.print(maxSleepTime);
                 Serial.println("s.");
+                #endif
                 sleepTime = maxSleepTime;
                 state = CommunicationState::SLEEP;
             }
 
+            #ifdef __DEBUG__
             Serial.print("Sleeping for ");
             Serial.print(sleepTime);
             Serial.println(" seconds.");
             Serial.flush();
             delay(1000);
             Serial.flush();
+            #endif
 
             if(sleepTime > 0){
                 digitalWrite(16, LOW);
@@ -502,9 +590,14 @@ void loop() {
 
             break;
         }
-
+        // This state can be used to readout the sensor data in case there was a communication issue.
+        // Currently, the software needs to be re-flashed to enter this state. This should be 
+        // modufied such that sening a special UART command can trigger a print to UART
+        // TODO: improve this
         case CommunicationState::UART_READOUT:
+            #ifdef __DEBUG__
             Serial.println("Data in memory:");
+            #endif
             measurementData = SPIFFS.open(measurementDataFN, FILE_READ);
             if(measurementData){
                 size_t n_bytes_read = 0;
@@ -528,11 +621,15 @@ void loop() {
 
                 measurementData.close();
             } else {
+                #ifdef __DEBUG__
                 Serial.println("There was an error.");
+                #endif
             }
             state = CommunicationState::SLEEP;
             break;
 
     }
-        Serial.println("loop");
+    #ifdef __DEBUG__
+    Serial.println("loop");
+    #endif
 }
