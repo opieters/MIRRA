@@ -9,3 +9,7 @@ webserver/_build/
 webserver/deployment/database/microclimate_measurement_system_database_structure.pdf
 webserver/management_interface/static/vendor/
 *.sch-bak
+*.log
+pcb_boards/gateway/pcb_gateway-rescue.dcm
+pcb_boards/gateway/pcb_gateway-rescue.lib
+pcb_boards/sensor_node/sensor_node-rescue.dcm
