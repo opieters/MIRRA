@@ -11,6 +11,7 @@
  
 enum class CommunicationState {
     SEARCHING_GATEWAY,
+    PREPARE_READOUT,
     READ_SENSOR_DATA,
     UPLOAD_SENSOR_DATA,
     SLEEP,
@@ -28,7 +29,7 @@ void processAckMessage(uint8_t* buffer);
 
 bool checkCommand(LoRaMessage& message, CommunicationCommand command);
 
-bool readTimeData(LoRaMessage& message, Sensor** sensors, size_t n_sensors);
+bool readTimeData(LoRaMessage& message, Sensor** sensors, size_t n_sensors, bool onlyEpoch = false);
 
 size_t readMeasurementData(uint8_t* buffer, const size_t max_length, File& file);
 

@@ -1,4 +1,7 @@
-#include "ESPCam.h"
+#include "ESPCamOW.h"
+#include "PCF2129_RTC.h"
+
+extern PCF2129_RTC rtc;
 
 
 // specifies the time of the sun rise starting from 12PM at the first day of each month
@@ -19,22 +22,15 @@ static double sunRiseTable[12] = {
 };
 
 
-ESPCam::ESPCam(uint8_t triggerPin, uint8_t statusPin) {
-    this->triggerPin = triggerPin;
-    this->statusPin = statusPin;
-
-    pinMode(triggerPin, OUTPUT);
-    pinMode(statusPin, INPUT_PULLDOWN);
-
-    digitalWrite(triggerPin, LOW);
-    //gpio_hold_en((gpio_num_t) triggerPin);
-    //gpio_deep_sleep_hold_en();
+ESPCamOW::ESPCamOW(Software::OWI owi, uint8_t triggerPin) : owi(owi), triggerPin(triggerPin) {
 }
 
-void ESPCam::setup(void) {
-    pinMode(triggerPin, OUTPUT);
-    digitalWrite(this->triggerPin, HIGH);
-    gpio_hold_dis((gpio_num_t) this->triggerPin);
+void ESPCamOW::setup(void) {
+
+    Serial.println("Configuring ESP OWI.");
+    //pinMode(triggerPin, OUTPUT);
+    //digitalWrite(this->triggerPin, HIGH);
+    //gpio_hold_dis((gpio_num_t) this->triggerPin);
     
     //delay(500);
     //digitalWrite(this->triggerPin, LOW);
@@ -42,33 +38,44 @@ void ESPCam::setup(void) {
 
 }
 
-void ESPCam::start_measurement(){
+void ESPCamOW::start_measurement(){
+    // write current time
+    owi.reset();
+    delay(100);
+    owi.write(0x14);
+    time_t ctime = rtc.read_time_epoch();
+    owi.write(ctime, sizeof(ctime));
 
+    Serial.println("Starting measurement, writing time");
 }
 
-uint8_t ESPCam::read_measurement(float* data, uint8_t length) {
-    digitalWrite(this->triggerPin, LOW);
-    gpio_hold_en((gpio_num_t) this->triggerPin);
+uint8_t ESPCamOW::read_measurement(float* data, uint8_t length) {
+    // take picture and readout status of previous picture
+    owi.reset();
+    delay(100);
+    owi.write(0x3C);
 
-    delay(2);
+    Serial.println("Reading state");
 
-    if(digitalRead(this->statusPin) == HIGH){
+    uint8_t status = owi.read(8);
+    
+    if(status == 0){
         *data = 1.0;
     } else {
         *data = 0.0;
     }
 
-
+    Serial.println(status);
     
     return 1;
 }
 
-ESPCam::~ESPCam() {
+ESPCamOW::~ESPCamOW() {
 
 }
 
 
-uint32_t ESPCam::adaptive_sample_interval_update(time_t ctime){
+uint32_t ESPCamOW::adaptive_sample_interval_update(time_t ctime){
     Serial.println("ADAPTIVE adaptive interval called.");
     // extract month and day from current time
     struct tm result;

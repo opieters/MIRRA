@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name GEMS)(type Legacy)(uri ${KIPRJMOD}/../gems_components/GEMS.lib)(options "")(descr ""))
+  (lib (name pcb_gateway-rescue)(type Legacy)(uri ${KIPRJMOD}/pcb_gateway-rescue.lib)(options "")(descr ""))
 )

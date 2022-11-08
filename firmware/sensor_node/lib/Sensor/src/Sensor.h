@@ -29,7 +29,7 @@ public:
 
 private:
 
-    uint32_t sample_interval = 60*60; // sample every hour by default
+    uint32_t sample_interval = 5*60; // sample every hour by default
 
 };
 

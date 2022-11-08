@@ -1,4 +1,5 @@
 (sym_lib_table
-  (lib (name GEMS)(type Legacy)(uri ${KIPRJMOD}/../gems_components/GEMS.lib)(options "")(descr ""))
-  (lib (name sensors_module-rescue)(type Legacy)(uri ${KIPRJMOD}/sensors_module-rescue.lib)(options "")(descr ""))
+  (lib (name "GEMS")(type "Legacy")(uri "${KIPRJMOD}/../gems_components/GEMS.lib")(options "")(descr ""))
+  (lib (name "sensors_module-rescue")(type "Legacy")(uri "${KIPRJMOD}/sensors_module-rescue.lib")(options "")(descr ""))
+  (lib (name "sensor_node-rescue")(type "Legacy")(uri "${KIPRJMOD}/sensor_node-rescue.lib")(options "")(descr ""))
 )

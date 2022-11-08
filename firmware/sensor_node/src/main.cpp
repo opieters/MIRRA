@@ -13,21 +13,28 @@
 #include "SoilTempSensor.h"
 #include "ESPCam.h"
 #include <math.h>
+#include <Software/OWI.h>
+#include "ESPCamOW.h"
+#include <HardwareSerial.h>
+#include <ESPCamUART.h>
 
 #define SS_PIN 27       // Slave select pin
-#define RST_PIN 32      // Reset pin
-#define DIO0_PIN 13     // DIO0 pin
+#define RST_PIN 26      // Reset pin
+#define DIO0_PIN 34     // DIO0 pin IRQ
 #define DIO1_PIN 14     // This pin is not connected in this board version
-#define TX_SWITCH 12 
-#define RX_SWITCH 26
+#define TX_SWITCH 13
+#define RX_SWITCH 25
+// for debugging purposes
+#define __DEBUG__   // comment out when not debugging
 
 PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
 RadioModule radio(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, TX_SWITCH, RX_SWITCH);
 
+// RTC_DATA_ATTR geeft aan dat die variabele in speciaal deel van geheugen worden opgeslaan (want bij deepsleep wordt alles vergeten)
 RTC_DATA_ATTR bool firstBoot = true;
 
 // keep communication state in persistent memory
-RTC_DATA_ATTR CommunicationState state = CommunicationState::SEARCHING_GATEWAY;
+RTC_DATA_ATTR CommunicationState state = CommunicationState::SEARCHING_GATEWAY, prev_state = CommunicationState::SLEEP;
 RTC_DATA_ATTR uint16_t n_errors = 0;
 
 constexpr uint8_t sda_pin = 21, scl_pin = 22;
@@ -46,7 +53,7 @@ RTC_DATA_ATTR uint32_t next_communication_time;
 RTC_DATA_ATTR uint32_t sample_interval;
 RTC_DATA_ATTR uint32_t communication_interval;
 float sleepTime;
-const float maxSleepTime = 60*60; // sleep at most one minute
+const float maxSleepTime = 12*60*60; // sleep at most half a day
 
 RTC_DATA_ATTR size_t nBytesWritten;
 RTC_DATA_ATTR size_t nBytesRead;
@@ -59,29 +66,37 @@ LoRaMessage message;
 bool status;
 
 // TODO
-const uint8_t oneWirePin = 15;
-const uint8_t soilMoisturePin = 39;
+const uint8_t oneWirePin = 2;
+const uint8_t uartWirePin = 17;
+//const uint8_t soilMoisturePin = 39;
 
-SoilMoistureSensor soilMoisture(soilMoisturePin);
+//Software::OWI owi(2);
+HardwareSerial serial2(2);
+
+
+//SoilMoistureSensor soilMoisture(soilMoisturePin);
 TempRHSensor airTempRHSensor;
 LightSensor lightSensor;
 SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
-ESPCam espCamera1(4, 17);
-ESPCam espCamera2(4, 14);
+
+ESPCamUART espCamera1(&serial2, GPIO_NUM_2, GPIO_NUM_36, GPIO_NUM_39);
+
 
 Sensor* sensors[] = {
     &airTempRHSensor,
     &soilTempSensor, 
-    &soilMoisture, 
     &lightSensor,
     &espCamera1,
-    //&espCamera2
+    //&espCamera2,
 };
 
 const size_t n_sensors = ARRAY_LENGTH(sensors);
 
-RTC_DATA_ATTR Sensor* sampleSensors[n_sensors] = {nullptr};
-RTC_DATA_ATTR uint8_t n_sampleSensors = 0;
+RTC_DATA_ATTR Sensor* sampleSensors[n_sensors] = {    &airTempRHSensor,
+    &soilTempSensor, 
+    &lightSensor,
+    &espCamera1,};
+RTC_DATA_ATTR uint8_t n_sampleSensors = 4;
 
 size_t i;
 
@@ -102,7 +117,7 @@ void openDataFileWriteMode(void){
     }
 }
 
-void initialiseSensors(void){
+void initialiseAllSensors(void){
     size_t i;
 
     #ifdef __DEBUG__
@@ -127,25 +142,37 @@ void stopMeasurements(void){
     for(i = 0; i < n_sensors; i++){
         sensors[i]->stop_measurement();
     }
-
-    digitalWrite(16, LOW);
 }
 
 
+bool dump_uart_log = false;
+void IRAM_ATTR gpio_0_isr_callback(){
+    dump_uart_log = true;
+
+    if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1){
+        dump_uart_log = true;
+        state = CommunicationState::SLEEP;
+    }
+}
+
 
 void setup() {
-    // Forcing GPIO16 ON to put power on VPP
+        // Forcing GPIO16 ON to put power on VPP
     // The hold on the GPIO first needs to be disabled because after deep sleep 
     // the GPIO is low and still locked from the previous boot.
-    gpio_hold_dis((gpio_num_t) 16);
+    // Needed to enable SDA qnd SCL pull-up voltages for RTC communication
     pinMode(16, OUTPUT);
     digitalWrite(16, HIGH);
-    gpio_hold_en((gpio_num_t) 16);
+    gpio_hold_dis((gpio_num_t) 16);
 
-    delay(1);
+    //ss.enableIntTx(false);
+    //ss.enableRx(false);
+
 
     Serial.begin(115200);
-    Wire.begin(sda_pin, scl_pin, 100e3);
+    Wire.begin(sda_pin, scl_pin, 100e3); // starts i2c
+
+    attachInterrupt(0, gpio_0_isr_callback, FALLING);
 
     // mount file system
     if (!SPIFFS.begin(true)) {
@@ -168,7 +195,7 @@ void setup() {
     }
     
     // connect with RTC
-    while(rtc.begin() != I2C_ERROR_OK){    
+    while(rtc.begin()){    
         #ifdef __DEBUG__
         Serial.println("Connecting to RTC...");
         Serial.print("Error code: ");
@@ -183,18 +210,18 @@ void setup() {
     
     // in case of the very first boot event, we need to set the clock, find the gateway and the correct time
     // sensor connections are also checked
-    if (firstBoot){
+    if(firstBoot){
         #ifdef __DEBUG__
         Serial.print("First boot. Setting time...");
         #endif
 
-        // Writing the initial time
-        rtc.write_time_epoch(1546300800);
+        // Writing the initial time: dummy time (is changed after communication with gateway)
+        rtc.write_time_epoch(1560210031);
         #ifdef __DEBUG__
         Serial.println(" done.");
         #endif
 
-        // MAC address is used for identification
+        // MAC address is used for identification: unique MAC address per node used as ID in datafile
         Serial.print("MAC address: ");
         for(int i = 0; i < 6; i++){
             Serial.print(radio.getMACAddress()[i]);
@@ -203,7 +230,7 @@ void setup() {
         Serial.println();
 
         for(int i = 0; i < ARRAY_LENGTH(gatewayMAC); i++){
-            gatewayMAC[i] = 0;
+            gatewayMAC[i] = 0; // gateway MAC is initialised to 0
         }
 
         firstBoot = false;
@@ -221,36 +248,46 @@ void setup() {
         Serial.println(nBytesRead);
         #endif
 
-        // default sample interval: 10 minutes
+        // default sample interval: 10 minutes (read out data from sensors)
         sample_interval = 10*60;
-        // default communication interval: 20 minutes
+        // default communication interval: 20 minutes (communication with gateway)
         // communication always occurs between sample timepoint, never at the same time!
         communication_interval = 20*60;
 
         #ifdef __DEBUG__
         Serial.println("Testing sensor readout.");
         #endif
-        initialiseSensors();
+        initialiseAllSensors();
                         
         for(i = 0; i < n_sensors; i++){
-                sensors[i]->start_measurement();
-            }
+            sensors[i]->start_measurement();
+        }
 
         delay(100);
 
+        // reading data from sensors: assembled in LoRa message format
         readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch(), sensors, n_sensors);
 
         stopMeasurements();
-    } else {
-        initialiseSensors();
 
+        delay(10000);
+    } else {
         #ifdef __DEBUG__
         Serial.print("Wakeup cause: ");
         #endif
         Serial.println(esp_sleep_get_wakeup_cause());
     }
 
+    if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1){
+        gpio_0_isr_callback();
+    }
+
     measurementData.close();
+
+    // eeded because this variable's state is not retained in deep sleep
+    for(i = 0; i < n_sensors; i++){
+        sensors[i]->set_sample_interval(sample_interval);
+    }
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 }
@@ -263,7 +300,26 @@ void loop() {
     // the main event-loop is implemented as a state-machine
     // the default state is the SLEEP state, which determines the next state
 
+    if(dump_uart_log){
+        prev_state = state;
+        state = CommunicationState::UART_READOUT;
+        dump_uart_log = false;
+    }
+
     switch (state){
+        case CommunicationState::PREPARE_READOUT:
+            #ifdef __DEBUG__
+            Serial.println("Initialising ");
+            Serial.print(n_sampleSensors);
+            Serial.println(" sensors");
+            #endif
+
+            for(i = 0; i < n_sampleSensors; i++){
+                sampleSensors[i]->setup();
+            }
+
+            state = CommunicationState::READ_SENSOR_DATA;
+            break;
         // sensor readout state
         // note that not all sensors are read out at every timestep
         case CommunicationState::READ_SENSOR_DATA: {
@@ -299,10 +355,10 @@ void loop() {
                     esp_sleep_enable_timer_wakeup(sleep_time); // sleep for 0.5 seconds
                     esp_light_sleep_start();
                     sleep_time = 500000;
-                } while(rtc.read_time_epoch() <  next_sample_time );
+                } while(rtc.read_time_epoch() <  next_sample_time);
             }
 
-            // copy sensor data into the buffer and stop the measurements
+            // copy sensor data (and readout timepoint) into the buffer and stop the measurements
             size_t length = readoutToBuffer(message.getData(), MAX_MESSAGE_LENGTH, rtc.read_time_epoch(), sampleSensors, n_sampleSensors);
             stopMeasurements();
 
@@ -311,6 +367,7 @@ void loop() {
             Serial.print("Wrote from ");
             Serial.print(nBytesWritten);
             #endif
+            // write buffer to file
             nBytesWritten += measurementData.write(message.getData(), length);
             #ifdef __DEBUG__
             Serial.print(" to ");
@@ -329,19 +386,24 @@ void loop() {
             // update sensor list that must be read at next sample event
 
             // find closest sample event
-            uint32_t interval = ~0;
-            for(i = 0; i < n_sensors; i++){
-                interval = min(interval, sensors[i]->adaptive_sample_interval_update(next_sample_time));
-            }
-
-            // find sensors that need to be sampled then
+            uint32_t interval = UINT_MAX;
+            uint32_t sensor_interval;
             n_sampleSensors = 0;
             for(i = 0; i < n_sensors; i++){
-                if(interval == sensors[i]->adaptive_sample_interval_update(next_sample_time)){
+                Serial.print("Sensor ");
+                Serial.print(i);
+                Serial.print(": ");
+                Serial.println(sensors[i]->adaptive_sample_interval_update(next_sample_time));
+                sensor_interval = sensors[i]->adaptive_sample_interval_update(next_sample_time);
+                if(sensor_interval < interval){
+                    n_sampleSensors = 1;
+                    interval = sensor_interval;
+                    sampleSensors[0] = sensors[i];
+                } else if(sensor_interval == interval){
                     sampleSensors[n_sampleSensors] = sensors[i];
                     n_sampleSensors++;
                 }
-            }
+            }        
             
             // set next measurement time
             next_sample_time += interval;
@@ -375,10 +437,12 @@ void loop() {
             Serial.println("State: Searching for gateway.");
             #endif
 
+            // AnyMessage: every LoRa message can be received
             status = radio.receiveAnyMessage(gatewaySearchWindow, message);
             #ifdef __DEBUG_COMM__
             status = true; message.setData((uint8_t*) "HELLOO\x04", 7);
             #endif
+            // check if message is coming from sensor node (not some other LoRa module in surrounding)
             if(status && checkCommand(message, CommunicationCommand::HELLO)){
                 uint8_t data[7];
 
@@ -387,10 +451,10 @@ void loop() {
                 Serial.println("Received hello message");
                 #endif
 
-                // store the MAC of the gateway
+                // store the MAC of the gateway (in hello message from gateway)
                 memcpy(gatewayMAC, message.getData(), ARRAY_LENGTH(gatewayMAC));
 
-                // send our MAC address
+                // send our MAC address: from node to gateway
                 memcpy(data, radio.getMACAddress(), 6);
                 data[6] = CommunicationCommandToInt(CommunicationCommand::HELLO_REPLY);
                 message.setData(data, ARRAY_LENGTH(data));
@@ -419,11 +483,13 @@ void loop() {
                 #ifdef __DEBUG__
                 Serial.println("Received time configuration.");
                 #endif
+                delay(300);
                 if(readTimeData(message, sensors, n_sensors)){
                     state = CommunicationState::SLEEP;
                 } else {
                     state = CommunicationState::SEARCHING_GATEWAY;
                 }
+                Serial.println(rtc.read_time_epoch());
             } else {
                 state = CommunicationState::SEARCHING_GATEWAY;
             }
@@ -434,10 +500,11 @@ void loop() {
         // send sensor data to the gateway
         case CommunicationState::UPLOAD_SENSOR_DATA:
             // wait for the command from the gateway, the gateway always takes initiative!
+            // gateway signals that it wants to receive message from specific node --> sensor node must be in this state to listen to this message
             status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::REQUEST_MEASUREMENT_DATA);
 
             if(status){
-
+                // buffer to save data to before sending out
                 uint8_t buffer[256];
                 size_t readLength = ARRAY_LENGTH(buffer) - 7;
 
@@ -455,6 +522,7 @@ void loop() {
 
                 // read at most 10 samples
                 readLength = min(readLength, nBytesWritten - nBytesRead);
+                // written as of position 7 (before: MAC address)
                 readLength = readMeasurementData(&buffer[7], readLength, measurementData);
 
                 measurementData.close();
@@ -464,7 +532,7 @@ void loop() {
 
                 radio.sendMessage(message);
 
-                // check for ACK
+                // check for ACK (acknowledge): checking if gateway has received message
                 status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::TIME_CONFIG);
 
                 // update variables if we received an ACK message from the gateway
@@ -475,12 +543,14 @@ void loop() {
                     Serial.println("Received ACK and timing update.");
                     #endif
 
-                    readTimeData(message, sensors, n_sensors);
-
+                    readTimeData(message, sensors, n_sensors, true);
+                    // another ACK from node to gateway --> gateway knows that node received message with next sample timepoint
                     buffer[6] = CommunicationCommandToInt(CommunicationCommand::ACK_DATA);
                     message.setData(buffer, 7);
                     radio.sendMessage(message);
 
+                    // OPTIONAL: remove data from sensor node when sure that gateway has received data
+                    // not necessary because enough storage in node
                     /*if(nBytesRead == nBytesWritten){
                         SPIFFS.remove(measurementDataFN);
                         
@@ -491,6 +561,8 @@ void loop() {
                         openDataFileWriteMode();
                         measurementData.close();
                     }*/
+
+
                 } else {
                     n_errors++;
 
@@ -528,7 +600,7 @@ void loop() {
 
             // check if the next sample time is close at hand
             if((next_sample_time - sleepThreshold) < now){
-                state = CommunicationState::READ_SENSOR_DATA;
+                state = CommunicationState::PREPARE_READOUT;
 
                 #ifdef __DEBUG__
                 Serial.println("Directly switching to sensor read state.");
@@ -555,11 +627,16 @@ void loop() {
 
             // check next wakeup event cause: sampling or communication
             if(next_sample_time <= next_communication_time){
-                state = CommunicationState::READ_SENSOR_DATA;
+                state = CommunicationState::PREPARE_READOUT;
+                // wakeupTime = time necessary for start up
                 sleepTime = ((next_sample_time - wakeupTime) - now);
+                Serial.println("Next event: sensor readout.");
+                Serial.flush();
             } else {
                 state = CommunicationState::UPLOAD_SENSOR_DATA;
                 sleepTime = ((next_communication_time - wakeupTime) - now);
+                Serial.println("Next event: gateway comms.");
+                Serial.flush();
             }
 
             if(sleepTime > maxSleepTime){
@@ -574,6 +651,8 @@ void loop() {
                 state = CommunicationState::SLEEP;
             }
 
+
+
             #ifdef __DEBUG__
             Serial.print("Sleeping for ");
             Serial.print(sleepTime);
@@ -584,15 +663,16 @@ void loop() {
             #endif
 
             if(sleepTime > 0){
-                digitalWrite(16, LOW);
+
+                // ! after every deep sleep: node returns to setup (only RTC_DATA_ATTR variables remain stored)
                 deepSleep(sleepTime);
             }
 
             break;
         }
         // This state can be used to readout the sensor data in case there was a communication issue.
-        // Currently, the software needs to be re-flashed to enter this state. This should be 
-        // modufied such that sening a special UART command can trigger a print to UART
+        // Currently, the software needs to be re-flashed to enter this state (forcing state to UART_READOUT around line 20). This should be 
+        // modified such that sening a special UART command can trigger a print to UART
         // TODO: improve this
         case CommunicationState::UART_READOUT:
             #ifdef __DEBUG__
@@ -613,8 +693,10 @@ void loop() {
 
                     measurementData.read(data_buffer, read_length);
 
+                    char print_buffer[10];
                     for(i = 0; i < read_length; i++){
-                        Serial.print(data_buffer[i], HEX);
+                        sprintf(print_buffer, "%02x", data_buffer[i]);
+                        Serial.print(print_buffer);
                     }
                     Serial.println();
                 }
@@ -625,7 +707,7 @@ void loop() {
                 Serial.println("There was an error.");
                 #endif
             }
-            state = CommunicationState::SLEEP;
+            state = prev_state;
             break;
 
     }
