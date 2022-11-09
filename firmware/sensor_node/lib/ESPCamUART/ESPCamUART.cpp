@@ -3,6 +3,9 @@
 
 extern PCF2129_RTC rtc;
 
+static volatile bool cam1_ok;
+static volatile bool cam2_ok;
+
 
 // specifies the time of the sun rise starting from 12PM at the first day of each month
 // Brussels timezone (UTC+1) WITHOUT daylight savings!!!
@@ -23,6 +26,11 @@ static double sunRiseTable[12] = {
 
 
 ESPCamUART::ESPCamUART(HardwareSerial* serial, const gpio_num_t pin, gpio_num_t a1, gpio_num_t a2) : serial(serial), pin(pin), stat1_pin(a1), stat2_pin(a2) {
+    attachInterrupt(stat1_pin, camera1_status_isr, RISING);
+    attachInterrupt(stat2_pin, camera2_status_isr, RISING);
+
+    cam1_ok = false;
+    cam2_ok = false;
 }
 
 void ESPCamUART::setup(void) {
@@ -45,6 +53,11 @@ void ESPCamUART::setup(void) {
 }
 
 void ESPCamUART::start_measurement(){
+    cam1_ok = false;
+    cam2_ok = false;
+
+    // send the get status message
+    serial->write(ESPCamUARTCommand::GET_STATUS);
     // write current time
     delay(100);
     time_t ctime = rtc.read_time_epoch();
@@ -55,35 +68,21 @@ void ESPCamUART::start_measurement(){
     Serial.println(ctime);
 }
 
+void IRAM_ATTR ESPCamUART::camera1_status_isr() {
+    cam1_ok = true;
+}
+
+void IRAM_ATTR ESPCamUART::camera2_status_isr() {
+    cam2_ok = true;
+}
+
 uint8_t ESPCamUART::read_measurement(float* data, uint8_t length) {
     uint8_t status;
 
-    for(int i = 0; i < 2; i++){
-        // take picture and readout status of previous picture
-        serial->write(ESPCamUARTCommand::GET_STATUS);
+    cam1_ok ? data[0] = 1.0 : data[0] = 0.0;
+    cam2_ok ? data[1] = 1.0 : data[1] = 0.0;
 
-        delay(500);
-
-        if(i == 0){
-            if(digitalRead(stat1_pin) == HIGH){
-                *data = 1.0;
-            } else {
-                *data = 0.0;
-            }
-        } else {
-            if(digitalRead(stat2_pin) == HIGH){
-                *data = 1.0;
-            } else {
-                *data = 0.0;
-            }
-        }
-
-        delay(100);
-
-        data++;
-
-        serial->write(ESPCamUARTCommand::TAKE_PICTURE);
-    }
+    serial->write(ESPCamUARTCommand::TAKE_PICTURE);
 
     serial->end();
     pinMode(pin, OUTPUT);

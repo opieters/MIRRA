@@ -39,5 +39,8 @@ class ESPCamUART : public Sensor {
         const gpio_num_t pin;
         const gpio_num_t stat1_pin, stat2_pin;
 
+        static void IRAM_ATTR camera1_status_isr();
+        static void IRAM_ATTR camera2_status_isr();
+
 };
 #endif
