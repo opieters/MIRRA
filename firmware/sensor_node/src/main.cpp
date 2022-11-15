@@ -8,7 +8,7 @@
 #include "SPIFFS.h"
 #include "Sensor.h"
 #include "TempRHSensor.h"
-#include "SoilMoistureSensor.h"
+//#include "SoilMoistureSensor.h"
 #include "LightSensor.h"
 #include "SoilTempSensor.h"
 #include "ESPCam.h"
@@ -17,6 +17,7 @@
 #include "ESPCamOW.h"
 #include <HardwareSerial.h>
 #include <ESPCamUART.h>
+#include <driver/adc.h>
 
 #define SS_PIN 27       // Slave select pin
 #define RST_PIN 26      // Reset pin
@@ -80,7 +81,6 @@ LightSensor lightSensor;
 SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
 
 ESPCamUART espCamera1(&serial2, GPIO_NUM_2, GPIO_NUM_36, GPIO_NUM_39);
-
 
 Sensor* sensors[] = {
     &airTempRHSensor,
@@ -165,6 +165,7 @@ void setup() {
     digitalWrite(16, HIGH);
     gpio_hold_dis((gpio_num_t) 16);
 
+    
     //ss.enableIntTx(false);
     //ss.enableRx(false);
 
@@ -216,7 +217,7 @@ void setup() {
         #endif
 
         // Writing the initial time: dummy time (is changed after communication with gateway)
-        rtc.write_time_epoch(1560210031);
+        rtc.write_time_epoch(1560210042);
         #ifdef __DEBUG__
         Serial.println(" done.");
         #endif
@@ -249,10 +250,10 @@ void setup() {
         #endif
 
         // default sample interval: 10 minutes (read out data from sensors)
-        sample_interval = 10*60;
+        sample_interval = 20*60; 
         // default communication interval: 20 minutes (communication with gateway)
         // communication always occurs between sample timepoint, never at the same time!
-        communication_interval = 20*60;
+        communication_interval = 60*60; 
 
         #ifdef __DEBUG__
         Serial.println("Testing sensor readout.");
@@ -486,6 +487,7 @@ void loop() {
                 delay(300);
                 if(readTimeData(message, sensors, n_sensors)){
                     state = CommunicationState::SLEEP;
+
                 } else {
                     state = CommunicationState::SEARCHING_GATEWAY;
                 }

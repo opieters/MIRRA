@@ -228,6 +228,7 @@ bool RadioModule::receiveSpecificMessage(uint32_t timeout_ms, LoRaMessage& messa
         } else {
             status = false;
         }
+        Serial.println("LOOOOOP.");
     } while(!status && (rtc->read_time_epoch() < timeout));
     return false;
 }

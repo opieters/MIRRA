@@ -24,7 +24,7 @@ class ESPCamUART : public Sensor {
 
         const uint8_t getID() { return 64; };
 
-        //uint32_t adaptive_sample_interval_update(time_t ctime);
+        uint32_t adaptive_sample_interval_update(time_t ctime);
 
         enum ESPCamUARTCommand {
             SET_TIME = 11,
@@ -38,9 +38,6 @@ class ESPCamUART : public Sensor {
         HardwareSerial* serial;
         const gpio_num_t pin;
         const gpio_num_t stat1_pin, stat2_pin;
-
-        static void IRAM_ATTR camera1_status_isr();
-        static void IRAM_ATTR camera2_status_isr();
 
 };
 #endif

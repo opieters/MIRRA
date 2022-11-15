@@ -15,6 +15,7 @@ ESP32-CAM
 #include <time.h>
 #include <esp_sntp.h>
 #include <HardwareSerial.h>
+#include "SPI.h"
 
 // for debugging purposes
 #define __DEBUG__   // comment out when not debugging
@@ -31,9 +32,9 @@ String datetimeString;
 //String timeStamp;
 
 
-// one wire interface to sensor node
-constexpr gpio_num_t ow_pin = GPIO_NUM_13;
-constexpr gpio_num_t stat_pin = GPIO_NUM_12;
+// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO13 (=ow_pin)
+constexpr gpio_num_t ow_pin = GPIO_NUM_12;
+constexpr gpio_num_t stat_pin = GPIO_NUM_13;
 HardwareSerial serial2(2);
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
@@ -106,7 +107,9 @@ void takePicture(void){
     rtc_gpio_hold_dis(GPIO_NUM_4);
     
     if(psramFound()){
+        #ifdef __DEBUG__
         Serial.println("psram found");
+        #endif
         config.frame_size = FRAMESIZE_SXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
         config.jpeg_quality = 10;
         config.fb_count = 1;
@@ -125,16 +128,20 @@ void takePicture(void){
         pictureSuccess = false;
         return;
     } else {
+        #ifdef __DEBUG__
         Serial.println("Camera init OK.");
+        #endif
         pictureSuccess = true;
     }
 
+    pinMode(stat_pin, INPUT);
 
     #ifdef __DEBUG__
     Serial.println("Starting SD Card");
     #endif
     delay(500);
     
+    //delay(1000); 
     if(!SD_MMC.begin("/sdcard", true, false)){ // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
         Serial.println("SD Card Mount Failed");
         delay(500);
@@ -225,7 +232,9 @@ void takePicture(void){
             String path2 = "/" + datetimeString + "_" + b_s + String (1) + String (1) + "_" + ae_s + ".jpg";
 
             fs::FS &fs = SD_MMC;
+            #ifdef __DEBUG__
             Serial.printf("Picture file name: %s\n", path2.c_str());
+            #endif
 
             File file2 = fs.open(path2.c_str(), FILE_WRITE);
             if (!file2) {
@@ -235,7 +244,9 @@ void takePicture(void){
             }
             else {
                 file2.write(fb->buf, fb->len); // payload (image), payload length
+                #ifdef __DEBUG__
                 Serial.printf("Saved file to path: %s\n", path2.c_str());
+                #endif
             }
 
             file2.close();
@@ -273,10 +284,13 @@ void setup() {
     }
 
     pinMode(stat_pin, OUTPUT);
+    digitalWrite(stat_pin, LOW);
 
     sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
 
+    #ifdef __DEBUG__
     Serial.println("Setup done.");
+    #endif
 
     serial2.flush();
 } 
@@ -291,19 +305,27 @@ void loop() {
     //if (!owi.rom_command()) { return; }
     while(!serial2.available());
 
+    #ifdef __DEBUG__
     Serial.println("YES");
+    #endif
     
     cmd = serial2.read();
 
+    #ifdef __DEBUG__
     Serial.print("Received ");
     Serial.println(cmd);
+    #endif
 
     // Read and dispatch remote arduino commands
     switch (cmd) {
         case ESPCam::SET_TIME:
+            #ifdef __DEBUG__
             Serial.println("Setting the time.");
+            #endif
             serial2.readBytes((uint8_t*) &owi_time, sizeof(owi_time));
+            #ifdef __DEBUG__
             Serial.println(owi_time);
+            #endif
             owi_time_value = {owi_time, 0};
             sntp_sync_time(&owi_time_value);
             delay(100);
@@ -321,7 +343,10 @@ void loop() {
             }
             break;
         case ESPCam::TAKE_PICTURE:
+            //delay(500);
+            #ifdef __DEBUG__
             Serial.println("Taking picture");
+            #endif
             takePicture();
         case ESPCam::ENABLE_SLEEP:
             // always sleep in the loop-state
