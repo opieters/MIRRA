@@ -2,6 +2,8 @@
 
 Microclimate Instrument for Real-time Remote Applications
 
+⚠️ This is a research project. Limited testing has been performed and reliability of data storage/sensor readout is not guaranteed. Use with caution. ⚠️
+
 ## 3D Designs
 
 The radiation is 3D printed and designed using OpenSCAD. All design files can eb found in `3d_printing`. They can be printed using an extrusion printer, with minimal post-processign (no supports).
