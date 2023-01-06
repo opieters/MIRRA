@@ -82,7 +82,7 @@ extern bool firstBoot;
 
 extern File sensorData;
 
-constexpr uint8_t sda_pin = 21, scl_pin = 22;
+constexpr uint8_t pinSDA = 21, pinSCL = 22;
 
 constexpr uint32_t sleepThreshold = 5; // seconds
 
@@ -222,6 +222,8 @@ void setup(void){
         uploadDataTime = readoutTime;
 
         gateway.initFirstBoot();
+
+        WiFi.disconnect();
 
         firstBoot = false;
     }
