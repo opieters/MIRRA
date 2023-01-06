@@ -15,3 +15,5 @@ pcb_boards/gateway/pcb_gateway-rescue.lib
 pcb_boards/sensor_node/sensor_node-rescue.dcm
 firmware/gateway2
 firmware/sensor_node2
+analysis/eline.csv
+*.zip

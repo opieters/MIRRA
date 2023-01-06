@@ -171,7 +171,7 @@ void setup() {
 
 
     Serial.begin(115200);
-    Wire.begin(sda_pin, scl_pin, 100e3); // starts i2c
+    Wire.begin(sdaPin, sclPin, 100e3); // starts i2c
 
     attachInterrupt(0, gpio_0_isr_callback, FALLING);
 
