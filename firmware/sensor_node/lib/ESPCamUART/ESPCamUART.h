@@ -10,7 +10,7 @@
 
 class ESPCamUART : public Sensor {
     public:
-        ESPCamUART(HardwareSerial* serial, gpio_num_t pin, gpio_num_t stat1_pin, gpio_num_t stat2_pin);
+        ESPCamUART(HardwareSerial* serial, gpio_num_t pin);
 
         void setup(void);
 
@@ -37,7 +37,6 @@ class ESPCamUART : public Sensor {
     private:
         HardwareSerial* serial;
         const gpio_num_t pin;
-        const gpio_num_t stat1_pin, stat2_pin;
 
 };
 #endif

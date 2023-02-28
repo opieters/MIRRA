@@ -1,17 +1,8 @@
 /*********
-  Rui Santos
-  Complete project details at https://RandomNerdTutorials.com/esp32-cam-pir-motion-detector-photo-capture/
- 
-  IMPORTANT!!!
-   - Select Board "AI Thinker ESP32-CAM"
-   - GPIO 0 must be connected to GND to upload a sketch
-   - After connecting GPIO 0 to GND, press the ESP32-CAM on-board RESET button to put your board in flashing mode
- 
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files.
-  The above copyright notice and this permission notice shall be included in all
-  copies or substantial portions of the Software.
+ESP32-CAM
 *********/
+
+//#define __ESP32__
  
 #include "esp_camera.h"
 #include "Arduino.h"
@@ -21,10 +12,30 @@
 #include "soc/rtc_cntl_reg.h"  // Disable brownour problems
 #include "driver/rtc_io.h"
 #include <EEPROM.h>            // read and write from flash memory
+#include <time.h>
+#include <esp_sntp.h>
+#include <HardwareSerial.h>
+#include "SPI.h"
+
+// for debugging purposes
+#define __DEBUG__   // comment out when not debugging
+
 // define the number of bytes you want to access
 #define EEPROM_SIZE 1
- 
-RTC_DATA_ATTR int bootCount = 0;
+
+RTC_DATA_ATTR bool firstBoot = true;
+
+// Variables to save date and time
+char formattedDatetime[26];
+String datetimeString;
+//String dayStamp;
+//String timeStamp;
+
+
+// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO13 (=ow_pin)
+constexpr gpio_num_t ow_pin = GPIO_NUM_12;
+//constexpr gpio_num_t stat_pin = GPIO_NUM_13;
+HardwareSerial serial2(2);
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
 #define PWDN_GPIO_NUM     32
@@ -45,137 +56,320 @@ RTC_DATA_ATTR int bootCount = 0;
 #define PCLK_GPIO_NUM     22
  
 int pictureNumber = 0;
-bool pictureSuccess = false;
+RTC_DATA_ATTR bool pictureSuccess;
+
+class ESPCam {
+  public:
+    /** One-Wire Interface (OWI) Remote Arduino Device function codes. */
+      enum {
+        SET_TIME = 11,
+        GET_TIME = 22,
+        TAKE_PICTURE = 33,
+        ENABLE_SLEEP = 44,
+        GET_STATUS = 55,
+      };
+};
+
+int i = 0;
+uint8_t status = 0;
+time_t owi_time = 0;
+uint8_t sensor_n = 0;
+
+timeval owi_time_value;
+
+void takePicture(void){
+// Camera configuration
+    camera_config_t config;
+    config.ledc_channel = LEDC_CHANNEL_0;
+    config.ledc_timer = LEDC_TIMER_0;
+    config.pin_d0 = Y2_GPIO_NUM;
+    config.pin_d1 = Y3_GPIO_NUM;
+    config.pin_d2 = Y4_GPIO_NUM;
+    config.pin_d3 = Y5_GPIO_NUM;
+    config.pin_d4 = Y6_GPIO_NUM;
+    config.pin_d5 = Y7_GPIO_NUM;
+    config.pin_d6 = Y8_GPIO_NUM;
+    config.pin_d7 = Y9_GPIO_NUM;
+    config.pin_xclk = XCLK_GPIO_NUM;
+    config.pin_pclk = PCLK_GPIO_NUM;
+    config.pin_vsync = VSYNC_GPIO_NUM;
+    config.pin_href = HREF_GPIO_NUM;
+    config.pin_sscb_sda = SIOD_GPIO_NUM;
+    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_pwdn = PWDN_GPIO_NUM;
+    config.pin_reset = RESET_GPIO_NUM;
+    config.xclk_freq_hz = 20000000;
+    config.pixel_format = PIXFORMAT_JPEG;
+
+    // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
+    pinMode(4, INPUT);
+    digitalWrite(4, LOW);
+    rtc_gpio_hold_dis(GPIO_NUM_4);
+    
+    if(psramFound()){
+        #ifdef __DEBUG__
+        Serial.println("psram found");
+        #endif
+        config.frame_size = FRAMESIZE_SXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+        config.jpeg_quality = 10;
+        config.fb_count = 1;
+    } else {
+        config.frame_size = FRAMESIZE_VGA;
+        config.jpeg_quality = 10;
+        config.fb_count = 1;
+    }
+
+    delay(1000);
+    
+    // Init Camera
+    esp_err_t err = esp_camera_init(&config);
+    if (err != ESP_OK) {
+        Serial.printf("Camera init failed with error 0x%x", err);
+        pictureSuccess = false;
+        return;
+    } else {
+        #ifdef __DEBUG__
+        Serial.println("Camera init OK.");
+        #endif
+        pictureSuccess = true;
+    }
+
+    //pinMode(stat_pin, INPUT);
+
+    #ifdef __DEBUG__
+    Serial.println("Starting SD Card");
+    #endif
+    delay(500);
+    
+    //delay(1000); 
+    if(!SD_MMC.begin("/sdcard", true, false)){ // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
+        Serial.println("SD Card Mount Failed");
+        delay(500);
+    }
+    
+    uint8_t cardType = SD_MMC.cardType();
+    if(cardType == CARD_NONE){
+        Serial.println("No SD Card attached");
+        pictureSuccess = false;
+        return;
+    }
+
+    struct tm timeinfo;
+
+    timeval tv;
+    gettimeofday(&tv, NULL);
+    timeinfo = *gmtime(&tv.tv_sec);
+
+    strftime(formattedDatetime, sizeof(formattedDatetime), "%Y-%m-%d %H_%M_%S", &timeinfo);
+    datetimeString =  String(formattedDatetime);
+    #ifdef __DEBUG__
+    Serial.print("Current datetime:");
+    Serial.println(datetimeString);
+    #endif
+    delay(500);
+    
+    camera_fb_t * fb = NULL;
+    
+    //set standard settings for gain and white balance (should be kept fixed -> cloudy)
+    sensor_t * s = esp_camera_sensor_get();
+
+    //Postprocessing
+    s->set_brightness(s, 0);     // -2 to 2
+    s->set_contrast(s, 0);       // -2 to 2
+    s->set_saturation(s, 0);     // -2 to 2
+    s->set_special_effect(s, 0); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
+    //White balance
+    s->set_whitebal(s, 0);       // 0 = disable , 1 = enable, switch off automatic white balancing, to force the fixed WB mode below?
+    s->set_awb_gain(s, 1);       // 0 = disable , 1 = enable
+    s->set_wb_mode(s, 2);        // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
+    //Exposure
+    s->set_exposure_ctrl(s, 1);  // 0 = disable , 1 = enable, if too dim the exposure will be longer
+    s->set_aec2(s, 0);           // 0 = disable , 1 = enable, ????
+    s->set_ae_level(s, 0);       // -2 to 2, too lighten/darken picture on top of automatic exposure
+    s->set_aec_value(s, 300);    // 0 to 1200, too set exposure yourself, when AEC is disabled
+    //ISO
+    s->set_gain_ctrl(s, 0);      // 0 = disable , 1 = enable #switch of automatic gain control, to ensure that a fixed gain of zero (next row) is applied
+    s->set_agc_gain(s, 0);       // 0 to 30
+    s->set_gainceiling(s, (gainceiling_t)0);  // 0 to 6 #only for automatic gain control, defines the max gain
+    //picture correction
+    s->set_bpc(s, 0);            // 0 = disable , 1 = enable
+    s->set_wpc(s, 1);            // 0 = disable , 1 = enable
+    s->set_raw_gma(s, 1);        // 0 = disable , 1 = enable
+    s->set_lenc(s, 1);           // 0 = disable , 1 = enable
+    s->set_hmirror(s, 0);        // 0 = disable , 1 = enable
+    s->set_vflip(s, 0);          // 0 = disable , 1 = enable
+    s->set_dcw(s, 1);            // 0 = disable , 1 = enable
+    s->set_colorbar(s, 0);       // 0 = disable , 1 = enable
+
+    //set brightness
+    for (int b = -2; b <= 2; b = b + 2) {
+        s->set_brightness(s, b);
+        char b_s = String(b).charAt(0);
+        if (b == 2) {
+            b_s = '+';
+        }
+        
+        // set gamma correction and exposure control
+        s->set_raw_gma(s, 1);
+        s->set_exposure_ctrl(s, 1);
+
+        //set automatic exposure level
+        for (int ae = -2; ae <= 2; ae = ae + 2) {
+            s->set_ae_level(s, ae);
+            char ae_s = String(ae).charAt(0);
+            if (ae == 2) {
+                ae_s = '+';
+            }
+            // take picture
+            fb = esp_camera_fb_get();
+            if (!fb) {
+                Serial.println("Camera capture failed");
+                pictureSuccess = false;
+                return;
+            }
+
+            // save picture
+            String path2 = "/" + datetimeString + "_" + b_s + String (1) + String (1) + "_" + ae_s + ".jpg";
+
+            fs::FS &fs = SD_MMC;
+            #ifdef __DEBUG__
+            Serial.printf("Picture file name: %s\n", path2.c_str());
+            #endif
+
+            File file2 = fs.open(path2.c_str(), FILE_WRITE);
+            if (!file2) {
+                Serial.println("Failed to open file in writing mode");
+                pictureSuccess = false;
+                return;
+            }
+            else {
+                file2.write(fb->buf, fb->len); // payload (image), payload length
+                #ifdef __DEBUG__
+                Serial.printf("Saved file to path: %s\n", path2.c_str());
+                #endif
+            }
+
+            file2.close();
+            esp_camera_fb_return(fb);
+
+            delay(100);
+        }
+    }
+
+    delay(1000);
+    
+    // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
+    pinMode(4, OUTPUT);
+    digitalWrite(4, LOW);
+    rtc_gpio_hold_en(GPIO_NUM_4);
+
+    pictureSuccess = true;
+
+    return;
+}
+
+
   
 void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-  Serial.begin(115200);
- 
-  Serial.setDebugOutput(true);
- 
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
-  
-  pinMode(4, INPUT);
-  digitalWrite(4, LOW);
-  rtc_gpio_hold_dis(GPIO_NUM_4);
- 
-  if(psramFound()){
-    config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-    config.jpeg_quality = 10;
-    config.fb_count = 2;
-  } else {
-    config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12;
-    config.fb_count = 1;
-  }
- 
-  // Init Camera
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
-    return;
-  }
- 
-  Serial.println("Starting SD Card");
- 
-  delay(500);
-  if(!SD_MMC.begin("/sdcard", true)){              // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
-    Serial.println("SD Card Mount Failed");
-    //return;
-  }
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+    Serial.begin(115200);
+    
+    Serial.setDebugOutput(true);
 
-  // since GPIO13 can be used for the SD card and is modfied by the above command,
-  // we need to re-set the status here
-  pinMode(GPIO_NUM_13, INPUT);
+    serial2.begin(9600, SERIAL_8N1, ow_pin, -1, true);
 
-  // Define GPIO 12 (overwrite) as output and set to LOW
-  pinMode(GPIO_NUM_12, OUTPUT);
-  digitalWrite(GPIO_NUM_12, LOW);
- 
-  uint8_t cardType = SD_MMC.cardType();
-  if(cardType == CARD_NONE){
-    Serial.println("No SD Card attached");
-    return;
-  }
-   
-  camera_fb_t * fb = NULL;
- 
-  // Take Picture with Camera
-  fb = esp_camera_fb_get();  
-  if(!fb) {
-    Serial.println("Camera capture failed");
-    return;
-  }
-  // initialize EEPROM with predefined size
-  EEPROM.begin(EEPROM_SIZE);
-  pictureNumber = EEPROM.read(0) + 1;
- 
-  // Path where new picture will be saved in SD Card
-  String path = "/picture" + String(pictureNumber) +".jpg";
- 
-  fs::FS &fs = SD_MMC;
-  Serial.printf("Picture file name: %s\n", path.c_str());
- 
-  File file = fs.open(path.c_str(), FILE_WRITE);
-  if(!file){
-    Serial.println("Failed to open file in writing mode");
-  }
-  else {
-    file.write(fb->buf, fb->len); // payload (image), payload length
-    Serial.printf("Saved file to path: %s\n", path.c_str());
-    EEPROM.write(0, pictureNumber);
-    EEPROM.commit();
-    pictureSuccess = true;
-  }
-  file.close();
-  esp_camera_fb_return(fb);
+    if (firstBoot){
+        pictureSuccess =  true;
+        firstBoot = false;
+    }
 
-  delay(1000);
+    //pinMode(stat_pin, OUTPUT);
+    //digitalWrite(stat_pin, LOW);
 
-  while(digitalRead(GPIO_NUM_13) == HIGH);
+    sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
 
-  if(pictureSuccess){
-    // Set GPIO 12 to high voltage
-    digitalWrite(GPIO_NUM_12, HIGH);
-    Serial.println("Sending HIGH signal on GPIO12");
-  }
-  
-  // IMPORTANT - we define pin mode for the trigger pin at the end of setup, because most pins on the ESP32-CAM
-  // have dual functions, and may have previously been used by the camera or SD card access. So we overwrite them here
-  //pinMode(GPIO_NUM_13, INPUT_PULLDOWN);
-  
-  // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
-  pinMode(4, OUTPUT);
-  digitalWrite(4, LOW);
-  rtc_gpio_hold_en(GPIO_NUM_4);
+    #ifdef __DEBUG__
+    Serial.println("Setup done.");
+    #endif
+
+    serial2.flush();
+
+    // Go to sleep after boot (enable external wake up on IO12)
+    if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0){
+        esp_sleep_enable_ext0_wakeup(ow_pin, 1);
+        Serial.println("Going to sleep now");
+        Serial.flush();
+        esp_deep_sleep_start();
+    }
+    
 } 
+
+uint8_t cmd;
+int counter = 0;
  
 void loop() {
-  // always sleep in the loop-state
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 1);
- 
-  Serial.println("Going to sleep now");
-  delay(1000);
-  esp_deep_sleep_start();
-  Serial.println("This will never be printed");
+
+    // Additional sketch code could be placed here before
+    // polling one-wire bus for commands
+    //if (!owi.rom_command()) { return; }
+    while(!serial2.available());
+
+    #ifdef __DEBUG__
+    Serial.println("YES");
+    #endif
+    
+    cmd = serial2.read();
+
+    #ifdef __DEBUG__
+    Serial.print("Received ");
+    Serial.println(cmd);
+    #endif
+
+    // Read and dispatch remote arduino commands
+    switch (cmd) {
+        case ESPCam::SET_TIME:
+            #ifdef __DEBUG__
+            Serial.println("Setting the time.");
+            #endif
+            serial2.readBytes((uint8_t*) &owi_time, sizeof(owi_time));
+            #ifdef __DEBUG__
+            Serial.println(owi_time);
+            #endif
+            owi_time_value = {owi_time, 0};
+            sntp_sync_time(&owi_time_value);
+            delay(100);
+            sntp_sync_time(&owi_time_value);
+            break;
+        case ESPCam::GET_TIME:
+            break;
+        case ESPCam::GET_STATUS:
+            if(pictureSuccess){
+                Serial.println("SUCCESS PRINT");
+                //digitalWrite(stat_pin, HIGH);
+            } else {
+                Serial.println("FAIL PRINT");
+                //digitalWrite(stat_pin, LOW);
+            }
+            break;
+        case ESPCam::TAKE_PICTURE:
+            //delay(500);
+            #ifdef __DEBUG__
+            Serial.println("Taking picture");
+            #endif
+            takePicture();
+        case ESPCam::ENABLE_SLEEP:
+            // always sleep in the loop-state
+            // swSer.end();
+            serial2.end();
+            esp_sleep_enable_ext0_wakeup(ow_pin, 1);
+            
+            Serial.println("Going to sleep now");
+            Serial.flush();
+            esp_deep_sleep_start();
+            break;
+        default:
+            break;
+    }
+
+
 }

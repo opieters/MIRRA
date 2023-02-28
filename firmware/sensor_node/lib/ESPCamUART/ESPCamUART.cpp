@@ -21,7 +21,7 @@ static double sunRiseTable[12] = {
 };
 
 
-ESPCamUART::ESPCamUART(HardwareSerial* serial, const gpio_num_t pin, gpio_num_t a1, gpio_num_t a2) : serial(serial), pin(pin), stat1_pin(a1), stat2_pin(a2) {
+ESPCamUART::ESPCamUART(HardwareSerial* serial, const gpio_num_t pin) : serial(serial), pin(pin) {
 }
 
 void ESPCamUART::setup(void) {
@@ -37,15 +37,13 @@ void ESPCamUART::setup(void) {
 
     serial->begin(9600, SERIAL_8N1, -1, pin, true);
 
-    pinMode(stat1_pin, INPUT);
-    pinMode(stat2_pin, INPUT);
 
     Serial.println("Configuring ESPCAM UART.");
 }
 
 void ESPCamUART::start_measurement(){
     // send the get status message
-    serial->write(ESPCamUARTCommand::GET_STATUS);
+    //serial->write(ESPCamUARTCommand::GET_STATUS);
     // write current time
     delay(100);
     time_t ctime = rtc.read_time_epoch();
@@ -58,8 +56,10 @@ void ESPCamUART::start_measurement(){
 
 uint8_t ESPCamUART::read_measurement(float* data, uint8_t length) {
     //uint8_t status;
-    digitalRead(stat1_pin)==HIGH ? data[0] = 1.0 : data[0] = 0.0;
-    digitalRead(stat2_pin)==HIGH ? data[1] = 1.0 : data[1] = 0.0;
+
+    data[0] = 0;
+    data[1] = 0;
+
 
     serial->write(ESPCamUARTCommand::TAKE_PICTURE);
     serial->flush();

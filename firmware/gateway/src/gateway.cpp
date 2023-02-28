@@ -9,11 +9,9 @@
 RTC_DATA_ATTR size_t nBytesWritten = 0;
 RTC_DATA_ATTR size_t nBytesRead = 0;
 
-RTC_DATA_ATTR SensorNode_t sensorNodes[4];
-RTC_DATA_ATTR uint8_t nSensorNodes;
+RTC_DATA_ATTR SensorNode_t sensorNodes[20];
+RTC_DATA_ATTR uint8_t nSensorNodes = 0;
 
-RTC_DATA_ATTR GateWayState state = GateWayState::DISCOVER_MODULES;
-RTC_DATA_ATTR GateWayState previousState = GateWayState::DISCOVER_MODULES;
 RTC_DATA_ATTR bool firstBoot = true;
 
 const char nodeDataFN[11] = "/nodes.dat";
@@ -100,7 +98,9 @@ void Gateway::deepSleep(float sleep_time){
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
     // Therefore we force pin 15 to a LOW state here.
     pinMode(15, OUTPUT); 
-    digitalWrite(15, LOW);  
+    digitalWrite(15, LOW); 
+
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); 
 
     // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep sleep
     if (sleep_time < 10){
@@ -117,11 +117,58 @@ void Gateway::deepSleep(float sleep_time){
 
         digitalWrite(16, LOW);
 
-        if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)
-            esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
         esp_sleep_enable_ext0_wakeup((gpio_num_t) rtc->getIntPin(), 0);
+        esp_sleep_enable_ext1_wakeup((gpio_num_t) (1 << 0), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+
         esp_deep_sleep_start();
     }
+}
+
+bool Gateway::printDataUART(){
+    // connect to MQTT server
+    
+    if(!SPIFFS.exists(sensorDataFN)){
+        Serial.println("No measurement data file found.");
+        return false;
+    }
+
+    sensorData = SPIFFS.open(sensorDataFN, FILE_READ);
+    sensorData.seek(nBytesRead);
+
+    Serial.print("Moving start to");
+    Serial.println(nBytesRead);
+
+    // upload all the data to the server
+    // the data is stored as:
+    // ... | MAC sensor node (6) | timestamp (4) |  n values (1) | sensor id (1) | sensor value (4) | sensor id (1) | sensor value (4) | ... | MAC sensor node (6)
+    // the MQTT server can only process one full sensor readout at a time, so we read part per part
+    while(nBytesRead < nBytesWritten){
+        uint8_t buffer[256];
+        uint8_t buffer_length = 0;
+
+        // read the MAC address, timestamp and number of readouts
+        nBytesRead += sensorData.read(buffer, MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t));
+        buffer_length += MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t);
+
+        uint8_t nSensorValues = buffer[buffer_length-1];
+
+        // read data to buffer
+        nBytesRead += sensorData.read(&buffer[buffer_length], nSensorValues*(sizeof(float) + sizeof(uint8_t)));
+        buffer_length += nSensorValues*(sizeof(float) + sizeof(uint8_t));
+
+        Serial.print("SENSOR DATA [");
+
+        for(size_t i = 0; i < buffer_length; i++){
+            Serial.print(buffer[i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println("]");
+    }
+    Serial.flush();
+
+    sensorData.close();
+
+    return true;
 }
 
 bool Gateway::uploadData() {
@@ -384,6 +431,10 @@ SensorNode_t* Gateway::addNewNode(LoRaMessage& m){
         }
     }
 
+    if(nSensorNodes == ARRAY_LENGTH(sensorNodes)){
+        newNode  = false;
+    }
+
     // add new nodes to the node list
     if(newNode){
         auto time = rtc->read_time_epoch();
@@ -456,6 +507,8 @@ void Gateway::storeSensorData(LoRaMessage& m){
         Serial.println(nBytesWritten);
 
         sensorData.close();
+    } else {
+        Serial.println("Unable to open file.");
     }
 }
 

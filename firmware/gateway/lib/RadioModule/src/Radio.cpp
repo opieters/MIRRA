@@ -113,8 +113,8 @@ bool RadioModule::receiveAnyMessage(uint32_t timeout_ms, LoRaMessage& message){
         
         // If the GPIO is the wakup source this means that we received a message and we didn't timeout
         esp_sleep_wakeup_cause_t wakup_cause = esp_sleep_get_wakeup_cause();
-        Serial.print(F("Wakeup a result of"));
-        Serial.println(wakup_cause);
+        //Serial.print(F("Wakeup a result of"));
+        //Serial.println(wakup_cause);
 
         if (wakup_cause == ESP_SLEEP_WAKEUP_GPIO || wakup_cause == ESP_SLEEP_WAKEUP_EXT0) {
             size_t length = lora_mod.getPacketLength();
@@ -150,7 +150,7 @@ bool RadioModule::receiveAnyMessage(uint32_t timeout_ms, LoRaMessage& message){
                 return false;
             }
         } else {
-            Serial.println("No reply received.");
+            //Serial.println("No reply received.");
             return false;
         }
     } else {

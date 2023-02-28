@@ -18,7 +18,7 @@ enum class GateWayState {
     READ_SENSORS,
     ERROR,
     UART_READOUT,
-    START_SLEEP,
+    FIND_NEXT_STATE,
     MODULE_CHECK,
 };
 
@@ -32,6 +32,7 @@ class Gateway {
         SensorNode_t* addNewNode(LoRaMessage& m);
 
         bool uploadData();
+        bool printDataUART();
         void storeSensorData(LoRaMessage&);
         void createDiscoveryMessage(LoRaMessage&);
         void createAckMessage(LoRaMessage&, LoRaMessage&);
@@ -60,7 +61,7 @@ class Gateway {
         static const uint32_t communicationSpacing = 15; // seconds
 
 #ifdef DEBUG_TIMING
-        static const uint32_t uploadDataInterval = 8*60; // seconds
+        static const uint32_t uploadDataInterval = 60; // seconds
 #else
         static const uint32_t uploadDataInterval = 60*60; // seconds
 #endif
