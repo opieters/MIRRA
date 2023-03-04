@@ -19,7 +19,7 @@ services:
       #MYSQL_HOST: 193.190.127.143/255.255.255.0
     volumes:
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - db_data:/users/opieters/webserver/management_interface/docker/data
+      #- db_data:/users/opieters/webserver/management_interface/docker/data
       #- /users/opieters/webserver/management_interface/docker/data:/docker-entrypoint-initdb.d
 
   # Start up MQTT
@@ -35,7 +35,7 @@ services:
   web:
     container_name: "web"
     build: 
-      context: /home/gems/GEMS/webserver/management_interface/
+      context: ./management_interface/
       #dockerfile: Dockerfile
     ports:
       - "80:80"
@@ -47,7 +47,7 @@ services:
   mqtt_parser:
     container_name: "mqtt_parser"
     build:
-      context: /home/gems/GEMS/webserver/mqtt_parser/
+      context: ./mqtt_parser/
       #dockerfile: Dockerfile
     #ports:
     #  - "3306:3306"

@@ -32,8 +32,8 @@ db_settings = {
 }
 
 basic_auth_settings = {
-    'username': 'case12',
-    'password': 'mechatronica'
+    'username': 'vop',
+    'password': 'cw'
 }
 
 mqqt_settings = {
