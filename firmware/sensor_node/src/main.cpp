@@ -35,7 +35,7 @@ RadioModule radio(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, TX_SWITCH, RX_SWITC
 RTC_DATA_ATTR bool firstBoot = true;
 
 // keep communication state in persistent memory
-RTC_DATA_ATTR CommunicationState state = CommunicationState::SEARCHING_GATEWAY, prev_state = CommunicationState::SLEEP;
+RTC_DATA_ATTR CommunicationState state = CommunicationState::UART_READOUT, prev_state = CommunicationState::SLEEP;
 RTC_DATA_ATTR uint16_t n_errors = 0;
 
 constexpr uint8_t sda_pin = 21, scl_pin = 22;
