@@ -188,7 +188,6 @@ void setup()
         SPIFFS.format();
         ESP.restart();
     }
-    
 
     // try to open data file
     openDataFileWriteMode();
@@ -646,14 +645,14 @@ void loop()
         {
             state = CommunicationState::PREPARE_READOUT;
             // wakeupTime = time necessary for start up
-            sleepTime = ((next_sample_time) - now);
+            sleepTime = ((next_sample_time)-now);
             Serial.println("Next event: sensor readout.");
             Serial.flush();
         }
         else
         {
             state = CommunicationState::UPLOAD_SENSOR_DATA;
-            sleepTime = ((next_communication_time) - now);
+            sleepTime = ((next_communication_time)-now);
             Serial.println("Next event: gateway comms.");
             Serial.flush();
         }
