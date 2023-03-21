@@ -41,11 +41,12 @@ void Logger::logfile_print(const char *string)
 
 void Logger::print(const char *string)
 {
-    char string_buffer[128];
+    size_t len_buffer = 22 + strlen(string) + 1;
+    char string_buffer[len_buffer];
     if (this->rtc != nullptr)
     {
         struct tm time = this->rtc->read_time();
-        snprintf(string_buffer, 128, "[%04u-%02u-%02u-%02u %02u:%02u:%02u] %s", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, string);
+        snprintf(string_buffer, len_buffer, "[%04u-%02u-%02u %02u:%02u:%02u] %s", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, string);
     }
     else
     {
