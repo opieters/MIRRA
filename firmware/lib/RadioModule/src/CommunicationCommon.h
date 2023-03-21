@@ -4,21 +4,28 @@
 #include <stdint.h>
 #include <cstddef>
 
-enum CommunicationCommand
+enum CommunicationCommand : uint8_t
 {
-    HELLO_REPLY = 6,
+    NONE = 0,
     TIME_CONFIG = 1,
     MEASUREMENT_DATA = 2,
     ACK_DATA = 3,
-    REQUEST_MEASUREMENT_DATA = 5,
     HELLO = 4,
-    NONE = 0
+    REQUEST_MEASUREMENT_DATA = 5,
+    HELLO_REPLY = 6,
 };
 
-uint8_t CommunicationCommandToInt(CommunicationCommand cmd);
+class MACAddress
+{
+private:
+    uint8_t address[6];
 
-CommunicationCommand IntToCommunicationCommand(uint8_t cmd);
-
-bool arrayCompare(void *array1, void *array2, size_t length);
+public:
+    static const size_t length = 6;
+    MACAddress(uint8_t *address);
+    char *to_string(char *string);
+    friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
+    friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
+};
 
 #endif
