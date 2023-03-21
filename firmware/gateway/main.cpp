@@ -9,7 +9,6 @@ LIBRARIES
 #include "Radio.h"
 #include "UplinkModule.h"
 #include "PubSubClient.h"
-#include "Storage.h"
 #include "PCF2129_RTC.h" //!< External RTC module
 #include <cstring>
 #include "SPIFFS.h"
@@ -34,12 +33,12 @@ PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
 RadioModule radioModule(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_POWER, TX_POWER);
 
 // iPad
-//const char *ssid = "Eline's iPhone";
-//const char *password = "shotspot";
+// const char *ssid = "Eline's iPhone";
+// const char *password = "shotspot";
 
 // Toren
-const char* ssid = "GontrodeWiFi2";
-const char* password = "b5uJeswA";
+const char *ssid = "GontrodeWiFi2";
+const char *password = "b5uJeswA";
 
 #define TOPIC_PREFIX "fornalab" //!< MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 
@@ -148,8 +147,7 @@ void runDiscovery(uint32_t timeout)
 bool dump_uart_log = false;
 void IRAM_ATTR gpio_0_isr_callback()
 {
-        dump_uart_log = true;
-
+    dump_uart_log = true;
 }
 
 void setup(void)
@@ -162,7 +160,7 @@ void setup(void)
 
     pinMode(0, INPUT);
     attachInterrupt(0, gpio_0_isr_callback, FALLING);
-    
+
     delay(1000);
 
     if (!SPIFFS.begin(true))
@@ -226,7 +224,7 @@ void setup(void)
 
         sampleTime = rtc.read_time_epoch();
         sampleTime = sampleTime / 60 / 60;
-        sampleTime = (sampleTime) * 60 * 60;
+        sampleTime = (sampleTime)*60 * 60;
         sampleTime += sampleInterval;
 
         readoutTime = sampleTime;
@@ -256,7 +254,8 @@ void loop(void)
 
     status = radioModule.receiveAnyMessage(receiveDataWindow, rxm);
 
-    if(dump_uart_log || (digitalRead(0) == LOW)){
+    if (dump_uart_log || (digitalRead(0) == LOW))
+    {
         dump_uart_log = false;
 
         Serial.println("Data in memory:");
@@ -356,12 +355,12 @@ void loop(void)
 
         updateSampleReadoutTimes();
         SensorNodeUpdateTimes(node);
-        while(node->nextCommunicationTime <= time){
+        while (node->nextCommunicationTime <= time)
+        {
             node->nextCommunicationTime += communicationInterval;
-            }
-Serial.println("Next comms");
-            Serial.println(node->nextCommunicationTime);
-
+        }
+        Serial.println("Next comms");
+        Serial.println(node->nextCommunicationTime);
 
         // send update message on next communication interval
         gateway.createUpdateMessage(*node, txm);
@@ -377,15 +376,13 @@ Serial.println("Next comms");
     }
     break;
     case CommunicationCommand::ACK_DATA:
-    break;
+        break;
     case CommunicationCommand::REQUEST_MEASUREMENT_DATA:
-    break;
+        break;
     case CommunicationCommand::HELLO:
         break;
     case CommunicationCommand::NONE:
     default:
         break;
     }
-
-
 }
