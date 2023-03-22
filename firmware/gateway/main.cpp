@@ -124,7 +124,7 @@ void runDiscovery(uint32_t timeout)
         // receive reply messages
         status = radioModule.receiveAnyMessage(discoverySendInterval, rxm);
 
-        if (status && (rxm.getLength() == 7) && (rxm.getData()[6] == CommunicationCommandToInt(CommunicationCommand::HELLO_REPLY)))
+        if (status && (rxm.getLength() == 7) && (rxm.getData()[6] == CommunicationCommand::HELLO_REPLY))
         {
             SensorNode_t *node = gateway.addNewNode(rxm);
             if (node != nullptr)
@@ -340,6 +340,7 @@ void loop(void)
 
         Serial.print("Node ");
         Serial.print(": ");
+        
         for (int j = 0; j < 6; j++)
         {
             Serial.print(node->macAddresss[j], HEX);

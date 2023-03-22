@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <cstddef>
+#include <cstdio>
+#include <cstring>
 
 enum CommunicationCommand : uint8_t
 {
@@ -21,7 +23,8 @@ private:
     uint8_t address[6];
 
 public:
-    static const size_t length = 6;
+    static const size_t length = sizeof(address);
+    uint8_t *get_address() { return address; };
     MACAddress(uint8_t *address);
     char *to_string(char *string);
     friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);

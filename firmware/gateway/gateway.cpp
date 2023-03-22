@@ -450,32 +450,27 @@ uint32_t Gateway::getGSMTime()
 SensorNode_t *Gateway::addNewNode(LoRaMessage &m)
 {
     SensorNode_t *node = nullptr;
+    if (nSensorNodes == ARRAY_LENGTH(sensorNodes))
+    {
+        Serial.println("Maximum number of sensor nodes reached.");
+        return node;
+    }
 
-    uint8_t *macAddress = m.getData();
-    size_t j;
+    MACAddress new_mac = MACAddress(m.getData());
     bool newNode = true;
 
     Serial.print("Adding node: ");
-    for (j = 0; j < 6; j++)
-    {
-        Serial.print(macAddress[j], HEX);
-        Serial.print(" ");
-    }
-    Serial.println();
+    char mac_str[] = "00:00:00:00:00:00";
+    Serial.println(new_mac.to_string(mac_str));
 
     // check if node in node list
-    for (j = 0; j < nSensorNodes; j++)
+    for (size_t j = 0; j < nSensorNodes; j++)
     {
-        if (arrayCompare(macAddress, sensorNodes[j].macAddresss, 6))
+        if (new_mac == MACAddress(sensorNodes[j].macAddresss))
         {
             newNode = false;
             node = &sensorNodes[j];
         }
-    }
-
-    if (nSensorNodes == ARRAY_LENGTH(sensorNodes))
-    {
-        newNode = false;
     }
 
     // add new nodes to the node list
@@ -484,7 +479,7 @@ SensorNode_t *Gateway::addNewNode(LoRaMessage &m)
         auto time = rtc->read_time_epoch();
         Serial.println("Adding new node.");
 
-        SensorNodeInit(&sensorNodes[nSensorNodes], macAddress);
+        SensorNodeInit(&sensorNodes[nSensorNodes], new_mac.get_address());
         node = &sensorNodes[nSensorNodes];
         nSensorNodes++;
 
@@ -492,26 +487,16 @@ SensorNode_t *Gateway::addNewNode(LoRaMessage &m)
         node->nextCommunicationTime = readoutTime + nSensorNodes * communicationSpacing;
 
         Serial.print("Added node: ");
-        for (j = 0; j < 6; j++)
-        {
-            Serial.print(node->macAddresss[j], HEX);
-            Serial.print(" ");
-        }
+        Serial.println(mac_str);
 
         // write node to file
         nodeData = SPIFFS.open(nodeDataFN, FILE_WRITE);
         nodeData.write(nSensorNodes);
-        for (j = 0; j < nSensorNodes; j++)
+        for (size_t j = 0; j < nSensorNodes; j++)
         {
             nodeData.write((uint8_t *)&sensorNodes[j], sizeof(SensorNode_t));
         }
         nodeData.close();
-    }
-
-    // the maximum amount of sensors is connected, stop discovery
-    if (nSensorNodes == ARRAY_LENGTH(sensorNodes))
-    {
-        Serial.println("Maximum number of sensor nodes reached.");
     }
 
     return node;
@@ -586,7 +571,7 @@ bool openSensorDataFile(void)
 
 bool Gateway::checkNodeSource(SensorNode_t &node, LoRaMessage &message, CommunicationCommand cmd)
 {
-    if (!arrayCompare(node.macAddresss, message.getData(), MAC_NUM_BYTES))
+    if (MACAddress(node.macAddresss) != MACAddress(message.getData()))
     {
         return false;
     }

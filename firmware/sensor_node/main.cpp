@@ -478,7 +478,7 @@ void loop()
 
         // send our MAC address: from node to gateway
         memcpy(data, radio.getMACAddress(), 6);
-        data[6] = CommunicationCommandToInt(CommunicationCommand::HELLO_REPLY);
+        data[6] = CommunicationCommand::HELLO_REPLY;
         message.setData(data, ARRAY_LENGTH(data));
         radio.sendMessage(message);
 
@@ -542,7 +542,7 @@ void loop()
 
         // prepare fixed part of header
         memcpy(buffer, radio.getMACAddress(), 6);
-        buffer[6] = CommunicationCommandToInt(CommunicationCommand::MEASUREMENT_DATA);
+        buffer[6] = CommunicationCommand::MEASUREMENT_DATA;
 
         // move to last position read
         measurementData = SPIFFS.open(measurementDataFN, FILE_READ);
@@ -574,7 +574,7 @@ void loop()
 
             readTimeData(message, sensors, n_sensors, false);
             // another ACK from node to gateway --> gateway knows that node received message with next sample timepoint
-            buffer[6] = CommunicationCommandToInt(CommunicationCommand::ACK_DATA);
+            buffer[6] = CommunicationCommand::ACK_DATA;
             message.setData(buffer, 7);
             radio.sendMessage(message);
 
