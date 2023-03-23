@@ -61,13 +61,15 @@ char *MACAddress::toString(char *string)
 {
     if (strlen(string) < 17)
         return string;
-    for (size_t i = 0; i < 6; i++)
+    for (size_t i = 0; i < MACAddress::length; i++)
     {
-        snprintf(&string[2 * i], 2, "%02X", this->address[i]);
+        if (i != 0)
+            string[3 * i - 1] = ':';
+        snprintf(&string[3 * i], 2, "%02X", this->address[i]);
     }
     for (size_t i = 2; i < 17; i += 3)
     {
-        snprintf(&string[i], 1, ":");
+        string[i] = ':';
     }
 
     return string;
