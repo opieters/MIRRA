@@ -168,8 +168,8 @@ bool Gateway::printDataUART()
         uint8_t buffer_length = 0;
 
         // read the MAC address, timestamp and number of readouts
-        nBytesRead += sensorData.read(buffer, MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t));
-        buffer_length += MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t);
+        nBytesRead += sensorData.read(buffer, MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t));
+        buffer_length += MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t);
 
         uint8_t nSensorValues = buffer[buffer_length - 1];
 
@@ -241,8 +241,8 @@ bool Gateway::uploadData()
         char topicHeader[sizeof(topic) + (6 * 2 + 5) * 2 + 2 + 10];
 
         // read the MAC address, timestamp and number of readouts
-        nBytesRead += sensorData.read(buffer, MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t));
-        buffer_length += MAC_NUM_BYTES + sizeof(uint32_t) + sizeof(uint8_t);
+        nBytesRead += sensorData.read(buffer, MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t));
+        buffer_length += MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t);
 
         uint8_t nSensorValues = buffer[buffer_length - 1];
         Serial.print("Reading ");
@@ -269,9 +269,9 @@ bool Gateway::uploadData()
         Serial.println(topicHeader);
 
         Serial.println("Data:");
-        for (size_t i = 0; i < buffer_length - MAC_NUM_BYTES; i++)
+        for (size_t i = 0; i < buffer_length - MACAddress::length; i++)
         {
-            Serial.print(buffer[MAC_NUM_BYTES + i], HEX);
+            Serial.print(buffer[MACAddress::length + i], HEX);
             Serial.print(" ");
         }
         Serial.println();
@@ -279,7 +279,7 @@ bool Gateway::uploadData()
         delay(1000);
 
         // send the MQTT data
-        mqtt->publish(topicHeader, &buffer[MAC_NUM_BYTES], buffer_length - MAC_NUM_BYTES, false);
+        mqtt->publish(topicHeader, &buffer[MACAddress::length], buffer_length - MACAddress::length, false);
 
         if (espClient != nullptr)
         {
@@ -314,12 +314,12 @@ void Gateway::createTopic(char *buffer, size_t max_len, uint8_t *nodeMAC)
     len++;
 
     // copy the MAC address of the gateway
-    for (int i = 0; i < MAC_NUM_BYTES; i++)
+    for (int i = 0; i < MACAddress::length; i++)
     {
         const char *fmt = "%02X";
         len += snprintf(&buffer[len], max_len - len, fmt, radioModule->getMACAddress()[i]);
 
-        if (i != (MAC_NUM_BYTES - 1))
+        if (i != (MACAddress::length - 1))
         {
             buffer[len] = ':';
             len++;
@@ -330,12 +330,12 @@ void Gateway::createTopic(char *buffer, size_t max_len, uint8_t *nodeMAC)
     len++;
 
     // copy the MAC address of the node
-    for (int i = 0; i < MAC_NUM_BYTES; i++)
+    for (int i = 0; i < MACAddress::length; i++)
     {
         const char *fmt = "%02X";
         len += snprintf(&buffer[len], max_len - len, fmt, nodeMAC[i]);
 
-        if (i != (MAC_NUM_BYTES - 1))
+        if (i != (MACAddress::length - 1))
         {
             buffer[len] = ':';
             len++;
@@ -349,7 +349,7 @@ void Gateway::createUpdateMessage(SensorNode_t &node, LoRaMessage &message)
     uint32_t time;
 
     // copy MAC address
-    std::memcpy(&data[0], node.macAddresss, MAC_NUM_BYTES);
+    std::memcpy(&data[0], node.macAddresss, MACAddress::length);
 
     // copy command code
     data[6] = CommunicationCommand::TIME_CONFIG;
@@ -373,19 +373,6 @@ void Gateway::createUpdateMessage(SensorNode_t &node, LoRaMessage &message)
     // copy the communication period
     time = communicationInterval;
     std::memcpy(&data[23], &time, 4);
-
-    message.setData(data, ARRAY_LENGTH(data));
-}
-
-void Gateway::createReadoutMessage(SensorNode_t &node, LoRaMessage &message)
-{
-    uint8_t data[7];
-
-    // copy MAC address
-    std::memcpy(&data[0], node.macAddresss, MAC_NUM_BYTES);
-
-    // set the command
-    data[6] = CommunicationCommand::REQUEST_MEASUREMENT_DATA;
 
     message.setData(data, ARRAY_LENGTH(data));
 }
@@ -521,7 +508,7 @@ void Gateway::storeSensorData(LoRaMessage &m)
         while (length < m.getLength())
         {
             // write the MAC address
-            nBytesWritten += sensorData.write(macAddress, MAC_NUM_BYTES);
+            nBytesWritten += sensorData.write(macAddress, MACAddress::length);
 
             // write timestamp and number of values
             nBytesWritten += sensorData.write(&m.getData()[length], sizeof(uint32_t) + 1);

@@ -7,10 +7,6 @@
 
 #define TINY_GSM_MODEM_SIM800
 
-#define MAC_BYTES           6
-#define PAYLOAD_LEN_BYTES   1
-#define TIMESTAMP_BYTES     4
-
 #define receiveWindow 200
 #define receiveDataWindow 1000
 #define receiveAckWindow 10
