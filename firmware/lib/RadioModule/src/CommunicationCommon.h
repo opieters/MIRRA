@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "Sensor.h"
+
 class Message
 {
 public:
@@ -15,14 +17,15 @@ public:
         HELLO = 1,
         HELLO_REPLY = 2,
         TIME_CONFIG = 3,
-        MEASUREMENT_DATA = 4,
-        ACK_DATA = 5
+        ACK_TIME = 4,
+        SENSOR_DATA = 5,
+        ACK_DATA = 6,
+        REPEAT = 7
     };
 
 private:
     Message::Type type;
-    MACAddress src;
-    MACAddress dest;
+    MACAddress src, dest;
 
 public:
     Message(Message::Type type, MACAddress src, MACAddress dest) : type{type}, src{src}, dest{dest} {};
@@ -32,25 +35,43 @@ public:
 
     bool isType(Message::Type type) { return type == type; };
 
-    virtual size_t to_data(uint8_t *data);
+    virtual size_t getLength() { return header_length; };
+    virtual uint8_t *to_data(uint8_t *data);
     static Message from_data(uint8_t *data);
 
+    static const size_t header_length = sizeof(type) + 2 * MACAddress::length;
     static const size_t max_length = 256;
 };
 
 class TimeConfigMessage : public Message
 {
 private:
-    uint32_t cur_time;
-    uint32_t sample_time;
-    uint32_t sample_period;
-    uint32_t comm_time;
-    uint32_t comm_period;
+    uint32_t cur_time, sample_time, sample_period, comm_time, comm_period;
 
 public:
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_period, uint32_t comm_time, uint32_t comm_period);
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data);
-    size_t to_data(uint8_t *data);
+    size_t getLength();
+    uint8_t *to_data(uint8_t *data);
+};
+
+class SensorDataMessage : public Message
+{
+private:
+    uint32_t time;
+    uint8_t n_values;
+
+public:
+    static const size_t max_n_values = (max_length - header_length - sizeof(time)) / SensorValue::length;
+
+private:
+    SensorValue sensor_values[max_n_values];
+
+public:
+    SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values);
+    SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data);
+    size_t getLength();
+    uint8_t *to_data(uint8_t *data);
 };
 
 class MACAddress

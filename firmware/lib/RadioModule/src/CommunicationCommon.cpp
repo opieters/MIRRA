@@ -1,26 +1,29 @@
 #include "CommunicationCommon.h"
-size_t Message::to_data(uint8_t *data)
+uint8_t *Message::to_data(uint8_t *data)
 {
-    size_t written = 0;
+    uint8_t written = 0;
     data[written] = (uint8_t)this->type;
     written += sizeof(this->type);
     memcpy(&data[written], this->src.getAddress(), MACAddress::length);
     written += MACAddress::length;
     memcpy(&data[written], this->src.getAddress(), MACAddress::length);
-    written += MACAddress::length;
-    return written;
+    return data;
 }
 Message Message::from_data(uint8_t *data)
 {
-    Message::Type type = (Message::Type)data[0];
-    MACAddress src = MACAddress(&data[sizeof(Message::Type)]);
-    MACAddress dest = MACAddress(&data[sizeof(Message::Type) + MACAddress::length]);
+    uint8_t read = 0;
+    Message::Type type = (Message::Type)(data[0]);
+    read += sizeof(Message::Type);
+    MACAddress src = MACAddress(&data[read]);
+    read += MACAddress::length;
+    MACAddress dest = MACAddress(&data[read]);
+    read += MACAddress::length;
     switch (type)
     {
     case Message::Type::TIME_CONFIG:
-        return TimeConfigMessage(src, dest, (uint32_t *)(&data[sizeof(Message::Type) + 2 * MACAddress::length]));
-    case Message::Type::MEASUREMENT_DATA:
-        break;
+        return TimeConfigMessage(src, dest, (uint32_t *)(&data[read]));
+    case Message::Type::SENSOR_DATA:
+        return SensorDataMessage(src, dest, &data[read]);
     default:
         return Message(type, src, dest);
     }
@@ -43,13 +46,61 @@ TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *
     this->comm_period = data[4];
 }
 
-size_t TimeConfigMessage::to_data(uint8_t *data)
+size_t TimeConfigMessage::getLength()
 {
-    size_t written = Message::to_data(data);
+    return header_length + sizeof(cur_time) + sizeof(sample_time) + sizeof(sample_period) + sizeof(comm_time) + sizeof(comm_period);
+}
+
+uint8_t *TimeConfigMessage::to_data(uint8_t *data)
+{
+    data = Message::to_data(data);
     uint32_t block[] = {cur_time, sample_time, sample_period, comm_time, comm_period};
-    memcpy(&data[written], block, sizeof(cur_time));
-    written += sizeof(block);
-    return written;
+    memcpy(&data[Message::getLength()], block, sizeof(block));
+    return data;
+}
+
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::Type::SENSOR_DATA, src, dest)
+{
+    this->time = time;
+    this->n_values = n_values;
+    for (size_t i = 0; i < n_values; i++)
+    {
+        this->sensor_values[i] = sensor_values[i];
+    }
+}
+
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data) : Message(Message::Type::SENSOR_DATA, src, dest)
+{
+    size_t read = 0;
+    this->time = ((uint32_t *)data)[read];
+    read += sizeof(this->time);
+    this->n_values = data[read];
+    for (size_t i = 0; i < this->n_values; i++)
+    {
+        this->sensor_values[i] = SensorValue(&data[read + i * SensorValue::length]);
+    }
+}
+
+size_t SensorDataMessage::getLength()
+{
+    return header_length + sizeof(this->time) + sizeof(n_values) + this->n_values * SensorValue::length;
+}
+
+uint8_t *SensorDataMessage::to_data(uint8_t *data)
+{
+    Message::to_data(data);
+    size_t written = header_length;
+    uint32_t *time_p = (uint32_t *)(&data[written]);
+    time_p[0] = this->time;
+    written += sizeof(this->time);
+    float *n_values_p = (float *)(&data[written]);
+    n_values_p[0] = this->n_values;
+    written += sizeof(this->n_values);
+    for (size_t i = 0; i < this->n_values; i++)
+    {
+        this->sensor_values[i].to_data(&data[written + i * SensorValue::length]);
+    }
+    return data;
 }
 
 MACAddress::MACAddress(const uint8_t *address)
@@ -59,7 +110,7 @@ MACAddress::MACAddress(const uint8_t *address)
 
 char *MACAddress::toString(char *string)
 {
-    if (strlen(string) < 17)
+    if (strlen(string) < 3 * MACAddress::length)
         return string;
     for (size_t i = 0; i < MACAddress::length; i++)
     {
@@ -67,11 +118,6 @@ char *MACAddress::toString(char *string)
             string[3 * i - 1] = ':';
         snprintf(&string[3 * i], 2, "%02X", this->address[i]);
     }
-    for (size_t i = 2; i < 17; i += 3)
-    {
-        string[i] = ':';
-    }
-
     return string;
 }
 
