@@ -1,78 +1,105 @@
 #include "logging.h"
 
-Logger::Logger(log_level level, char *logfile_path = "/logs.dat", PCF2129_RTC *rtc)
+Logger::Logger(Level level, char *logfile_base_path, PCF2129_RTC *rtc)
 {
     this->level = level;
-    this->logfile_path = logfile_path;
-    this->rtc = rtc;
-    open_logfile(); // preliminary test to see if the logfile is valid
-}
-File Logger::open_logfile()
-{
-    File logfile;
-    if (SPIFFS.exists(this->logfile_path))
+    if (logfile_base_path == nullptr)
     {
-        logfile = SPIFFS.open(this->logfile_path, FILE_APPEND);
+        this->logfile_enabled = false;
     }
     else
     {
-        logfile = SPIFFS.open(this->logfile_path, FILE_WRITE);
+        strncpy(this->logfile_base_path, logfile_base_path, 22);
+    }
+    this->rtc = rtc;
+    this->logfile_time = rtc->read_time();
+}
+File Logger::open_logfile(char *logfile_path)
+{
+    File logfile;
+    if (SPIFFS.exists(logfile_path))
+    {
+        logfile = SPIFFS.open(logfile_path, FILE_APPEND);
+    }
+    else
+    {
+        logfile = SPIFFS.open(logfile_path, FILE_WRITE);
     }
 
     if (!logfile)
     {
-        this->logfile_path = nullptr;
-        error("Unable to open/create logfile! Logger will disable logging to file.");
+        this->logfile_enabled = false;
+        this->print(Level::error, "Unable to open/create logfile! Logger will disable logging to file.");
     }
     return logfile;
 }
 
-void Logger::logfile_print(const char *string)
+void Logger::logfile_print(const char *string, struct tm &time)
 {
-    if (this->logfile_path == nullptr)
+    if (!this->logfile_enabled)
         return;
-    File logfile = open_logfile();
-    for (size_t i = 0; i != '\0'; i++)
+    if ((!this->logfile) || (this->logfile_time.tm_mday != time.tm_mday) || (this->logfile_time.tm_mon != time.tm_mon) || (this->logfile_time.tm_year != time.tm_year))
     {
-        logfile.write(string[i]);
+        if (this->logfile)
+            logfile.close();
+        char time_string[11];
+        strftime(time_string, 11, "%F", &time);
+        char logfile_path[32];
+        snprintf(logfile_path, 32, "%s%s", logfile_base_path, time_string);
+        this->logfile = open_logfile(logfile_path);
+        if (!this->logfile)
+            return;
     }
-    logfile.close();
+    logfile.println(string);
 }
 
-void Logger::print(const char *string)
+void Logger::print(Level level, const char *string)
 {
-    size_t len_buffer = 22 + strlen(string) + 1;
+    if (level < this->level)
+        return;
+    size_t time_length = 21;
+    size_t level_length = 5;
+    size_t len_buffer = time_length + 1 + level_length + 2 + strlen(string) + 1;
     char string_buffer[len_buffer];
-    if (this->rtc != nullptr)
-    {
-        struct tm time = this->rtc->read_time();
-        snprintf(string_buffer, len_buffer, "[%04u-%02u-%02u %02u:%02u:%02u] %s", time.tm_year, time.tm_mon, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec, string);
-    }
-    else
-    {
-        snprintf(string_buffer, 128, "%s", string);
-    }
-    logfile_print(string_buffer);
+    char time_string[time_length + 1];
+    char level_string[level_length + 1];
+
+    struct tm time = this->rtc->read_time();
+
+    strftime(time_string, sizeof(time_string), "[%F %T]", &time);
+    level_to_string(level, level_string, sizeof(level_string));
+    snprintf(string_buffer, len_buffer, "%s %s: %s", time_string, level_string, string);
+
+    logfile_print(string_buffer, time);
     Serial.print(string_buffer);
 }
 
-void Logger::error(const char *string)
+void Logger::print(Level level, const unsigned int u)
 {
-    if (this->level < log_level::error)
-        return;
-    this->print(string);
+    char int_string[21];
+    snprintf(int_string, 21, "%u", u);
+    print(level, int_string);
 }
 
-void Logger::info(const char *string)
+void Logger::print(Level level, const signed int i)
 {
-    if (this->level < log_level::info)
-        return;
-    this->print(string);
+    char int_string[22];
+    snprintf(int_string, 22, "%i", i);
+    print(level, int_string);
 }
 
-void Logger::debug(const char *string)
+char *Logger::level_to_string(Level level, char *buffer, size_t buffer_length)
 {
-    if (this->level < log_level::debug)
-        return;
-    this->print(string);
+    switch (level)
+    {
+    case Level::error:
+        strncpy(buffer, "ERROR", buffer_length);
+        return buffer;
+    case Level::info:
+        strncpy(buffer, "INFO", buffer_length);
+        return buffer;
+    case Level::debug:
+        strncpy(buffer, "DEBUG", buffer_length);
+        return buffer;
+    }
 }

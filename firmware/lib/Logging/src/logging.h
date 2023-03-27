@@ -6,29 +6,35 @@
 #include <HardwareSerial.h>
 #include <PCF2129_RTC.h>
 
-enum log_level
-{
-    none,
-    error,
-    info,
-    debug
-};
-
 class Logger
 {
+public:
+    enum Level
+    {
+        debug,
+        info,
+        error
+    };
+
 private:
-    log_level level;
-    char *logfile_path;
+    Level level;
+    char logfile_base_path[22];
     PCF2129_RTC *rtc;
 
-    File open_logfile();
-    void logfile_print(const char *string);
-    void print(const char *string);
+    bool logfile_enabled = true;
+    struct tm logfile_time;
+    File logfile;
+    File open_logfile(char *logfile_path);
+    void logfile_print(const char *string, struct tm &time);
+
+    char *level_to_string(Level level, char *buffer, size_t buffer_length);
 
 public:
-    Logger(log_level level, char *logfile_path, PCF2129_RTC *rtc);
-    void debug(const char *string);
-    void info(const char *string);
-    void error(const char *string);
+    Logger(Level level, char *logfile_path, PCF2129_RTC *rtc);
+    void print(Level level, const char *string);
+    void print(Level level, const signed int i);
+    void print(Level level, const unsigned int i);
+
+    static const size_t days_to_keep = 7;
 };
 #endif
