@@ -8,6 +8,8 @@
 
 #include "Sensor.h"
 
+// TODO: Use unpadded structs to easily group blocks of data to be written to a buffer in the to_data methods, should improve readability substantially
+
 class Message
 {
 public:
