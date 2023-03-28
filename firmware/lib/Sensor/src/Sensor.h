@@ -51,7 +51,7 @@ public:
         float value;
     } __attribute__((packed));
 
-    static const size_t length = sizeof(tag) + sizeof(value);
+    static const size_t length = sizeof(SensorValue_struct);
 };
 
 #endif
