@@ -24,6 +24,8 @@ private:
     bool logfile_enabled = true;
     struct tm logfile_time;
     File logfile;
+    void generate_logfile_path(char *buffer, struct tm &time);
+    void delete_oldest_logfile(struct tm &time);
     File open_logfile(char *logfile_path);
     void logfile_print(const char *string, struct tm &time);
 

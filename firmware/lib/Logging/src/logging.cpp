@@ -9,7 +9,7 @@ Logger::Logger(Level level, char *logfile_base_path, PCF2129_RTC *rtc)
     }
     else
     {
-        strncpy(this->logfile_base_path, logfile_base_path, 22);
+        strncpy(this->logfile_base_path, logfile_base_path, 18);
     }
     this->rtc = rtc;
     this->logfile_time = rtc->read_time();
@@ -34,18 +34,41 @@ File Logger::open_logfile(char *logfile_path)
     return logfile;
 }
 
+void Logger::generate_logfile_path(char *buffer, struct tm &time)
+{
+    char time_string[11];
+    strftime(time_string, 11, "%F", &time);
+    snprintf(buffer, 32, "%s%s%s", this->logfile_base_path, time_string, ".log");
+}
+
+void Logger::delete_oldest_logfile(struct tm &time)
+{
+    uint32_t epoch = mktime(&time);
+    epoch -= days_to_keep * 24 * 60 * 60;
+    struct tm delete_time = *localtime((time_t *)&epoch);
+    char logfile_path[32];
+    generate_logfile_path(logfile_path, delete_time);
+    if (SPIFFS.exists(logfile_path))
+    {
+        if (!SPIFFS.remove(logfile_path))
+        {
+            this->logfile_enabled = false;
+            this->print(Logger::error, "Could not remove logfile. Logger will disable logging to file.");
+        }
+    }
+}
+
 void Logger::logfile_print(const char *string, struct tm &time)
 {
     if (!this->logfile_enabled)
         return;
     if ((!this->logfile) || (this->logfile_time.tm_mday != time.tm_mday) || (this->logfile_time.tm_mon != time.tm_mon) || (this->logfile_time.tm_year != time.tm_year))
     {
+        delete_oldest_logfile(time);
         if (this->logfile)
             logfile.close();
-        char time_string[11];
-        strftime(time_string, 11, "%F", &time);
         char logfile_path[32];
-        snprintf(logfile_path, 32, "%s%s", logfile_base_path, time_string);
+        generate_logfile_path(logfile_path, time);
         this->logfile = open_logfile(logfile_path);
         if (!this->logfile)
             return;
