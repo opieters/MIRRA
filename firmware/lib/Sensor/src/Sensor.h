@@ -41,8 +41,16 @@ private:
 public:
     SensorValue() : tag{0}, value{0} {};
     SensorValue(uint8_t *data){};
+    SensorValue(int type_tag, int instance_tag, float value) : tag{((type_tag & 0xFFF) << 4) | (instance_tag & 0xF)}, value{value} {};
     SensorValue(uint16_t tag, float value) : tag{tag}, value{value} {};
     uint8_t *to_data(uint8_t *data);
+
+    struct SensorValue_struct
+    {
+        uint16_t tag;
+        float value;
+    } __attribute__((packed));
+
     static const size_t length = sizeof(tag) + sizeof(value);
 };
 

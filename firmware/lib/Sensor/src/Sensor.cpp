@@ -21,15 +21,15 @@ uint32_t Sensor::adaptive_sample_interval_update(time_t current_sample_timepoint
 
 SensorValue::SensorValue(uint8_t *data)
 {
-    this->tag = ((uint16_t *)data)[0];
-    this->value = ((float *)data[sizeof(this->tag)])[0];
+    SensorValue_struct buffer = {0, 0};
+    memcpy(&buffer, data, sizeof(buffer));
+    this->tag = buffer.tag;
+    this->value = buffer.value;
 }
 
 uint8_t *SensorValue::to_data(uint8_t *data)
 {
-    uint16_t *tag_p = (uint16_t *)data;
-    tag_p[0] = this->tag;
-    float *value_p = (float *)(&tag_p[1]);
-    value_p[0] = this->value;
+    SensorValue_struct buffer = {this->tag, this->value};
+    memcpy(data, &buffer, sizeof(buffer));
     return data;
 }
