@@ -10,6 +10,22 @@
 
 // TODO: Use unpadded structs to easily group blocks of data to be written to a buffer in the to_data methods, should improve readability substantially
 
+class MACAddress
+{
+private:
+    uint8_t address[6];
+
+public:
+    MACAddress(const uint8_t *address);
+    uint8_t *getAddress() { return address; };
+    char *toString(char *string);
+    friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
+    friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
+
+    static const size_t length = sizeof(address);
+    static const MACAddress broadcast;
+};
+
 class Message
 {
 public:
@@ -74,22 +90,6 @@ public:
     SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data);
     size_t getLength();
     uint8_t *to_data(uint8_t *data);
-};
-
-class MACAddress
-{
-private:
-    uint8_t address[6];
-
-public:
-    MACAddress(const uint8_t *address);
-    uint8_t *getAddress() { return address; };
-    char *toString(char *string);
-    friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
-    friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
-
-    static const size_t length = sizeof(address);
-    static const MACAddress broadcast;
 };
 
 #endif
