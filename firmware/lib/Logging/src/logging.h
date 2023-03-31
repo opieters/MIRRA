@@ -33,6 +33,7 @@ private:
 
 public:
     Logger(Level level, char *logfile_path, PCF2129_RTC *rtc);
+    void printf(Level level, const char *fmt, ...);
     void print(Level level, const char *string);
     void print(Level level, const signed int i);
     void print(Level level, const unsigned int i);

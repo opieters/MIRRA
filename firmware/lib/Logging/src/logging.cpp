@@ -76,6 +76,17 @@ void Logger::logfile_print(const char *string, struct tm &time)
     logfile.println(string);
 }
 
+void Logger::printf(Level level, const char *fmt, ...)
+{
+    if (level < this->level)
+        return;
+    char buffer[256];
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, va);
+    this->print(level, buffer);
+}
+
 void Logger::print(Level level, const char *string)
 {
     if (level < this->level)
