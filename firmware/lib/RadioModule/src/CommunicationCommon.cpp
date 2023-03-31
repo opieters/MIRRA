@@ -132,5 +132,4 @@ bool operator==(const MACAddress &mac1, const MACAddress &mac2)
     return true;
 }
 
-uint8_t zeros[] = {0, 0, 0, 0, 0, 0};
-const MACAddress MACAddress::broadcast = MACAddress(zeros);
+const MACAddress MACAddress::broadcast = MACAddress();

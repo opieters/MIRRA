@@ -16,6 +16,7 @@ private:
     uint8_t address[6];
 
 public:
+    MACAddress() : address{0, 0, 0, 0, 0, 0} {};
     MACAddress(const uint8_t *address);
     uint8_t *getAddress() { return address; };
     char *toString(char *string);
