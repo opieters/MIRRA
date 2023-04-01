@@ -57,7 +57,7 @@ void LoRaModule::sendMessage(Message message)
     }
 }
 
-Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false)
+Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false)
 {
     if (repeat_mac == nullptr)
         repeat_mac = this->lastSent.getDest();

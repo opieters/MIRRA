@@ -44,7 +44,7 @@ public:
 
     MACAddress getMACAddress(void) { return macAddress; };
 
-    Message receiveMessage(uint32_t timeout_ms, Message::Type cmd = Message::Type::ERROR, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false);
+    Message receiveMessage(uint32_t timeout_ms, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false);
     void sendMessage(Message message);
 };
 
