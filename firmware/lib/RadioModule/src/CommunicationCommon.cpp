@@ -113,7 +113,7 @@ MACAddress::MACAddress(const uint8_t *address)
 
 char *MACAddress::toString(char *string)
 {
-    if (strlen(string) < 3 * MACAddress::length)
+    if (strlen(string) + 1 < MACAddress::string_length)
         return string;
     for (size_t i = 0; i < MACAddress::length; i++)
     {

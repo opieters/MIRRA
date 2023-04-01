@@ -19,12 +19,14 @@ public:
     MACAddress() : address{0, 0, 0, 0, 0, 0} {};
     MACAddress(const uint8_t *address);
     uint8_t *getAddress() { return address; };
-    char *toString(char *string);
+    char *toString(char *string = str_buffer);
     friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
     friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
 
     static const size_t length = sizeof(address);
+    static const size_t string_length = length * 3;
     static const MACAddress broadcast;
+    static char str_buffer[string_length];
 };
 
 class Message

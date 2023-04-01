@@ -91,10 +91,12 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts =
 
             if ((!promiscuous) && ((received.getDest() != this->macAddress) && (received.getDest() != MACAddress::broadcast)))
             {
+                log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getDest().toString());
                 continue;
             }
             if (received.isType(Message::Type::REPEAT))
             {
+                log->printf(Logger::debug, "Received REPEAT message from %s", received.getSource().toString());
                 if (this->lastSent.getDest() == received.getSource())
                 {
                     this->sendMessage(this->lastSent);
