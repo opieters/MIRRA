@@ -28,6 +28,9 @@ Message Message::from_data(uint8_t *data)
         return Message(type, src, dest);
     }
 }
+
+const Message Message::error = Message(Message::Type::ERROR, MACAddress::broadcast, MACAddress::broadcast);
+
 TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_period, uint32_t comm_time, uint32_t comm_period) : Message(Message::Type::TIME_CONFIG, src, dest)
 {
     this->cur_time = cur_time;

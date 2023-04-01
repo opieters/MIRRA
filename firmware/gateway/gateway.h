@@ -1,7 +1,7 @@
 #ifndef __GATEWAY_H__
 #define __GATEWAY_H__
 
-#include "Radio.h"
+#include "LoRaModule.h"
 #include "SensorNode.h"
 #include "PCF2129_RTC.h"
 #include "PubSubClient.h"

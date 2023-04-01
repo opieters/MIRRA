@@ -32,7 +32,7 @@ class Message
 public:
     enum Type : uint8_t
     {
-        NONE = 0,
+        ERROR = 0,
         HELLO = 1,
         HELLO_REPLY = 2,
         TIME_CONFIG = 3,
@@ -58,6 +58,7 @@ public:
     virtual uint8_t *to_data(uint8_t *data);
     static Message from_data(uint8_t *data);
 
+    static const Message error;
     static const size_t header_length = sizeof(type) + 2 * MACAddress::length;
     static const size_t max_length = 256;
 };
