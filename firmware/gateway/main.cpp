@@ -21,16 +21,8 @@ LIBRARIES
 
 #define USE_WIFI
 
-// Pin assignments
-#define SS_PIN 13   // Slave select pin
-#define RST_PIN 15  // Reset pin
-#define DIO0_PIN 34 // DIO0 pin: LoRa interrupt pin
-#define DIO1_PIN 4  // DIO1 pin: not used??
-#define TX_POWER 17
-#define RX_POWER 16
-
 PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
-RadioModule radioModule(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_POWER, TX_POWER);
+RadioModule radioModule(&rtc, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN);
 
 // iPad
 // const char *ssid = "Eline's iPhone";
@@ -340,7 +332,7 @@ void loop(void)
 
         Serial.print("Node ");
         Serial.print(": ");
-        
+
         for (int j = 0; j < 6; j++)
         {
             Serial.print(node->macAddresss[j], HEX);
