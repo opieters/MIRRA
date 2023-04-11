@@ -13,8 +13,8 @@ LoRaModule::LoRaModule(PCF2129_RTC *rtc, Logger *log, const uint8_t csPin, const
     pinMode(rxPin, OUTPUT);
     this->mod.setRfSwitchPins(rxPin, txPin);
 
-    this->macAddress = MACAddress();
-    esp_efuse_mac_get_default(this->macAddress.getAddress());
+    this->mac = MACAddress();
+    esp_efuse_mac_get_default(this->mac.getAddress());
 
     int state = this->begin(LORA_FREQUENCY,
                             LORA_BANDWIDTH,
@@ -89,7 +89,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts =
             state = this->readData(buffer, min(this->getPacketLength(), Message::max_length));
             Message received = Message::from_data(buffer);
 
-            if ((!promiscuous) && ((received.getDest() != this->macAddress) && (received.getDest() != MACAddress::broadcast)))
+            if ((!promiscuous) && ((received.getDest() != this->mac) && (received.getDest() != MACAddress::broadcast)))
             {
                 log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getDest().toString());
                 continue;
@@ -122,7 +122,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts =
             {
                 return Message::error;
             }
-            this->sendMessage(Message(Message::Type::REPEAT, this->macAddress, repeat_mac));
+            this->sendMessage(Message(Message::Type::REPEAT, this->mac, repeat_mac));
             esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
             repeat_attempts--;
         }
