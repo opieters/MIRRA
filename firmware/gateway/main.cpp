@@ -6,55 +6,24 @@ LIBRARIES
 
 #include "config.h"
 #include "utilities.h"
-#include "Radio.h"
 #include "UplinkModule.h"
 #include "PubSubClient.h"
 #include "PCF2129_RTC.h" //!< External RTC module
 #include <cstring>
 #include "SPIFFS.h"
-#ifdef USE_WIFI
 #include "WiFi.h"
-#endif
 #include "SensorNode.h"
 #include "gateway.h"
 #include "CommunicationCommon.h"
 
-#define USE_WIFI
-
-PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
-RadioModule radioModule(&rtc, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN);
-
-// iPad
-// const char *ssid = "Eline's iPhone";
-// const char *password = "shotspot";
-
-// Toren
-const char *ssid = "GontrodeWiFi2";
-const char *password = "b5uJeswA";
-
-#define TOPIC_PREFIX "fornalab" //!< MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
-
-#ifdef USE_WIFI
-WiFiClient espClient;
-#endif
-
-const auto mqttServer = IPAddress(193, 190, 127, 143); //(85,119,83,194); //IPAddress(193,190,127,143);
-
-#ifdef USE_WIFI
-PubSubClient mqtt(mqttServer, 1883, espClient);
-#else
-TinyGsmClient client(*gsmModule.modem);
-PubSubClient mqtt(mqttServer, 1883, client);
-#endif
+// TinyGsmClient client(*gsmModule.modem);
+// PubSubClient mqtt(mqttServer, 1883, client);
 
 #ifdef DEBUG_TIMING
-constexpr uint32_t discoveryInterval = 60;       // seconds
 constexpr uint32_t discoverySendInterval = 1000; // ms
 constexpr uint32_t shortDiscoverySendInterval = 10;
 #else
-constexpr uint32_t discoveryInterval = 1 * 60;   // seconds
 constexpr uint32_t discoverySendInterval = 1000; // ms
-constexpr uint32_t shortDiscoverySendInterval = 10;
 #endif
 
 RTC_DATA_ATTR uint32_t uploadDataTime;
@@ -67,12 +36,6 @@ extern uint8_t nSensorNodes;
 extern bool firstBoot;
 
 extern File sensorData;
-
-constexpr uint8_t sda_pin = 21, scl_pin = 22;
-
-constexpr uint32_t nextReadoutThreshold = 15; // seconds
-
-constexpr float maxSensorPeriod = 2 * 60 * 60; // max 2h between sensor readouts
 
 #ifdef USE_WIFI
 Gateway gateway(&radioModule, &rtc, &mqtt, &espClient, nullptr);
@@ -146,7 +109,7 @@ void setup(void)
 {
     Serial.begin(115200);
     Serial2.begin(9600);
-    Wire.begin(sda_pin, scl_pin, 100000U);
+    Wire.begin(SDA_PIN, SCL_PIN, 100000U); // i2c
     Serial.println("Initialising...");
     Serial.flush();
 
