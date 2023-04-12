@@ -69,10 +69,10 @@ public:
 class TimeConfigMessage : public Message
 {
 private:
-    uint32_t cur_time, sample_time, sample_period, comm_time, comm_period;
+    uint32_t cur_time, sample_time, sample_interval, comm_time, comm_interval;
 
 public:
-    TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_period, uint32_t comm_time, uint32_t comm_period);
+    TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval);
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data);
     size_t getLength();
     uint8_t *to_data(uint8_t *data);

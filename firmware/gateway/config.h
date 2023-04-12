@@ -34,11 +34,12 @@
 #define MQTT_PORT 1883
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 
-// Communication and sensor settings (seconds)
-#define COMMUNICATION_PERIOD_LENGTH
-#define COMMUNICATION_PERIOD_PADDING
-#define COMMUNICATION_INTERVAL
-#define SAMPLING_INTERVAL
+// Communication and sensor settings 
+#define COMMUNICATION_PERIOD_LENGTH 20 //s, time reserved for communication between gateway and one node
+#define COMMUNICATION_PERIOD_PADDING 10 //s, time between each node's communication period
+#define COMMUNICATION_INTERVAL 60*60*24 //s, time between communication times for every nodes
+#define SAMPLING_INTERVAL 60*60*3 //s, time between sensor sampling for every node
+#define DISCOVERY_TIMEOUT 5000 //ms
 
 #define MAX_SENSOR_NODES
 

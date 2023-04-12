@@ -31,33 +31,33 @@ Message Message::from_data(uint8_t *data)
 
 const Message Message::error = Message(Message::Type::ERROR, MACAddress::broadcast, MACAddress::broadcast);
 
-TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_period, uint32_t comm_time, uint32_t comm_period) : Message(Message::Type::TIME_CONFIG, src, dest)
+TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval) : Message(Message::Type::TIME_CONFIG, src, dest)
 {
     this->cur_time = cur_time;
     this->sample_time = sample_time;
-    this->sample_period = sample_period;
+    this->sample_interval = sample_interval;
     this->comm_time = comm_time;
-    this->comm_period = comm_period;
+    this->comm_interval = comm_interval;
 }
 
 TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data) : Message(Message::Type::TIME_CONFIG, src, dest)
 {
     this->cur_time = data[0];
     this->sample_time = data[1];
-    this->sample_period = data[2];
+    this->sample_interval = data[2];
     this->comm_time = data[3];
-    this->comm_period = data[4];
+    this->comm_interval = data[4];
 }
 
 size_t TimeConfigMessage::getLength()
 {
-    return header_length + sizeof(cur_time) + sizeof(sample_time) + sizeof(sample_period) + sizeof(comm_time) + sizeof(comm_period);
+    return header_length + sizeof(cur_time) + sizeof(sample_time) + sizeof(sample_interval) + sizeof(comm_time) + sizeof(comm_interval);
 }
 
 uint8_t *TimeConfigMessage::to_data(uint8_t *data)
 {
     data = Message::to_data(data);
-    uint32_t block[] = {cur_time, sample_time, sample_period, comm_time, comm_period};
+    uint32_t block[] = {cur_time, sample_time, sample_interval, comm_time, comm_interval};
     memcpy(&data[Message::getLength()], block, sizeof(block));
     return data;
 }
