@@ -57,7 +57,7 @@ void LoRaModule::sendMessage(Message message)
     }
 }
 
-Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false)
+Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Message::Type::ALL, size_t repeat_attempts = 0, MACAddress repeat_mac = nullptr, bool promiscuous = false)
 {
     if (repeat_mac == nullptr)
         repeat_mac = this->lastSent.getDest();
@@ -88,6 +88,12 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, size_t repeat_attempts =
         {
             state = this->readData(buffer, min(this->getPacketLength(), Message::max_length));
             Message received = Message::from_data(buffer);
+
+            if (type != Message::Type::ALL && !received.isType(type))
+            {
+                log->printf(Logger::debug, "Message of type %u discarded because message of type %u is desired.", received.getType(), type);
+                continue;
+            }
 
             if ((!promiscuous) && ((received.getDest() != this->mac) && (received.getDest() != MACAddress::broadcast)))
             {

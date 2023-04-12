@@ -41,7 +41,8 @@ public:
         ACK_TIME = 4,
         SENSOR_DATA = 5,
         ACK_DATA = 6,
-        REPEAT = 7
+        REPEAT = 7,
+        ALL = 8
     };
 
 private:
