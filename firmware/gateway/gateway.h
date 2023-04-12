@@ -18,12 +18,15 @@ private:
         MACAddress mac;
         uint32_t last_comm_time;
         uint32_t next_comm_time;
+        uint32_t sampling_interval;
 
 public:
         Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {}
         MACAddress getMACAddress() { return mac; }
         void updateLastCommTime(uint32_t ctime) { last_comm_time = ctime; };
         void updateNextCommTime(uint32_t time) { next_comm_time = time; };
+        uint32_t getLastCommTime() {return last_comm_time;}
+        uint32_t getNextCommTime() {return next_comm_time;}
 };
 
 class Gateway
@@ -31,6 +34,8 @@ class Gateway
 public:
         Gateway(Logger *log);
 
+        void nodesFromFile();
+        
         void initFirstBoot(void);
 
         void deepSleep(float time);
@@ -40,8 +45,6 @@ public:
 
         void commPeriod();
 
-        void nodesFromFile();
-        void addNewNode(Message &m);
 
         char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
         bool uploadData();

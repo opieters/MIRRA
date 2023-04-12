@@ -134,6 +134,46 @@ void Gateway::deepSleepUntil(uint32_t time)
     deepSleep((float)(time - ctime));
 }
 
+void Gateway::discovery()
+{
+    if (nodes.size() >= MAX_SENSOR_NODES)
+    {
+        log->print(Logger::Level::info, "Could not run discovery because maximum amount of nodes has been reached.");
+        return;
+    }
+    log->print(Logger::Level::info, "Sending discovery message.");
+    lora.sendMessage(Message(Message::Type::HELLO, lora.getMACAddress(), MACAddress::broadcast));
+    Message hello_reply = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::Type::HELLO_REPLY);
+    if (hello_reply.isType(Message::Type::ERROR))
+    {
+        log->print(Logger::Level::error, "Error while receiving reply to discovery message. Aborting discovery.");
+        return;
+    }
+    log->printf(Logger::Level::info, "Node found at %s", hello_reply.getSource().toString());
+
+    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t sample_time = ((ctime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING;
+    uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL: nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING ;
+    
+    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
+    Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::Type::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
+    if (time_ack.isType(Message::Type::ERROR))
+    {
+        log->printf(Logger::Level::error, "Error while receiving ack to time config message from %s. Aborting discovery.", hello_reply.getSource().toString());
+        return;
+    }
+
+    log->printf(Logger::Level::info, "Registering node %s", time_ack.getSource());
+    nodes.push_back(Node(time_ack.getSource(), ctime, comm_time));
+    File nodes_file = SPIFFS.open(nodeDataFN);
+    nodes_file.write(nodes.size());
+    for (Node n : nodes)
+    {
+        nodes_file.write((uint8_t*)&n, sizeof(Node));
+    }
+    nodes_file.close();
+}
+
 bool Gateway::printDataUART()
 {
     // connect to MQTT server
@@ -332,60 +372,6 @@ uint32_t Gateway::getWiFiTime(void)
 uint32_t Gateway::getGSMTime()
 {
     return uplinkModule->get_rtc_time();
-}
-
-SensorNode_t *Gateway::addNewNode(LoRaMessage &m)
-{
-    SensorNode_t *node = nullptr;
-    if (nSensorNodes == ARRAY_LENGTH(sensorNodes))
-    {
-        Serial.println("Maximum number of sensor nodes reached.");
-        return node;
-    }
-
-    MACAddress new_mac = MACAddress(m.getData());
-    bool newNode = true;
-
-    Serial.print("Adding node: ");
-    Serial.println(new_mac.toString());
-
-    // check if node in node list
-    for (size_t j = 0; j < nSensorNodes; j++)
-    {
-        if (new_mac == MACAddress(sensorNodes[j].macAddresss))
-        {
-            newNode = false;
-            node = &sensorNodes[j];
-        }
-    }
-
-    // add new nodes to the node list
-    if (newNode)
-    {
-        auto time = rtc->read_time_epoch();
-        Serial.println("Adding new node.");
-
-        SensorNodeInit(&sensorNodes[nSensorNodes], new_mac.get_address());
-        node = &sensorNodes[nSensorNodes];
-        nSensorNodes++;
-
-        node->lastCommunicationTime = time;
-        node->nextCommunicationTime = readoutTime + nSensorNodes * communicationSpacing;
-
-        Serial.print("Added node: ");
-        Serial.println(mac_str);
-
-        // write node to file
-        nodeData = SPIFFS.open(nodeDataFN, FILE_WRITE);
-        nodeData.write(nSensorNodes);
-        for (size_t j = 0; j < nSensorNodes; j++)
-        {
-            nodeData.write((uint8_t *)&sensorNodes[j], sizeof(SensorNode_t));
-        }
-        nodeData.close();
-    }
-
-    return node;
 }
 
 void Gateway::storeSensorData(LoRaMessage &m)

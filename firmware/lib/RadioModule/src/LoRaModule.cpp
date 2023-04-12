@@ -63,8 +63,6 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Mes
         repeat_mac = this->lastSent.getDest();
     uint8_t buffer[Message::max_length];
 
-    // Set LoRa module in receive mode and start listening
-    int state;
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // When the LoRa module get's a message it will generate an interrupt on DIO0.
     esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
@@ -72,7 +70,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Mes
     esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
     do
     {
-        state = this->startReceive();
+        int state = this->startReceive();
 
         if (state != RADIOLIB_ERR_NONE)
         {
@@ -87,8 +85,26 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Mes
         if (wakeup_cause == ESP_SLEEP_WAKEUP_GPIO || wakeup_cause == ESP_SLEEP_WAKEUP_EXT0)
         {
             state = this->readData(buffer, min(this->getPacketLength(), Message::max_length));
+            
+            if (state != RADIOLIB_ERR_NONE)
+            {
+                log->printf(Logger::error, "Reading received data failed, code: %i", state);
+                return Message::error;
+            }
+
             Message received = Message::from_data(buffer);
 
+            if (received.isType(Message::Type::REPEAT))
+            {
+                log->printf(Logger::debug, "Received REPEAT message from %s", received.getSource().toString());
+                if (this->lastSent.getDest() == received.getSource())
+                {
+                    this->sendMessage(this->lastSent);
+                    esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
+                }
+                continue;
+            }
+            
             if (type != Message::Type::ALL && !received.isType(type))
             {
                 log->printf(Logger::debug, "Message of type %u discarded because message of type %u is desired.", received.getType(), type);
@@ -100,26 +116,8 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Mes
                 log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getDest().toString());
                 continue;
             }
-            if (received.isType(Message::Type::REPEAT))
-            {
-                log->printf(Logger::debug, "Received REPEAT message from %s", received.getSource().toString());
-                if (this->lastSent.getDest() == received.getSource())
-                {
-                    this->sendMessage(this->lastSent);
-                    esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
-                }
-                continue;
-            }
 
-            if (state == RADIOLIB_ERR_NONE)
-            {
-                return received;
-            }
-            else
-            {
-                log->printf(Logger::error, "Reading received data failed, code: %i", state);
-                return Message::error;
-            }
+            return received;
         }
         else
         {
@@ -128,6 +126,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type = Mes
             {
                 return Message::error;
             }
+            log->printf(Logger::debug, "Sending REPEAT message...");
             this->sendMessage(Message(Message::Type::REPEAT, this->mac, repeat_mac));
             esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
             repeat_attempts--;
