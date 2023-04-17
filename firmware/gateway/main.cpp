@@ -12,7 +12,6 @@ LIBRARIES
 #include <cstring>
 #include "SPIFFS.h"
 #include "WiFi.h"
-#include "SensorNode.h"
 #include "gateway.h"
 #include "CommunicationCommon.h"
 
@@ -30,22 +29,13 @@ RTC_DATA_ATTR uint32_t uploadDataTime;
 RTC_DATA_ATTR uint32_t sampleTime;
 RTC_DATA_ATTR uint32_t readoutTime;
 
-extern SensorNode_t sensorNodes[20];
-extern uint8_t nSensorNodes;
-
 extern bool firstBoot;
-
-extern File sensorData;
 
 #ifdef USE_WIFI
 Gateway gateway(&radioModule, &rtc, &mqtt, &espClient, nullptr);
 #else
 Gateway gateway(&radioModule, &rtc, &mqtt, nullptr, &gsmModule);
 #endif
-
-LoRaMessage rxm;
-LoRaMessage txm;
-bool status = false;
 
 void updateSampleReadoutTimes(void)
 {

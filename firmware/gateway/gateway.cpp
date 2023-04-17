@@ -4,9 +4,9 @@
 #include "utilities.h"
 #include <NTPClient.h>
 
-
 const char nodeDataFN[] = "/nodes.dat";
 const char sensorDataFN[] = "/data.dat";
+const char sensorDataTempFN[] = "/data_temp.dat";
 
 Gateway::Gateway(Logger *log)
     : log{log},
@@ -31,9 +31,9 @@ void Gateway::nodesFromFile()
 {
     File nodesFile = SPIFFS.open(nodeDataFN, FILE_READ);
     size_t size;
-    nodesFile.read((uint8_t*)&size, sizeof(size_t));
+    nodesFile.read((uint8_t *)&size, sizeof(size_t));
     nodes.resize(size);
-    nodesFile.read((uint8_t*)nodes.data(), size * sizeof(Node));
+    nodesFile.read((uint8_t *)nodes.data(), size * sizeof(Node));
     nodesFile.close();
 }
 
@@ -53,7 +53,7 @@ void Gateway::deepSleep(float sleep_time)
     if (sleep_time < 10)
     {
         // We use the internal timer
-        esp_sleep_enable_timer_wakeup(SECONDS_TO_US(sleep_time));
+        esp_sleep_enable_timer_wakeup((uint64_t)(sleep_time * 1000 * 1000));
     }
     else
     {
@@ -73,209 +73,130 @@ void Gateway::deepSleepUntil(uint32_t time)
     deepSleep((float)(time - ctime));
 }
 
+void Gateway::lightSleep(float sleep_time)
+{
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_sleep_enable_timer_wakeup((uint64_t)SECONDS_TO_US(sleep_time * 1000 * 1000));
+    esp_light_sleep_start();
+}
+
+void Gateway::lightSleepUntil(uint32_t time)
+{
+    uint32_t ctime = rtc.read_time_epoch();
+    lightSleep((float)(time - ctime));
+}
+
 void Gateway::discovery()
 {
     if (nodes.size() >= MAX_SENSOR_NODES)
     {
-        log->print(Logger::Level::info, "Could not run discovery because maximum amount of nodes has been reached.");
+        log->print(Logger::info, "Could not run discovery because maximum amount of nodes has been reached.");
         return;
     }
-    log->print(Logger::Level::info, "Sending discovery message.");
-    lora.sendMessage(Message(Message::Type::HELLO, lora.getMACAddress(), MACAddress::broadcast));
-    Message hello_reply = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::Type::HELLO_REPLY);
-    if (hello_reply.isType(Message::Type::ERROR))
+    log->print(Logger::info, "Sending discovery message.");
+    lora.sendMessage(Message(Message::HELLO, lora.getMACAddress(), MACAddress::broadcast));
+    Message hello_reply = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::HELLO_REPLY);
+    if (hello_reply.isType(Message::ERROR))
     {
-        log->print(Logger::Level::error, "Error while receiving reply to discovery message. Aborting discovery.");
+        log->print(Logger::error, "Error while awaiting/receiving reply to discovery message. Aborting discovery.");
         return;
     }
-    log->printf(Logger::Level::info, "Node found at %s", hello_reply.getSource().toString());
+    log->printf(Logger::info, "Node found at %s", hello_reply.getSource().toString());
 
     uint32_t ctime = rtc.read_time_epoch();
     uint32_t sample_time = ((ctime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING;
-    uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL: nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING ;
-    
+    uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING;
+
     lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
-    Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::Type::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
-    if (time_ack.isType(Message::Type::ERROR))
+    Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
+    if (time_ack.isType(Message::ERROR))
     {
-        log->printf(Logger::Level::error, "Error while receiving ack to time config message from %s. Aborting discovery.", hello_reply.getSource().toString());
+        log->printf(Logger::error, "Error while receiving ack to time config message from %s. Aborting discovery.", hello_reply.getSource().toString());
         return;
     }
 
-    log->printf(Logger::Level::info, "Registering node %s", time_ack.getSource());
+    log->printf(Logger::info, "Registering node %s", time_ack.getSource());
     Node new_node = Node(time_ack.getSource(), ctime, comm_time);
     storeNode(new_node);
-
 }
 
-void Gateway::storeNode(Node& n)
+void Gateway::storeNode(Node &n)
 {
     nodes.push_back(n);
     File nodesFile = SPIFFS.open(nodeDataFN, FILE_APPEND);
     nodesFile.write(nodes.size());
-    nodesFile.write((uint8_t*)nodes.data(), nodes.size());
+    nodesFile.write((uint8_t *)nodes.data(), nodes.size());
     nodesFile.close();
 }
 
-bool Gateway::printDataUART()
+void Gateway::commPeriod()
 {
-    // connect to MQTT server
-
-    if (!SPIFFS.exists(sensorDataFN))
+    File dataFile = SPIFFS.open(sensorDataFN, FILE_APPEND);
+    for (Node n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a node misses its new time config
     {
-        Serial.println("No measurement data file found.");
-        return false;
-    }
-
-    sensorData = SPIFFS.open(sensorDataFN, FILE_READ);
-    sensorData.seek(nBytesRead);
-
-    Serial.print("Moving start to");
-    Serial.println(nBytesRead);
-
-    // upload all the data to the server
-    // the data is stored as:
-    // ... | MAC sensor node (6) | timestamp (4) |  n values (1) | sensor id (1) | sensor value (4) | sensor id (1) | sensor value (4) | ... | MAC sensor node (6)
-    // the MQTT server can only process one full sensor readout at a time, so we read part per part
-    while (nBytesRead < nBytesWritten)
-    {
-        uint8_t buffer[256];
-        uint8_t buffer_length = 0;
-
-        // read the MAC address, timestamp and number of readouts
-        nBytesRead += sensorData.read(buffer, MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t));
-        buffer_length += MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t);
-
-        uint8_t nSensorValues = buffer[buffer_length - 1];
-
-        // read data to buffer
-        nBytesRead += sensorData.read(&buffer[buffer_length], nSensorValues * (sizeof(float) + sizeof(uint8_t)));
-        buffer_length += nSensorValues * (sizeof(float) + sizeof(uint8_t));
-
-        Serial.print("SENSOR DATA [");
-
-        for (size_t i = 0; i < buffer_length; i++)
+        lightSleepUntil(n.getNextCommTime() - COMMUNICATION_PERIOD_PADDING); // light sleep until scheduled comm period
+        log->printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
+        SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&lora.receiveMessage(SENSOR_DATA_TIMEOUT + COMMUNICATION_PERIOD_PADDING, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress()));
+        if (sensorData.isType(Message::ERROR))
         {
-            Serial.print(buffer[i], HEX);
-            Serial.print(" ");
+            log->printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
+            continue;
         }
-        Serial.println("]");
+        log->printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
+        storeSensorData(sensorData, dataFile);
+
+        uint32_t ctime = rtc.read_time_epoch();
+        uint32_t comm_time = ctime + COMMUNICATION_INTERVAL;
+
+        lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), 0, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
+        Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
+        if (time_ack.isType(Message::ERROR))
+        {
+            log->printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
+            continue;
+        }
+        n.updateLastCommTime(ctime);
+        n.updateNextCommTime(comm_time);
     }
-    Serial.flush();
-
-    sensorData.close();
-
-    return true;
+    dataFile.close();
 }
 
-bool Gateway::uploadData()
+void Gateway::storeSensorData(SensorDataMessage &m, File &dataFile)
 {
+    uint8_t buffer[SensorDataMessage::max_length];
+    m.to_data(buffer);
+    buffer[0] = 0; // mark not uploaded (yet)
+    dataFile.write((uint8_t)m.getLength());
+    dataFile.write(buffer, m.getLength());
+}
 
-    // connect to MQTT server
-    uint8_t maxNAttempts = 5;
-    char clientid[MACAddress::length];
-    strcpy(clientid, lora.getMACAddress().toString());
-    mqtt.connect(clientid);
-    Serial.print("Connecting to MQTT server");
-    while (!mqtt.connected())
+void Gateway::pruneSensorData(File &dataFile)
+{
+    if (dataFile.size() < MAX_SENSORDATA_FILESIZE)
+        return;
+    File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
+    size_t fileSize = dataFile.size();
+    while (dataFile.peek() != EOF)
     {
-        mqtt.connect(clientid);
-        Serial.print(".");
-        delay(1000);
-        if (maxNAttempts == 0)
+        uint8_t message_length = dataFile.peek();
+        if (fileSize > MAX_SENSORDATA_FILESIZE)
         {
-            Serial.println();
-            Serial.println("Could not connect to MQTT server");
-            return false;
+            fileSize -= sizeof(message_length) + message_length;
+            dataFile.seek(sizeof(message_length) + message_length, fs::SeekCur);
         }
-        maxNAttempts--;
-    }
-
-    Serial.println(" Connected.");
-    Serial.flush();
-
-    if (!SPIFFS.exists(sensorDataFN))
-    {
-        Serial.println("No measurement data file found.");
-        mqtt.disconnect();
-        return false;
-    }
-
-    sensorData = SPIFFS.open(sensorDataFN, FILE_READ);
-    sensorData.seek(nBytesRead);
-
-    Serial.print("Moving start to");
-    Serial.println(nBytesRead);
-
-    // upload all the data to the server
-    // the data is stored as:
-    // ... | MAC sensor node (6) | timestamp (4) |  n values (1) | sensor id (1) | sensor value (4) | ... | MAC sensor node (6)
-    // the MQTT server can only process one full sensor readout at a time, so we read part per part
-    while (nBytesRead < nBytesWritten)
-    {
-        uint8_t buffer[256];
-        uint8_t buffer_length = 0;
-        char topicHeader[sizeof(TOPIC_PREFIX) + (6 * 2 + 5) * 2 + 2 + 10];
-
-        // read the MAC address, timestamp and number of readouts
-        nBytesRead += sensorData.read(buffer, MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t));
-        buffer_length += MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t);
-
-        uint8_t nSensorValues = buffer[buffer_length - 1];
-        Serial.print("Reading ");
-        Serial.print(nSensorValues);
-        Serial.println(" sensor values.");
-
-        // read data to buffer
-        nBytesRead += sensorData.read(&buffer[buffer_length], nSensorValues * (sizeof(float) + sizeof(uint8_t)));
-        buffer_length += nSensorValues * (sizeof(float) + sizeof(uint8_t));
-
-        // create MQTT message
-
-        // the topic includes the sensor MAC
-        MACAddress sensor_mac = MACAddress(buffer);
-        createTopic(topicHeader, ARRAY_LENGTH(topicHeader), sensor_mac);
-
-        // make sure we are still connected
-        while (!mqtt.connected())
+        else
         {
-            mqtt.connect(clientid);
-            delay(10);
-        };
-
-        Serial.println("Topic header:");
-        Serial.println(topicHeader);
-
-        Serial.println("Data:");
-        for (size_t i = 0; i < buffer_length - MACAddress::length; i++)
-        {
-            Serial.print(buffer[MACAddress::length + i], HEX);
-            Serial.print(" ");
+            uint8_t buffer[sizeof(message_length) + message_length];
+            dataFile.read(buffer, sizeof(message_length) + message_length);
+            dataFileTemp.write(buffer, sizeof(message_length) + message_length);
         }
-        Serial.println();
-        Serial.flush();
-        delay(1000);
-
-        // send the MQTT data
-        mqtt.publish(topicHeader, &buffer[MACAddress::length], buffer_length - MACAddress::length, false);
-        wifi.flush();
-
-        delay(1000);
     }
-
-    Serial.println("Sent all data. Disconnecting.");
-    mqtt.disconnect();
-
-    sensorData.close();
-
+    dataFileTemp.close();
     SPIFFS.remove(sensorDataFN);
-    nBytesRead = 0;
-    nBytesWritten = 0;
-
-    return true;
+    SPIFFS.rename(sensorDataTempFN, sensorDataFN);
 }
 
-char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress& nodeMAC)
+char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress &nodeMAC)
 {
     char mac_string_buffer[MACAddress::string_length];
     snprintf(buffer, max_len, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(mac_string_buffer));
@@ -292,20 +213,11 @@ uint32_t Gateway::getWiFiTime(void)
     while (!timeClient.update())
     {
         delay(500);
-        log->print(Logger::debug,".");
+        log->print(Logger::debug, ".");
     }
     log->print(Logger::info, " done.");
     log->printf(Logger::info, "Date and time: %s %s", timeClient.getFormattedDate(), timeClient.getFormattedTime());
 
     timeClient.end();
     return timeClient.getEpochTime();
-}
-
-
-void Gateway::storeSensorData(SensorDataMessage& m, File& dataFile)
-{
-    uint8_t buffer[SensorDataMessage::max_length];
-    m.to_data(buffer);
-    buffer[0] = 0; // mark not uploaded (yet)
-    dataFile.write(buffer, m.getLength());
 }

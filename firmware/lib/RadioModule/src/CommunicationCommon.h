@@ -40,9 +40,8 @@ public:
         TIME_CONFIG = 3,
         ACK_TIME = 4,
         SENSOR_DATA = 5,
-        ACK_DATA = 6,
-        REPEAT = 7,
-        ALL = 8
+        REPEAT = 6,
+        ALL = 7
     };
 
 private:

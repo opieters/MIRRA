@@ -20,18 +20,18 @@ Message Message::from_data(uint8_t *data)
     read += MACAddress::length;
     switch (type)
     {
-    case Message::Type::TIME_CONFIG:
+    case Message::TIME_CONFIG:
         return TimeConfigMessage(src, dest, (uint32_t *)(&data[read]));
-    case Message::Type::SENSOR_DATA:
+    case Message::SENSOR_DATA:
         return SensorDataMessage(src, dest, &data[read]);
     default:
         return Message(type, src, dest);
     }
 }
 
-const Message Message::error = Message(Message::Type::ERROR, MACAddress::broadcast, MACAddress::broadcast);
+const Message Message::error = Message(Message::ERROR, MACAddress::broadcast, MACAddress::broadcast);
 
-TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval) : Message(Message::Type::TIME_CONFIG, src, dest)
+TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval) : Message(Message::TIME_CONFIG, src, dest)
 {
     this->cur_time = cur_time;
     this->sample_time = sample_time;
@@ -40,7 +40,7 @@ TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t c
     this->comm_interval = comm_interval;
 }
 
-TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data) : Message(Message::Type::TIME_CONFIG, src, dest)
+TimeConfigMessage::TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data) : Message(Message::TIME_CONFIG, src, dest)
 {
     this->cur_time = data[0];
     this->sample_time = data[1];
@@ -62,7 +62,7 @@ uint8_t *TimeConfigMessage::to_data(uint8_t *data)
     return data;
 }
 
-SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::Type::SENSOR_DATA, src, dest)
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::SENSOR_DATA, src, dest)
 {
     this->time = time;
     this->n_values = n_values;
@@ -72,7 +72,7 @@ SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t t
     }
 }
 
-SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data) : Message(Message::Type::SENSOR_DATA, src, dest)
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data) : Message(Message::SENSOR_DATA, src, dest)
 {
     size_t read = 0;
     this->time = ((uint32_t *)data)[read];

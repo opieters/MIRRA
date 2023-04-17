@@ -25,8 +25,8 @@ public:
         MACAddress getMACAddress() { return mac; }
         void updateLastCommTime(uint32_t ctime) { last_comm_time = ctime; };
         void updateNextCommTime(uint32_t time) { next_comm_time = time; };
-        uint32_t getLastCommTime() {return last_comm_time;}
-        uint32_t getNextCommTime() {return next_comm_time;}
+        uint32_t getLastCommTime() { return last_comm_time; }
+        uint32_t getNextCommTime() { return next_comm_time; }
 };
 
 RTC_DATA_ATTR bool firstBoot = true;
@@ -36,18 +36,20 @@ class Gateway
 public:
         Gateway(Logger *log);
         void nodesFromFile();
-        
+
         void deepSleep(float time);
         void deepSleepUntil(uint32_t time);
+        void lightSleep(float time);
+        void lightSleepUntil(uint32_t time);
 
         void discovery();
-        void storeNode(Node& n);
+        void storeNode(Node &n);
 
         void commPeriod();
-        void storeSensorData(SensorDataMessage& m, File& dataFile);
+        void storeSensorData(SensorDataMessage &m, File &dataFile);
+        void pruneSensorData(File &dataFile);
 
-
-        char *createTopic(char *buffer, size_t buffer_size, MACAddress& nodeMAC);
+        char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
         void uploadPeriod();
 
         bool uploadData();
@@ -65,8 +67,6 @@ private:
         Logger *log;
 
         std::vector<Node> nodes;
-
-        static const uint32_t communicationSpacing = 15; // seconds
 };
 
 #endif
