@@ -35,7 +35,7 @@ RadioModule radio(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, TX_SWITCH, RX_SWITC
 RTC_DATA_ATTR bool firstBoot = true;
 
 // keep communication state in persistent memory
-RTC_DATA_ATTR CommunicationState state = CommunicationState::UART_READOUT, prev_state = CommunicationState::SLEEP;
+RTC_DATA_ATTR CommunicationState state = CommunicationState::PREPARE_READOUT, prev_state = CommunicationState::SLEEP;
 RTC_DATA_ATTR uint16_t n_errors = 0;
 
 constexpr uint8_t sda_pin = 21, scl_pin = 22;
@@ -46,6 +46,8 @@ File measurementData;
 
 const uint32_t gatewaySearchWindow = 120UL * 1000UL;
 const uint32_t gatewayCommunicationInterval = 10000UL;
+
+const uint32_t dummy_time = 1560210042;
 
 RTC_DATA_ATTR uint32_t next_sample_time;
 RTC_DATA_ATTR uint32_t next_communication_time;
@@ -80,9 +82,9 @@ SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
 ESPCamUART espCamera1(&serial2, GPIO_NUM_2);
 
 Sensor *sensors[] = {
-    &airTempRHSensor,
-    &soilTempSensor,
-    &lightSensor,
+    //&airTempRHSensor,
+    //&soilTempSensor,
+    //&lightSensor,
     &espCamera1,
     //&espCamera2,
 };
@@ -90,12 +92,12 @@ Sensor *sensors[] = {
 const size_t n_sensors = ARRAY_LENGTH(sensors);
 
 RTC_DATA_ATTR Sensor *sampleSensors[n_sensors] = {
-    &airTempRHSensor,
-    &soilTempSensor,
-    &lightSensor,
+    //&airTempRHSensor,
+    //&soilTempSensor,
+    //&lightSensor,
     &espCamera1,
 };
-RTC_DATA_ATTR uint8_t n_sampleSensors = 4;
+RTC_DATA_ATTR uint8_t n_sampleSensors = ARRAY_LENGTH(sampleSensors);
 
 size_t i;
 
@@ -225,7 +227,8 @@ void setup()
 #endif
 
         // Writing the initial time: dummy time (is changed after communication with gateway)
-        rtc.write_time_epoch(1560210042);
+        rtc.write_time_epoch(dummy_time);
+        next_sample_time = dummy_time;
 #ifdef __DEBUG__
         Serial.println(" done.");
 #endif
@@ -302,6 +305,7 @@ void setup()
     // eeded because this variable's state is not retained in deep sleep
     for (i = 0; i < n_sensors; i++)
     {
+        Serial.println("Setting sample interval for sensor " + i);
         sensors[i]->set_sample_interval(sample_interval);
     }
 
@@ -310,6 +314,40 @@ void setup()
 
 void loop()
 {
+    #ifdef __DEBUG__
+        Serial.println("Start of loop");
+        Serial.print("Current state: ");
+        switch(state) {
+            case CommunicationState::SEARCHING_GATEWAY:
+                Serial.println("SEARCHING_GATEWAY");
+                break;
+            case CommunicationState::PREPARE_READOUT:
+                Serial.println("PREPARE_READOUT");
+                break;
+            case CommunicationState::READ_SENSOR_DATA:
+                Serial.println("READ_SENSOR_DATA");
+                break;
+            case CommunicationState::UPLOAD_SENSOR_DATA:
+                Serial.println("UPLOAD_SENSOR_DATA");
+                break;
+            case CommunicationState::SLEEP:
+                Serial.println("SLEEP");
+                break;
+            case CommunicationState::ERROR:
+                Serial.println("ERROR");
+                break;
+            case CommunicationState::GET_SAMPLE_CONFIG:
+                Serial.println("GET_SAMPLE_CONFIG");
+                break;
+            case CommunicationState::UART_READOUT:
+                Serial.println("UART_READOUT");
+                break;
+            default:
+                Serial.println("");
+                break;
+        }
+        Serial.println("====================");
+    #endif
     status = false;
 
     // the main event-loop is implemented as a state-machine
@@ -321,6 +359,11 @@ void loop()
         state = CommunicationState::UART_READOUT;
         dump_uart_log = false;
     }
+
+    Serial.print("Current time: ");
+    Serial.println(rtc.read_time_epoch());
+    Serial.print("Next sample time: ");
+    Serial.println(next_sample_time);
 
     switch (state)
     {
@@ -415,11 +458,11 @@ void loop()
         n_sampleSensors = 0;
         for (i = 0; i < n_sensors; i++)
         {
-            Serial.print("Sensor ");
+            Serial.print("Sensor_interval for sensor ");
             Serial.print(i);
             Serial.print(": ");
-            Serial.println(sensors[i]->adaptive_sample_interval_update(next_sample_time));
-            sensor_interval = sensors[i]->adaptive_sample_interval_update(next_sample_time);
+            sensor_interval = sensors[i]->adaptive_sample_interval_update(rtc.read_time_epoch());
+            Serial.println(sensor_interval);
             if (sensor_interval < interval)
             {
                 n_sampleSensors = 1;
@@ -734,6 +777,7 @@ void loop()
         break;
     }
 #ifdef __DEBUG__
-    Serial.println("loop");
+    Serial.println("End of loop");
+    Serial.println("");
 #endif
 }

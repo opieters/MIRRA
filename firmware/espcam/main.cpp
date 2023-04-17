@@ -312,6 +312,10 @@ void loop() {
     // Additional sketch code could be placed here before
     // polling one-wire bus for commands
     //if (!owi.rom_command()) { return; }
+    #ifdef __DEBUG__
+    Serial.println("Loop started");
+    #endif
+
     while(!serial2.available());
 
     #ifdef __DEBUG__

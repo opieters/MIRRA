@@ -57,13 +57,16 @@ void ESPCamUART::start_measurement(){
 uint8_t ESPCamUART::read_measurement(float* data, uint8_t length) {
     //uint8_t status;
 
-    data[0] = 0;
-    data[1] = 0;
+    data[0] = 0.1;
+    data[1] = 0.2;
 
-
+    Serial.println("[ESPCAM] Taking picture");
     serial->write(ESPCamUARTCommand::TAKE_PICTURE);
+    Serial.println("[ESPCAM] ESPCamUARTCommand sent");
     serial->flush();
+    Serial.println("[ESPCAM] Flushing");
     serial->end();
+    Serial.println("[ESPCAM] End");
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
     gpio_hold_en(pin);
@@ -77,7 +80,7 @@ ESPCamUART::~ESPCamUART() {
 
 
 uint32_t ESPCamUART::adaptive_sample_interval_update(time_t ctime){
-    Serial.println("ADAPTIVE adaptive interval called.");
+    Serial.println("[ESPCAM] ADAPTIVE adaptive interval called.");
     // extract month and day from current time
     struct tm result;
     gmtime_r(&ctime, &result);
@@ -97,5 +100,6 @@ uint32_t ESPCamUART::adaptive_sample_interval_update(time_t ctime){
     }
 
     // return sample interval: target time - current time
+    // return 60;
     return ttime - ctime;
 }
