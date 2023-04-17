@@ -29,28 +29,29 @@ public:
         uint32_t getNextCommTime() {return next_comm_time;}
 };
 
+RTC_DATA_ATTR bool firstBoot = true;
+
 class Gateway
 {
 public:
         Gateway(Logger *log);
-
         void nodesFromFile();
         
-        void initFirstBoot(void);
-
         void deepSleep(float time);
         void deepSleepUntil(uint32_t time);
 
         void discovery();
+        void storeNode(Node& n);
 
         void commPeriod();
+        void storeSensorData(SensorDataMessage& m, File& dataFile);
 
 
-        char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
+        char *createTopic(char *buffer, size_t buffer_size, MACAddress& nodeMAC);
+        void uploadPeriod();
+
         bool uploadData();
         bool printDataUART();
-
-        void storeSensorData(SensorDataMessage &m);
 
         uint32_t getWiFiTime(void);
         uint32_t getGSMTime(void);
@@ -66,10 +67,6 @@ private:
         std::vector<Node> nodes;
 
         static const uint32_t communicationSpacing = 15; // seconds
-
-        static const char *topic; //!< MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 };
-
-bool openSensorDataFile(void);
 
 #endif

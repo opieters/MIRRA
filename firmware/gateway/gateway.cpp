@@ -4,23 +4,9 @@
 #include "utilities.h"
 #include <NTPClient.h>
 
-RTC_DATA_ATTR size_t nBytesWritten = 0;
-RTC_DATA_ATTR size_t nBytesRead = 0;
-
-RTC_DATA_ATTR SensorNode_t sensorNodes[20];
-RTC_DATA_ATTR uint8_t nSensorNodes = 0;
-
-RTC_DATA_ATTR bool firstBoot = true;
 
 const char nodeDataFN[] = "/nodes.dat";
 const char sensorDataFN[] = "/data.dat";
-
-File nodeData;
-File sensorData;
-
-const char *Gateway::topic = "fornalab";
-
-extern uint32_t readoutTime, sampleTime;
 
 Gateway::Gateway(Logger *log)
     : log{log},
@@ -29,73 +15,26 @@ Gateway::Gateway(Logger *log)
       wifi{WiFiClient()},
       mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, this->wifi)}
 {
+    if (firstBoot)
+    {
+        File nodesFile = SPIFFS.open(nodeDataFN, FILE_WRITE, true);
+        nodesFile.write((size_t)0);
+        nodesFile.close();
+        File dataFile = SPIFFS.open(sensorDataFN, FILE_WRITE, true);
+        dataFile.close();
+    }
+
+    nodesFromFile();
 }
 
-void Gateway::initFirstBoot(void)
+void Gateway::nodesFromFile()
 {
-    nSensorNodes = 0;
-
-    if (openSensorDataFile())
-    {
-        nBytesWritten = sensorData.size();
-        nBytesRead = sensorData.size();
-
-        Serial.println("Set nbytes to values");
-        Serial.print("Set nbytes written:");
-        Serial.println(nBytesWritten);
-        Serial.print("Set nbytes read:");
-        Serial.println(nBytesRead);
-        sensorData.close();
-    }
-    else
-    {
-        Serial.println("ERROR with FS.");
-    }
-
-    if (SPIFFS.exists(nodeDataFN))
-    {
-        nodeData = SPIFFS.open(nodeDataFN, FILE_READ);
-
-        if (nodeData.available() > 0)
-        {
-            nSensorNodes = nodeData.read();
-        }
-
-        for (size_t i = 0; i < nSensorNodes; i++)
-        {
-            nodeData.read((uint8_t *)&sensorNodes[i], sizeof(SensorNode_t));
-            SensorNodeUpdateTimes(&sensorNodes[i]);
-        }
-
-        // update values
-
-        nodeData.close();
-
-        if (nSensorNodes > 0)
-        {
-            Serial.print("Loaded ");
-            Serial.print(nSensorNodes);
-            Serial.println(" sensors from data storage.");
-        }
-        else
-        {
-            Serial.println("No sensor nodes found in memory.");
-        }
-    }
-    else
-    {
-        nodeData = SPIFFS.open(nodeDataFN, FILE_WRITE);
-        if (nodeData)
-        {
-            nodeData.write(0);
-            nodeData.close();
-            Serial.println("Sensor file not found.");
-        }
-        else
-        {
-            Serial.println("ERROR with FS.");
-        }
-    }
+    File nodesFile = SPIFFS.open(nodeDataFN, FILE_READ);
+    size_t size;
+    nodesFile.read((uint8_t*)&size, sizeof(size_t));
+    nodes.resize(size);
+    nodesFile.read((uint8_t*)nodes.data(), size * sizeof(Node));
+    nodesFile.close();
 }
 
 void Gateway::deepSleep(float sleep_time)
@@ -164,14 +103,18 @@ void Gateway::discovery()
     }
 
     log->printf(Logger::Level::info, "Registering node %s", time_ack.getSource());
-    nodes.push_back(Node(time_ack.getSource(), ctime, comm_time));
-    File nodes_file = SPIFFS.open(nodeDataFN);
-    nodes_file.write(nodes.size());
-    for (Node n : nodes)
-    {
-        nodes_file.write((uint8_t*)&n, sizeof(Node));
-    }
-    nodes_file.close();
+    Node new_node = Node(time_ack.getSource(), ctime, comm_time);
+    storeNode(new_node);
+
+}
+
+void Gateway::storeNode(Node& n)
+{
+    nodes.push_back(n);
+    File nodesFile = SPIFFS.open(nodeDataFN, FILE_APPEND);
+    nodesFile.write(nodes.size());
+    nodesFile.write((uint8_t*)nodes.data(), nodes.size());
+    nodesFile.close();
 }
 
 bool Gateway::printDataUART()
@@ -254,7 +197,7 @@ bool Gateway::uploadData()
     if (!SPIFFS.exists(sensorDataFN))
     {
         Serial.println("No measurement data file found.");
-        mqtt->disconnect();
+        mqtt.disconnect();
         return false;
     }
 
@@ -272,7 +215,7 @@ bool Gateway::uploadData()
     {
         uint8_t buffer[256];
         uint8_t buffer_length = 0;
-        char topicHeader[sizeof(topic) + (6 * 2 + 5) * 2 + 2 + 10];
+        char topicHeader[sizeof(TOPIC_PREFIX) + (6 * 2 + 5) * 2 + 2 + 10];
 
         // read the MAC address, timestamp and number of readouts
         nBytesRead += sensorData.read(buffer, MACAddress::length + sizeof(uint32_t) + sizeof(uint8_t));
@@ -290,12 +233,13 @@ bool Gateway::uploadData()
         // create MQTT message
 
         // the topic includes the sensor MAC
-        createTopic(topicHeader, ARRAY_LENGTH(topicHeader), &buffer[0]);
+        MACAddress sensor_mac = MACAddress(buffer);
+        createTopic(topicHeader, ARRAY_LENGTH(topicHeader), sensor_mac);
 
         // make sure we are still connected
-        while (!mqtt->connected())
+        while (!mqtt.connected())
         {
-            mqtt->connect(clientID);
+            mqtt.connect(clientid);
             delay(10);
         };
 
@@ -313,18 +257,14 @@ bool Gateway::uploadData()
         delay(1000);
 
         // send the MQTT data
-        mqtt->publish(topicHeader, &buffer[MACAddress::length], buffer_length - MACAddress::length, false);
-
-        if (espClient != nullptr)
-        {
-            espClient->flush();
-        }
+        mqtt.publish(topicHeader, &buffer[MACAddress::length], buffer_length - MACAddress::length, false);
+        wifi.flush();
 
         delay(1000);
     }
 
     Serial.println("Sent all data. Disconnecting.");
-    mqtt->disconnect();
+    mqtt.disconnect();
 
     sensorData.close();
 
@@ -335,7 +275,7 @@ bool Gateway::uploadData()
     return true;
 }
 
-char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress &nodeMAC)
+char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress& nodeMAC)
 {
     char mac_string_buffer[MACAddress::string_length];
     snprintf(buffer, max_len, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(mac_string_buffer));
@@ -345,98 +285,27 @@ char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress &nodeMAC)
 uint32_t Gateway::getWiFiTime(void)
 {
     WiFiUDP ntpUDP;
-
-    // NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
     NTPClient timeClient(ntpUDP, NTP_URL, 3600, 60000);
-
     timeClient.begin();
 
-    Serial.print("Fetching UTP time");
-
+    log->print(Logger::info, "Fetching UTP time");
     while (!timeClient.update())
     {
         delay(500);
-        Serial.print(".");
+        log->print(Logger::debug,".");
     }
-    Serial.println(" done.");
-
-    Serial.println("Date and time:");
-    Serial.println(timeClient.getFormattedDate());
-    Serial.println(timeClient.getFormattedTime());
+    log->print(Logger::info, " done.");
+    log->printf(Logger::info, "Date and time: %s %s", timeClient.getFormattedDate(), timeClient.getFormattedTime());
 
     timeClient.end();
-
     return timeClient.getEpochTime();
 }
 
-uint32_t Gateway::getGSMTime()
+
+void Gateway::storeSensorData(SensorDataMessage& m, File& dataFile)
 {
-    return uplinkModule->get_rtc_time();
-}
-
-void Gateway::storeSensorData(LoRaMessage &m)
-{
-    size_t length = 0;
-
-    uint8_t *macAddress = m.getData();
-    length = 7; // skip MAC and command byte
-
-    uint8_t nValues;
-
-    Serial.print("N bytes written: ");
-    Serial.println(nBytesWritten);
-    Serial.print("N bytes read: ");
-    Serial.println(nBytesRead);
-
-    if (openSensorDataFile())
-    {
-        while (length < m.getLength())
-        {
-            // write the MAC address
-            nBytesWritten += sensorData.write(macAddress, MACAddress::length);
-
-            // write timestamp and number of values
-            nBytesWritten += sensorData.write(&m.getData()[length], sizeof(uint32_t) + 1);
-            length += sizeof(uint32_t) + 1;
-
-            nValues = m.getData()[length - 1];
-
-            Serial.print("N values received: ");
-            Serial.println(nValues);
-
-            nBytesWritten += sensorData.write(&m.getData()[length], nValues * (sizeof(float) + 1));
-            length += nValues * (sizeof(float) + 1);
-        }
-
-        Serial.print("N bytes written: ");
-        Serial.println(nBytesWritten);
-
-        sensorData.close();
-    }
-    else
-    {
-        Serial.println("Unable to open file.");
-    }
-}
-
-bool openSensorDataFile(void)
-{
-    if (SPIFFS.exists(sensorDataFN))
-    {
-        sensorData = SPIFFS.open(sensorDataFN, FILE_APPEND);
-    }
-    else
-    {
-        sensorData = SPIFFS.open(sensorDataFN, FILE_WRITE);
-    }
-
-    if (sensorData)
-    {
-        return true;
-    }
-    else
-    {
-        Serial.println("Unable to open data file.");
-        return false;
-    }
+    uint8_t buffer[SensorDataMessage::max_length];
+    m.to_data(buffer);
+    buffer[0] = 0; // mark not uploaded (yet)
+    dataFile.write(buffer, m.getLength());
 }

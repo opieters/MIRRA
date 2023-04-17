@@ -39,12 +39,16 @@
 #define COMMUNICATION_PERIOD_PADDING 5 //s, time between each node's communication period
 #define COMMUNICATION_INTERVAL 60*60*24 //s, time between communication times for every nodes
 
+#define UPLOAD_EVERY 3 // amount of times the gateway will communicate with the nodes before uploading data to the server
+
 #define SAMPLING_INTERVAL 60*60*3 //s, time between sensor sampling for every node
 #define SAMPLING_ROUNDING 60*60 //s, round sampling time to nearest ...
 
 #define DISCOVERY_TIMEOUT 5000 //ms
 #define TIME_CONFIG_TIMEOUT 3000 //ms
 #define TIME_CONFIG_ATTEMPTS 3
+
+#define MAX_SENSORDATA_FILESIZE 1024 * 1024 //bytes
 
 #define MAX_SENSOR_NODES 20
 
