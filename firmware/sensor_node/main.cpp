@@ -47,7 +47,7 @@ File measurementData;
 const uint32_t gatewaySearchWindow = 120UL * 1000UL;
 const uint32_t gatewayCommunicationInterval = 10000UL;
 
-const uint32_t dummy_time = 1560210042;
+const uint32_t dummy_time = 1681717608 - 200; // Monday, April 17, 2023 7:08:17 AM GMT+02:00
 
 RTC_DATA_ATTR uint32_t next_sample_time;
 RTC_DATA_ATTR uint32_t next_communication_time;
@@ -607,7 +607,7 @@ void loop()
         status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::TIME_CONFIG);
 
         // update variables if we received an ACK message from the gateway
-        if (status)
+        if (status || true)
         {
             nBytesRead += readLength;
 

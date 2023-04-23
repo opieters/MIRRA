@@ -305,7 +305,6 @@ void setup() {
 } 
 
 uint8_t cmd;
-int counter = 0;
  
 void loop() {
 
@@ -313,27 +312,23 @@ void loop() {
     // polling one-wire bus for commands
     //if (!owi.rom_command()) { return; }
     #ifdef __DEBUG__
-    Serial.println("Loop started");
+    Serial.println("");
+    Serial.println("Cycle started");
     #endif
 
     while(!serial2.available());
-
-    #ifdef __DEBUG__
-    Serial.println("YES");
-    #endif
     
     cmd = serial2.read();
 
     #ifdef __DEBUG__
-    Serial.print("Received ");
-    Serial.println(cmd);
+    Serial.print("Received command ");
     #endif
 
     // Read and dispatch remote arduino commands
     switch (cmd) {
         case ESPCam::SET_TIME:
             #ifdef __DEBUG__
-            Serial.println("Setting the time.");
+            Serial.println("ESPCam::SET_TIME");
             #endif
             serial2.readBytes((uint8_t*) &owi_time, sizeof(owi_time));
             #ifdef __DEBUG__
@@ -345,8 +340,14 @@ void loop() {
             sntp_sync_time(&owi_time_value);
             break;
         case ESPCam::GET_TIME:
+            #ifdef __DEBUG__
+            Serial.println("ESPCam::GET_TIME");
+            #endif
             break;
         case ESPCam::GET_STATUS:
+            #ifdef __DEBUG__
+            Serial.println("ESPCam::GET_STATUS");
+            #endif
             if(pictureSuccess){
                 Serial.println("SUCCESS PRINT");
                 //digitalWrite(stat_pin, HIGH);
@@ -358,16 +359,17 @@ void loop() {
         case ESPCam::TAKE_PICTURE:
             //delay(500);
             #ifdef __DEBUG__
-            Serial.println("Taking picture");
+            Serial.println("ESPCam::TAKE_PICTURE");
             #endif
             takePicture();
         case ESPCam::ENABLE_SLEEP:
+            #ifdef __DEBUG__
+            Serial.println("ESPCam::ENABLE_SLEEP");
+            #endif
             // always sleep in the loop-state
             // swSer.end();
             serial2.end();
             esp_sleep_enable_ext0_wakeup(ow_pin, 1);
-            
-            Serial.println("Going to sleep now");
             Serial.flush();
             esp_deep_sleep_start();
             break;
