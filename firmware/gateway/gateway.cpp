@@ -4,24 +4,46 @@
 #include "utilities.h"
 #include <NTPClient.h>
 
-const char nodeDataFN[] = "/nodes.dat";
-const char sensorDataFN[] = "/data.dat";
 const char sensorDataTempFN[] = "/data_temp.dat";
+extern volatile bool commandPhaseEntry;
 
-Gateway::Gateway(Logger *log)
+RTC_DATA_ATTR bool initialBoot = true;
+
+Gateway::Gateway(Logger *log, PCF2129_RTC* rtc)
     : log{log},
-      rtc{PCF2129_RTC(RTC_INT_PIN, RTC_ADDRESS)},
-      lora{LoRaModule(&rtc, this->log, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN)},
-      wifi{WiFiClient()},
-      mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, this->wifi)}
+      rtc{rtc},
+      lora{LoRaModule(rtc, this->log, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN)},
+      mqtt_client{WiFiClient()},
+      mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, this->mqtt_client)}
 {
-    if (firstBoot)
+    rtc->begin();
+    Serial.begin(115200);
+    Serial2.begin(9600);
+    Wire.begin(SDA_PIN, SCL_PIN, 100000U); // i2c
+    log->print(Logger::info, "Initialising...");
+    if (!SPIFFS.begin(true))
     {
-        File nodesFile = SPIFFS.open(nodeDataFN, FILE_WRITE, true);
+        log->print(Logger::error, "Mounting SPIFFS failed! Restarting...");
+        ESP.restart();
+    }
+    if (initialBoot)
+    {
+        log->print(Logger::info, "First boot.");
+
+        //manage filesystem
+        File nodesFile = SPIFFS.open(NODES_FP, FILE_WRITE, true);
         nodesFile.write((size_t)0);
         nodesFile.close();
-        File dataFile = SPIFFS.open(sensorDataFN, FILE_WRITE, true);
+        File dataFile = SPIFFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
+        
+        //retrieve time
+        wifiConnect();
+        rtc->write_time_epoch(getWiFiTime());
+        WiFi.disconnect();
+
+        initialBoot = false;
+
     }
 
     nodesFromFile();
@@ -29,12 +51,49 @@ Gateway::Gateway(Logger *log)
 
 void Gateway::nodesFromFile()
 {
-    File nodesFile = SPIFFS.open(nodeDataFN, FILE_READ);
+    log->print(Logger::debug, "Recovering nodes from file...");
+    File nodesFile = SPIFFS.open(NODES_FP, FILE_READ);
     size_t size;
     nodesFile.read((uint8_t *)&size, sizeof(size_t));
     nodes.resize(size);
     nodesFile.read((uint8_t *)nodes.data(), size * sizeof(Node));
     nodesFile.close();
+}
+
+void Gateway::wake()
+{
+    log->print(Logger::debug, "Running wake()...");
+    if (!nodes.empty() && rtc->read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime())) commPeriod();
+    for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
+    {
+        if (commandPhaseEntry)
+        {
+            log->print(Logger::info, "Entering command phase...");
+            commandPhase();
+            break;
+        }
+        delay(100);
+    }
+    log->print(Logger::debug, "Entering deep sleep...");
+    deepSleepUntil(nodes.empty() ? COMMUNICATION_INTERVAL : WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
+}
+
+void Gateway::commandPhase()
+{
+    Serial.print("COMMAND PHASE");
+    char buffer[256];
+    Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
+    size_t length = Serial.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
+    buffer[length] = '\0';
+    if (strcmp(buffer, "") || strcmp(buffer, "exit") || strcmp(buffer, "close"))
+    {
+        Serial.print("Exiting command phase...");
+        return;
+    }
+    else
+    {
+        Serial.printf("Command '%s' not found.", buffer);
+    }
 }
 
 void Gateway::deepSleep(float sleep_time)
@@ -58,10 +117,10 @@ void Gateway::deepSleep(float sleep_time)
     else
     {
         // We use the external RTC
-        rtc.enable_alarm();
-        rtc.write_alarm_epoch(rtc.read_time_epoch() + (uint32_t)round(sleep_time));
+        rtc->enable_alarm();
+        rtc->write_alarm_epoch(rtc->read_time_epoch() + (uint32_t)round(sleep_time));
 
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc->getIntPin(), 0);
     }
     esp_sleep_enable_ext1_wakeup((gpio_num_t)BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     esp_deep_sleep_start();
@@ -69,7 +128,7 @@ void Gateway::deepSleep(float sleep_time)
 
 void Gateway::deepSleepUntil(uint32_t time)
 {
-    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t ctime = rtc->read_time_epoch();
     deepSleep((float)(time - ctime));
 }
 
@@ -82,7 +141,7 @@ void Gateway::lightSleep(float sleep_time)
 
 void Gateway::lightSleepUntil(uint32_t time)
 {
-    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t ctime = rtc->read_time_epoch();
     lightSleep((float)(time - ctime));
 }
 
@@ -103,7 +162,7 @@ void Gateway::discovery()
     }
     log->printf(Logger::info, "Node found at %s", hello_reply.getSource().toString());
 
-    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t ctime = rtc->read_time_epoch();
     uint32_t sample_time = ((ctime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING;
     uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING;
 
@@ -123,7 +182,7 @@ void Gateway::discovery()
 void Gateway::storeNode(Node &n)
 {
     nodes.push_back(n);
-    File nodesFile = SPIFFS.open(nodeDataFN, FILE_APPEND);
+    File nodesFile = SPIFFS.open(NODES_FP, FILE_APPEND);
     nodesFile.write(nodes.size());
     nodesFile.write((uint8_t *)nodes.data(), nodes.size());
     nodesFile.close();
@@ -131,12 +190,13 @@ void Gateway::storeNode(Node &n)
 
 void Gateway::commPeriod()
 {
-    File dataFile = SPIFFS.open(sensorDataFN, FILE_APPEND);
+    File dataFile = SPIFFS.open(DATA_FP, FILE_APPEND);
     for (Node n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a node misses its new time config
     {
         lightSleepUntil(n.getNextCommTime() - COMMUNICATION_PERIOD_PADDING); // light sleep until scheduled comm period
         log->printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
-        SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&lora.receiveMessage(SENSOR_DATA_TIMEOUT + COMMUNICATION_PERIOD_PADDING, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress()));
+        Message sensorDataM = lora.receiveMessage(SENSOR_DATA_TIMEOUT + COMMUNICATION_PERIOD_PADDING, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress());
+        SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
         if (sensorData.isType(Message::ERROR))
         {
             log->printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
@@ -145,7 +205,7 @@ void Gateway::commPeriod()
         log->printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
 
-        uint32_t ctime = rtc.read_time_epoch();
+        uint32_t ctime = rtc->read_time_epoch();
         uint32_t comm_time = ctime + COMMUNICATION_INTERVAL;
 
         lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), 0, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
@@ -157,6 +217,10 @@ void Gateway::commPeriod()
         }
         n.updateLastCommTime(ctime);
         n.updateNextCommTime(comm_time);
+    }
+    if (nodes.empty())
+    {
+        log->print(Logger::info, "No comm periods performed because no nodes have been registered.");
     }
     dataFile.close();
 }
@@ -192,8 +256,8 @@ void Gateway::pruneSensorData(File &dataFile)
         }
     }
     dataFileTemp.close();
-    SPIFFS.remove(sensorDataFN);
-    SPIFFS.rename(sensorDataTempFN, sensorDataFN);
+    SPIFFS.remove(DATA_FP);
+    SPIFFS.rename(sensorDataTempFN, DATA_FP);
 }
 
 char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress &nodeMAC)
@@ -201,6 +265,23 @@ char *Gateway::createTopic(char *buffer, size_t max_len, MACAddress &nodeMAC)
     char mac_string_buffer[MACAddress::string_length];
     snprintf(buffer, max_len, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(mac_string_buffer));
     return buffer;
+}
+
+void Gateway::wifiConnect()
+{
+    log->printf(Logger::info, "Connecting to WiFi with SSID: %s", WIFI_SSID);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    for(size_t i = 500; i > 0 && WiFi.status() != WL_CONNECTED; i--)
+    {
+        delay(500);
+        log->print(Logger::info, ".");
+    }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        log->print(Logger::error, "Could not connect to WiFi.");
+        return;
+    }
+    log->print(Logger::info, "Connected to WiFi.");
 }
 
 uint32_t Gateway::getWiFiTime(void)
