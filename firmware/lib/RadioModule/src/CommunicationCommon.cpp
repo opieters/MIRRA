@@ -136,3 +136,4 @@ bool operator==(const MACAddress &mac1, const MACAddress &mac2)
 }
 
 const MACAddress MACAddress::broadcast = MACAddress();
+char MACAddress::str_buffer[MACAddress::string_length];
