@@ -40,7 +40,7 @@ private:
 
 public:
     SensorValue() : tag{0}, value{0} {};
-    SensorValue(uint8_t *data){};
+    SensorValue(uint8_t *data);
     SensorValue(unsigned int type_tag, unsigned int instance_tag, float value) : tag{((type_tag & 0xFFF) << 4) | (instance_tag & 0xF)}, value{value} {};
     SensorValue(uint16_t tag, float value) : tag{tag}, value{value} {};
     uint8_t *to_data(uint8_t *data);
