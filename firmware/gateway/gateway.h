@@ -20,7 +20,7 @@ private:
         uint32_t sampling_interval = 0;
 
 public:
-        Node() {};
+        Node(){};
         Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {}
         MACAddress getMACAddress() { return mac; }
         void updateLastCommTime(uint32_t ctime) { last_comm_time = ctime; };
@@ -32,14 +32,15 @@ public:
 class Gateway
 {
 public:
-        Gateway(Logger *log, PCF2129_RTC* rtc);
+        Gateway(Logger *log, PCF2129_RTC *rtc);
         void nodesFromFile();
-
 
         void wake();
 
         void commandPhase();
-        
+        void listFiles();
+        void printFile(const char *filename);
+
         void deepSleep(float time);
         void deepSleepUntil(uint32_t time);
         void lightSleep(float time);
@@ -64,7 +65,7 @@ public:
 
 private:
         LoRaModule lora;
-        PCF2129_RTC* rtc;
+        PCF2129_RTC *rtc;
         PubSubClient mqtt;
         WiFiClient mqtt_client;
 

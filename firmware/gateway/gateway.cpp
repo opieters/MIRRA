@@ -9,7 +9,7 @@ extern volatile bool commandPhaseEntry;
 
 RTC_DATA_ATTR bool initialBoot = true;
 
-Gateway::Gateway(Logger *log, PCF2129_RTC* rtc)
+Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
     : log{log},
       rtc{rtc},
       lora{LoRaModule(rtc, this->log, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN)},
@@ -30,20 +30,19 @@ Gateway::Gateway(Logger *log, PCF2129_RTC* rtc)
     {
         log->print(Logger::info, "First boot.");
 
-        //manage filesystem
+        // manage filesystem
         File nodesFile = SPIFFS.open(NODES_FP, FILE_WRITE, true);
         nodesFile.write((size_t)0);
         nodesFile.close();
         File dataFile = SPIFFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
-        
-        //retrieve time
+
+        // retrieve time
         wifiConnect();
         rtc->write_time_epoch(getWiFiTime());
         WiFi.disconnect();
 
         initialBoot = false;
-
     }
 
     nodesFromFile();
@@ -63,7 +62,8 @@ void Gateway::nodesFromFile()
 void Gateway::wake()
 {
     log->print(Logger::debug, "Running wake()...");
-    if (!nodes.empty() && rtc->read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime())) commPeriod();
+    if (!nodes.empty() && rtc->read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
+        commPeriod();
     for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
     {
         if (commandPhaseEntry)
@@ -80,20 +80,74 @@ void Gateway::wake()
 
 void Gateway::commandPhase()
 {
-    Serial.print("COMMAND PHASE");
+    Serial.println("COMMAND PHASE");
     char buffer[256];
+    size_t length;
     Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
-    size_t length = Serial.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
-    buffer[length] = '\0';
-    if (strcmp(buffer, "") || strcmp(buffer, "exit") || strcmp(buffer, "close"))
+    while (true)
     {
-        Serial.print("Exiting command phase...");
+        length = Serial.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
+        buffer[length] = '\0';
+        if (strcmp(buffer, "") == 0 || strcmp(buffer, "exit") == 0 || strcmp(buffer, "close") == 0)
+        {
+            Serial.println("Exiting command phase...");
+            return;
+        }
+        else if (strcmp(buffer, "discovery") == 0)
+        {
+            discovery();
+        }
+        else if (strcmp(buffer, "ls") == 0 || strcmp(buffer, "list") == 0)
+        {
+            listFiles();
+        }
+        else if (strncmp(buffer, "echo ", 5) == 0)
+        {
+            Serial.println(&buffer[5]);
+        }
+        else if (strncmp(buffer, "print ", 6) == 0)
+        {
+            printFile(&buffer[6]);
+        }
+        else
+        {
+            Serial.printf("Command '%s' not found or invalid argument(s) given.", buffer);
+        }
+    }
+}
+
+void Gateway::listFiles()
+{
+    File root = SPIFFS.open("/");
+    File file = root.openNextFile();
+    while (file)
+    {
+        Serial.println(file.name());
+        file = root.openNextFile();
+    }
+    root.close();
+    file.close();
+}
+
+void Gateway::printFile(const char *filename)
+{
+    if (!SPIFFS.exists(filename))
+    {
+        Serial.printf("File '%s' does not exist.", filename);
         return;
     }
-    else
+    File file = SPIFFS.open(filename, FILE_READ);
+    if (!file)
     {
-        Serial.printf("Command '%s' not found.", buffer);
+        Serial.printf("Error while opening file '%s'", filename);
+        return;
     }
+    while (file.available())
+    {
+        Serial.write(file.read());
+    }
+    Serial.flush();
+    file.close();
 }
 
 void Gateway::deepSleep(float sleep_time)
@@ -193,7 +247,7 @@ void Gateway::commPeriod()
     File dataFile = SPIFFS.open(DATA_FP, FILE_APPEND);
     for (Node n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a node misses its new time config
     {
-        lightSleepUntil(n.getNextCommTime() - COMMUNICATION_PERIOD_PADDING); // light sleep until scheduled comm period
+        lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
         log->printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
         Message sensorDataM = lora.receiveMessage(SENSOR_DATA_TIMEOUT + COMMUNICATION_PERIOD_PADDING, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress());
         SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
@@ -271,7 +325,7 @@ void Gateway::wifiConnect()
 {
     log->printf(Logger::info, "Connecting to WiFi with SSID: %s", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
-    for(size_t i = 500; i > 0 && WiFi.status() != WL_CONNECTED; i--)
+    for (size_t i = 500; i > 0 && WiFi.status() != WL_CONNECTED; i--)
     {
         delay(500);
         log->print(Logger::info, ".");
