@@ -32,7 +32,7 @@ private:
     char *level_to_string(Level level, char *buffer, size_t buffer_length);
 
 public:
-    Logger(Level level, char *logfile_path, PCF2129_RTC *rtc);
+    Logger(Level level, const char *logfile_path, PCF2129_RTC *rtc);
     void printf(Level level, const char *fmt, ...);
     void print(Level level, const char *string);
     void print(Level level, const signed int i);

@@ -1,6 +1,6 @@
 #include "logging.h"
 
-Logger::Logger(Level level, char *logfile_base_path, PCF2129_RTC *rtc)
+Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc)
 {
     this->level = level;
     if (logfile_base_path == nullptr)
@@ -128,12 +128,10 @@ char *Logger::level_to_string(Level level, char *buffer, size_t buffer_length)
     {
     case Level::error:
         strncpy(buffer, "ERROR", buffer_length);
-        return buffer;
     case Level::info:
         strncpy(buffer, "INFO", buffer_length);
-        return buffer;
     case Level::debug:
         strncpy(buffer, "DEBUG", buffer_length);
-        return buffer;
     }
+    return buffer;
 }
