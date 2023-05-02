@@ -16,10 +16,6 @@ Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
       mqtt_client{WiFiClient()},
       mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, this->mqtt_client)}
 {
-    rtc->begin();
-    Serial.begin(115200);
-    Serial2.begin(9600);
-    Wire.begin(SDA_PIN, SCL_PIN, 100000U); // i2c
     log->print(Logger::info, "Initialising...");
     if (!SPIFFS.begin(true))
     {
