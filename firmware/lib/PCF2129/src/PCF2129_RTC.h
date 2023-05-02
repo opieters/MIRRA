@@ -40,28 +40,11 @@ class PCF2129_RTC
         uint8_t bcd_to_dec(uint8_t value);
         uint8_t dec_to_bcd(uint8_t value);
     public:
-        /**
-         * Constructor
-         * 
-         * @param sda   The sda pin
-         * 
-         * @param scl   The scl pin
-         * 
-         * @param i2c_port The used i2c bus port
-         **/
         PCF2129_RTC(uint8_t int_pin, uint8_t i2c_address);
-
-        // /**
-        //  * Destructor
-        //  */
-        // ~PCF2129_RTC();
-
         void enable_alarm();
         struct tm read_time();
         void write_time(struct tm datetime);
         void write_alarm(struct tm alarm_datetime);
-
-        bool begin();
 
         /**
          * Reads the time from the rtc and returns an epoch

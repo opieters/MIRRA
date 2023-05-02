@@ -7,17 +7,7 @@ PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t i2c_address)
     this->int_pin = int_pin;
 
     pinMode(int_pin, INPUT_PULLUP);
-}
-
-bool PCF2129_RTC::begin()
-{
-    // I2C config
-
-    // enabling interrupt + clearing flag
-    Wire.beginTransmission(address);
-    Wire.write(0x01);
-    Wire.write(0x02);
-    return Wire.endTransmission();
+    enable_alarm();
 }
 
 void PCF2129_RTC::enable_alarm()
