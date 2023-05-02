@@ -57,8 +57,8 @@ void ESPCamUART::start_measurement(){
 uint8_t ESPCamUART::read_measurement(float* data, uint8_t length) {
     //uint8_t status;
 
-    data[0] = 0.1;
-    data[1] = 0.2;
+    data[0] = 0;
+    data[1] = 0;
 
     Serial.println("[ESPCAM] Taking picture");
     serial->write(ESPCamUARTCommand::TAKE_PICTURE);

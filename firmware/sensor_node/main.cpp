@@ -35,7 +35,7 @@ RadioModule radio(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, TX_SWITCH, RX_SWITC
 RTC_DATA_ATTR bool firstBoot = true;
 
 // keep communication state in persistent memory
-RTC_DATA_ATTR CommunicationState state = CommunicationState::PREPARE_READOUT, prev_state = CommunicationState::SLEEP;
+RTC_DATA_ATTR CommunicationState state = CommunicationState::SEARCHING_GATEWAY, prev_state = CommunicationState::SLEEP;
 RTC_DATA_ATTR uint16_t n_errors = 0;
 
 constexpr uint8_t sda_pin = 21, scl_pin = 22;
@@ -82,9 +82,9 @@ SoilTemperatureSensor soilTempSensor(oneWirePin, 0);
 ESPCamUART espCamera1(&serial2, GPIO_NUM_2);
 
 Sensor *sensors[] = {
-    //&airTempRHSensor,
-    //&soilTempSensor,
-    //&lightSensor,
+    &airTempRHSensor,
+    &soilTempSensor,
+    &lightSensor,
     &espCamera1,
     //&espCamera2,
 };
@@ -92,9 +92,9 @@ Sensor *sensors[] = {
 const size_t n_sensors = ARRAY_LENGTH(sensors);
 
 RTC_DATA_ATTR Sensor *sampleSensors[n_sensors] = {
-    //&airTempRHSensor,
-    //&soilTempSensor,
-    //&lightSensor,
+    &airTempRHSensor,
+    &soilTempSensor,
+    &lightSensor,
     &espCamera1,
 };
 RTC_DATA_ATTR uint8_t n_sampleSensors = ARRAY_LENGTH(sampleSensors);
@@ -607,7 +607,7 @@ void loop()
         status = radio.receiveSpecificMessage(gatewayCommunicationInterval, message, CommunicationCommand::TIME_CONFIG);
 
         // update variables if we received an ACK message from the gateway
-        if (status || true)
+        if (status)
         {
             nBytesRead += readLength;
 
