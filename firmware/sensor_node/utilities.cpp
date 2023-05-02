@@ -137,6 +137,9 @@ bool checkCommand(LoRaMessage &message, CommunicationCommand command)
 // sensor node receives current time from gateway
 bool readTimeData(LoRaMessage &message, Sensor **sensors, size_t n_sensors, bool onlyEpoch)
 {
+    next_communication_time = rtc.read_time_epoch() + 120;
+    return true;
+
     uint32_t time;
     size_t i;
 
