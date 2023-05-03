@@ -1,11 +1,10 @@
 #include "LoRaModule.h"
 
-LoRaModule::LoRaModule(PCF2129_RTC *rtc, Logger *log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t DIO1Pin, const uint8_t rxPin, const uint8_t txPin)
-    : rtc{rtc},
-      log{log},
+LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
+    : log{log},
       DIO0Pin{DIO0Pin},
       DIO1Pin{DIO1Pin},
-      mod{Module(csPin, DIO0Pin, rstPin, DIO1Pin)},
+      mod{Module(csPin, DIO0Pin, rstPin)},
       SX1272(&mod),
       lastSent{Message::error}
 {
@@ -15,7 +14,6 @@ LoRaModule::LoRaModule(PCF2129_RTC *rtc, Logger *log, const uint8_t csPin, const
 
     this->mac = MACAddress();
     esp_efuse_mac_get_default(this->mac.getAddress());
-
     int state = this->begin(LORA_FREQUENCY,
                             LORA_BANDWIDTH,
                             LORA_SPREADING_FACTOR,
@@ -60,8 +58,10 @@ void LoRaModule::sendMessage(Message message)
 
 Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size_t repeat_attempts, MACAddress source, bool promiscuous)
 {
-    if (source == nullptr)
+    if (source == MACAddress::broadcast && this->lastSent.getType() != Message::ERROR)
+    {
         source = this->lastSent.getDest();
+    }
     timeout_ms /= repeat_attempts + 1;
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
@@ -71,6 +71,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size
     esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
     do
     {
+        log->printf(Logger::debug, "Starting receive ...");
         int state = this->startReceive();
 
         if (state != RADIOLIB_ERR_NONE)
