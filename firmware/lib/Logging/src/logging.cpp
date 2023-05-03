@@ -13,6 +13,7 @@ Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc)
     }
     this->rtc = rtc;
     this->logfile_time = rtc->read_time();
+    this->print(Logger::debug, "Logger initialised.");
 }
 File Logger::open_logfile(char *logfile_path)
 {
@@ -38,7 +39,7 @@ void Logger::generate_logfile_path(char *buffer, struct tm &time)
 {
     char time_string[11];
     strftime(time_string, 11, "%F", &time);
-    snprintf(buffer, 32, "%s%s%s", this->logfile_base_path, time_string, ".log");
+    snprintf(buffer, 32, "%s%s.log", this->logfile_base_path, time_string);
 }
 
 void Logger::delete_oldest_logfile(struct tm &time)
@@ -66,14 +67,16 @@ void Logger::logfile_print(const char *string, struct tm &time)
     {
         delete_oldest_logfile(time);
         if (this->logfile)
-            logfile.close();
+            this->logfile.close();
         char logfile_path[32];
         generate_logfile_path(logfile_path, time);
         this->logfile = open_logfile(logfile_path);
+        this->logfile_time = time;
         if (!this->logfile)
             return;
     }
     logfile.println(string);
+    logfile.flush();
 }
 
 void Logger::printf(Level level, const char *fmt, ...)
@@ -104,8 +107,8 @@ void Logger::print(Level level, const char *string)
     level_to_string(level, level_string, sizeof(level_string));
     snprintf(string_buffer, len_buffer, "%s %s: %s", time_string, level_string, string);
 
+    Serial.println(string_buffer);
     logfile_print(string_buffer, time);
-    Serial.print(string_buffer);
 }
 
 void Logger::print(Level level, const unsigned int u)
@@ -122,16 +125,25 @@ void Logger::print(Level level, const signed int i)
     print(level, int_string);
 }
 
+void Logger::closeLogfile()
+{
+    this->logfile.close();
+    this->logfile_enabled = false;
+}
+
 char *Logger::level_to_string(Level level, char *buffer, size_t buffer_length)
 {
     switch (level)
     {
     case Level::error:
         strncpy(buffer, "ERROR", buffer_length);
+        break;
     case Level::info:
         strncpy(buffer, "INFO", buffer_length);
+        break;
     case Level::debug:
         strncpy(buffer, "DEBUG", buffer_length);
+        break;
     }
     return buffer;
 }

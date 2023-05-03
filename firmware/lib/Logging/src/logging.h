@@ -37,6 +37,7 @@ public:
     void print(Level level, const char *string);
     void print(Level level, const signed int i);
     void print(Level level, const unsigned int i);
+    void closeLogfile();
 
     static const size_t days_to_keep = 7;
 };
