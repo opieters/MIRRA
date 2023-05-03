@@ -64,12 +64,12 @@ public:
         uint32_t getGSMTime();
 
 private:
-        LoRaModule lora;
-        PCF2129_RTC *rtc;
-        PubSubClient mqtt;
-        WiFiClient mqtt_client;
-
         Logger *log;
+        PCF2129_RTC *rtc;
+
+        LoRaModule lora;
+        WiFiClient mqtt_client;
+        PubSubClient mqtt;
 
         std::vector<Node> nodes;
 };

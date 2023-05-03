@@ -12,29 +12,28 @@ RTC_DATA_ATTR bool initialBoot = true;
 Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
     : log{log},
       rtc{rtc},
-      lora{LoRaModule(rtc, this->log, CS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, RX_PIN, TX_PIN)},
+      lora{LoRaModule(log, CS_PIN, RST_PIN, DIO0_PIN, RX_PIN, TX_PIN)},
       mqtt_client{WiFiClient()},
-      mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, this->mqtt_client)}
+      mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, mqtt_client)}
 {
-    log->print(Logger::info, "Initialising...");
-    if (!SPIFFS.begin(true))
-    {
-        log->print(Logger::error, "Mounting SPIFFS failed! Restarting...");
-        ESP.restart();
-    }
     if (initialBoot)
     {
         log->print(Logger::info, "First boot.");
 
         // manage filesystem
+        if (SPIFFS.exists(NODES_FP))
+            SPIFFS.remove(NODES_FP);
         File nodesFile = SPIFFS.open(NODES_FP, FILE_WRITE, true);
-        nodesFile.write((size_t)0);
+        nodesFile.write(0);
         nodesFile.close();
+        if (SPIFFS.exists(DATA_FP))
+            SPIFFS.remove(DATA_FP);
         File dataFile = SPIFFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
 
-        // retrieve time
+        log->print(Logger::info, "Retrieving time from WiFi....");
         wifiConnect();
+        log->print(Logger::debug, "Writing time to RTC...");
         rtc->write_time_epoch(getWiFiTime());
         WiFi.disconnect();
 
@@ -48,8 +47,9 @@ void Gateway::nodesFromFile()
 {
     log->print(Logger::debug, "Recovering nodes from file...");
     File nodesFile = SPIFFS.open(NODES_FP, FILE_READ);
-    size_t size;
-    nodesFile.read((uint8_t *)&size, sizeof(size_t));
+    uint8_t size;
+    nodesFile.read(&size, sizeof(uint8_t));
+    log->printf(Logger::debug, "%u nodes found in %s", size, NODES_FP);
     nodes.resize(size);
     nodesFile.read((uint8_t *)nodes.data(), size * sizeof(Node));
     nodesFile.close();
@@ -60,6 +60,7 @@ void Gateway::wake()
     log->print(Logger::debug, "Running wake()...");
     if (!nodes.empty() && rtc->read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
         commPeriod();
+    log->print(Logger::info, "Press the BOOT pin to enter command phase ...");
     for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
     {
         if (commandPhaseEntry)
@@ -71,19 +72,30 @@ void Gateway::wake()
         delay(100);
     }
     log->print(Logger::debug, "Entering deep sleep...");
-    deepSleepUntil(nodes.empty() ? COMMUNICATION_INTERVAL : WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
+    if (nodes.empty())
+        deepSleep(COMMUNICATION_INTERVAL);
+    else
+        deepSleepUntil(WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
 }
 
 void Gateway::commandPhase()
 {
     Serial.println("COMMAND PHASE");
-    char buffer[256];
     size_t length;
     Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
     while (true)
     {
+        char buffer[256];
         length = Serial.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
-        buffer[length] = '\0';
+        if (length >= 1 && buffer[length - 1] == '\r')
+        {
+            buffer[length - 1] = '\0';
+        }
+        else
+        {
+            buffer[length] = '\0';
+        }
+        Serial.println(buffer);
         if (strcmp(buffer, "") == 0 || strcmp(buffer, "exit") == 0 || strcmp(buffer, "close") == 0)
         {
             Serial.println("Exiting command phase...");
@@ -97,28 +109,34 @@ void Gateway::commandPhase()
         {
             listFiles();
         }
-        else if (strncmp(buffer, "echo ", 5) == 0)
-        {
-            Serial.println(&buffer[5]);
-        }
         else if (strncmp(buffer, "print ", 6) == 0)
         {
             printFile(&buffer[6]);
         }
+        else if (strcmp(buffer, "format") == 0)
+        {
+            Serial.println("Formatting flash memory (this can take some time)...");
+            SPIFFS.format();
+            Serial.println("Restarting ...");
+            ESP.restart();
+        }
+        else if (strncmp(buffer, "echo ", 5) == 0)
+        {
+            Serial.println(&buffer[5]);
+        }
         else
         {
-            Serial.printf("Command '%s' not found or invalid argument(s) given.", buffer);
+            Serial.printf("Command '%s' not found or invalid argument(s) given.\n", buffer);
         }
     }
 }
-
 void Gateway::listFiles()
 {
     File root = SPIFFS.open("/");
     File file = root.openNextFile();
     while (file)
     {
-        Serial.println(file.name());
+        Serial.println(file.path());
         file = root.openNextFile();
     }
     root.close();
@@ -129,15 +147,16 @@ void Gateway::printFile(const char *filename)
 {
     if (!SPIFFS.exists(filename))
     {
-        Serial.printf("File '%s' does not exist.", filename);
+        Serial.printf("File '%s' does not exist.\n", filename);
         return;
     }
     File file = SPIFFS.open(filename, FILE_READ);
     if (!file)
     {
-        Serial.printf("Error while opening file '%s'", filename);
+        Serial.printf("Error while opening file '%s'\n", filename);
         return;
     }
+    Serial.printf("%s with size %u bytes\n", filename, file.size());
     while (file.available())
     {
         Serial.write(file.read());
@@ -151,7 +170,6 @@ void Gateway::deepSleep(float sleep_time)
     if (sleep_time <= 0)
         return;
 
-    lora.sleep();
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
     // Therefore we force pin 15 to a LOW state here.
     pinMode(15, OUTPUT);
@@ -161,18 +179,23 @@ void Gateway::deepSleep(float sleep_time)
     // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep sleep
     if (sleep_time < 10)
     {
-        // We use the internal timer
+        log->print(Logger::debug, "Using internal timer for deep sleep.");
         esp_sleep_enable_timer_wakeup((uint64_t)(sleep_time * 1000 * 1000));
     }
     else
     {
+        log->print(Logger::debug, "Using RTC for deep sleep.");
         // We use the external RTC
         rtc->enable_alarm();
         rtc->write_alarm_epoch(rtc->read_time_epoch() + (uint32_t)round(sleep_time));
 
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc->getIntPin(), 0);
     }
-    esp_sleep_enable_ext1_wakeup((gpio_num_t)BOOT_PIN, ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(BOOT_PIN), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+    lora.sleep();
+    log->closeLogfile();
+    SPIFFS.end();
+    log->print(Logger::debug, "SPIFFS unmounted.");
     esp_deep_sleep_start();
 }
 
@@ -204,6 +227,7 @@ void Gateway::discovery()
     }
     log->print(Logger::info, "Sending discovery message.");
     lora.sendMessage(Message(Message::HELLO, lora.getMACAddress(), MACAddress::broadcast));
+    log->print(Logger::debug, "Awaiting discovery response message ...");
     Message hello_reply = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::HELLO_REPLY);
     if (hello_reply.isType(Message::ERROR))
     {
@@ -286,23 +310,23 @@ void Gateway::storeSensorData(SensorDataMessage &m, File &dataFile)
 
 void Gateway::pruneSensorData(File &dataFile)
 {
-    if (dataFile.size() < MAX_SENSORDATA_FILESIZE)
+    size_t fileSize = dataFile.size();
+    if (fileSize < MAX_SENSORDATA_FILESIZE)
         return;
     File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
-    size_t fileSize = dataFile.size();
     while (dataFile.peek() != EOF)
     {
-        uint8_t message_length = dataFile.peek();
+        uint8_t message_length = sizeof(message_length) + dataFile.peek();
         if (fileSize > MAX_SENSORDATA_FILESIZE)
         {
-            fileSize -= sizeof(message_length) + message_length;
-            dataFile.seek(sizeof(message_length) + message_length, fs::SeekCur);
+            fileSize -= message_length;
+            dataFile.seek(message_length, fs::SeekCur);
         }
         else
         {
-            uint8_t buffer[sizeof(message_length) + message_length];
-            dataFile.read(buffer, sizeof(message_length) + message_length);
-            dataFileTemp.write(buffer, sizeof(message_length) + message_length);
+            uint8_t buffer[message_length];
+            dataFile.read(buffer, message_length);
+            dataFileTemp.write(buffer, message_length);
         }
     }
     dataFileTemp.close();
@@ -321,9 +345,9 @@ void Gateway::wifiConnect()
 {
     log->printf(Logger::info, "Connecting to WiFi with SSID: %s", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
-    for (size_t i = 500; i > 0 && WiFi.status() != WL_CONNECTED; i--)
+    for (size_t i = 10; i > 0 && WiFi.status() != WL_CONNECTED; i--)
     {
-        delay(500);
+        delay(1000);
         log->print(Logger::info, ".");
     }
     if (WiFi.status() != WL_CONNECTED)
@@ -346,7 +370,7 @@ uint32_t Gateway::getWiFiTime(void)
         delay(500);
         log->print(Logger::debug, ".");
     }
-    log->print(Logger::info, " done.");
+    log->print(Logger::info, "done.");
     log->printf(Logger::info, "Date and time: %s %s", timeClient.getFormattedDate(), timeClient.getFormattedTime());
 
     timeClient.end();
