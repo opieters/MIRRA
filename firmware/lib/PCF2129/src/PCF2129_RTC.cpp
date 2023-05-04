@@ -94,7 +94,6 @@ void PCF2129_RTC::write_time_epoch(uint32_t epoch)
 void PCF2129_RTC::write_alarm_epoch(uint32_t alarm_epoch)
 {
     struct tm t = *localtime((time_t *)&alarm_epoch);
-    // The year and month are not used for the alarm
     Serial.printf("RTC alarm for: %i %i %i %i \n", t.tm_sec, t.tm_min, t.tm_hour, t.tm_mday);
     write_alarm(t);
 }
