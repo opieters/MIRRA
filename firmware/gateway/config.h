@@ -34,7 +34,7 @@
 #define WIFI_PASS "b5uJeswA"
 #define NTP_URL "be.pool.ntp.org"
 // MQTT settings
-#define MQTT_SERVER IPAddress(193, 190, 127, 143)
+#define MQTT_SERVER IPAddress(5, 9, 199, 28)
 #define MQTT_PORT 1883
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 // UART settings
