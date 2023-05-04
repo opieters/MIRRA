@@ -53,11 +53,14 @@ public:
         void storeSensorData(SensorDataMessage &m, File &dataFile);
         void pruneSensorData(File &dataFile);
 
+        void printSensorData();
+        void printNodes();
+
         char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
         void uploadPeriod();
 
         bool uploadData();
-        bool printDataUART();
+
 
         void wifiConnect();
         uint32_t getWiFiTime();
