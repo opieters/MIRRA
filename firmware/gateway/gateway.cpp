@@ -8,7 +8,7 @@ const char sensorDataTempFN[] = "/data_temp.dat";
 extern volatile bool commandPhaseEntry;
 
 RTC_DATA_ATTR bool initialBoot = true;
-RTC_DATA_ATTR int collectionPeriods = 0;
+RTC_DATA_ATTR int commPeriods = 0;
 
 Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
     : log{log},
@@ -38,18 +38,10 @@ Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
         {
             log->print(Logger::debug, "Writing time to RTC...");
             rtc->write_time_epoch(getWiFiTime());
-    
-            //test mqtt
-            if (mqtt.connect("testID")) {
-                mqtt.publish("testTopic", "testPayload %s", WiFi.macAddress());
-            }
-            log->print(Logger::info, "Test MQTT message send");
-            
-
-            WiFi.disconnect();
+            log->print(Logger::debug, "Sending test MQQT message...");
         }
         initialBoot = false;
-        collectionPeriods = 0;
+        commPeriods = 0;
     }
 
     nodesFromFile();
@@ -72,6 +64,11 @@ void Gateway::wake()
     log->print(Logger::debug, "Running wake()...");
     if (!nodes.empty() && rtc->read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
         commPeriod();
+    //send data to server only every UPLOAD_EVERY comm periods
+    if (commPeriods >= UPLOAD_EVERY) {
+            uploadPeriod();
+            commPeriods = 0;
+    } 
     log->print(Logger::info, "Press the BOOT pin to enter command phase ...");
     for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
     {
@@ -292,14 +289,6 @@ void Gateway::commPeriod()
         log->printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
 
-        //send data over WiFi only every UPLOAD_EVERY collection periods
-        if (collectionPeriods == UPLOAD_EVERY) {
-            uploadSensorData(n, sensorData);
-            collectionPeriods = 0;
-        } else {
-            collectionPeriods++;
-        }
-
         uint32_t ctime = rtc->read_time_epoch();
         uint32_t comm_time = ctime + COMMUNICATION_INTERVAL;
 
@@ -398,17 +387,10 @@ uint32_t Gateway::getWiFiTime(void)
     return timeClient.getEpochTime();
 }
 
-void Gateway::uploadSensorData(Node n, SensorDataMessage sensorData)
+void Gateway::uploadPeriod()
 {
     wifiConnect();
-    char* WiFiMAC = new char[WiFi.macAddress().length() + 1];
-    strcpy(WiFiMAC, WiFi.macAddress().c_str());
-    char* topic_array; //TOPIC_PREFIX + '/' + WiFi.macAddress() +"/" + n.getMACAddress().toString()
-    snprintf(topic_array, 36, "%s/%s/%s", TOPIC_PREFIX, WiFi.macAddress(), n.getMACAddress());
-    uint8_t* sensorDataUINT8;
-    sensorData.to_data(sensorDataUINT8);
-    if(mqtt.connect(WiFiMAC)) {
-        mqtt.publish(topic_array, sensorDataUINT8, sensorData.getLength());
-    }
+    char topic_array[sizeof(TOPIC_PREFIX) + 1 + MACAddress::string_length + 1]; //TOPIC_PREFIX + '/' + GATEWAY MAC 
+    snprintf(topic_array, 36, "%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString());
     WiFi.disconnect();
 }
