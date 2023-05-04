@@ -57,10 +57,7 @@ public:
         void printNodes();
 
         char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
-        void uploadSensorData(Node n, SensorDataMessage sensorData);
-
-        bool uploadData();
-
+        void uploadPeriod();
 
         void wifiConnect();
         uint32_t getWiFiTime();
