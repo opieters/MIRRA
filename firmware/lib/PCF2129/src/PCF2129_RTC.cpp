@@ -7,12 +7,10 @@ PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t i2c_address)
     this->int_pin = int_pin;
 
     pinMode(int_pin, INPUT_PULLUP);
-    enable_alarm();
 }
 
 void PCF2129_RTC::enable_alarm()
 {
-    // enabling interrupt + clearing flag
     Wire.beginTransmission(address);
     Wire.write(0x01);
     Wire.write(0x02);
@@ -39,9 +37,9 @@ struct tm PCF2129_RTC::read_time()
     now.tm_sec = seconds;
     now.tm_min = minutes;
     now.tm_hour = hours;
-    now.tm_mday = days - 1; // (RTC uses 1-12 as months but C time structs use 0-11 as months)
+    now.tm_mday = days; 
     now.tm_wday = week_day;
-    now.tm_mon = months;
+    now.tm_mon = months - 1; // (RTC uses 1-12 as months but C time structs use 0-11 as months)
     now.tm_year = years + 100; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
     return now;
 }
@@ -55,8 +53,8 @@ void PCF2129_RTC::write_time(struct tm datetime)
     Wire.write(dec_to_bcd(datetime.tm_hour));
     Wire.write(dec_to_bcd(datetime.tm_mday));
     Wire.write(datetime.tm_wday);
-    Wire.write(dec_to_bcd(datetime.tm_mon));
-    Wire.write(dec_to_bcd(datetime.tm_year));
+    Wire.write(dec_to_bcd(datetime.tm_mon + 1));
+    Wire.write(dec_to_bcd(datetime.tm_year - 100));
     Wire.endTransmission();
 }
 
@@ -90,10 +88,6 @@ uint32_t PCF2129_RTC::read_time_epoch()
 void PCF2129_RTC::write_time_epoch(uint32_t epoch)
 {
     struct tm t = *localtime((time_t *)&epoch);
-    // The year we have to write is relative to 2000
-    t.tm_year -= 100;
-    // The month we have to write starts at 1
-    ++t.tm_mon;
     write_time(t);
 }
 
@@ -101,5 +95,6 @@ void PCF2129_RTC::write_alarm_epoch(uint32_t alarm_epoch)
 {
     struct tm t = *localtime((time_t *)&alarm_epoch);
     // The year and month are not used for the alarm
+    Serial.printf("RTC alarm for: %i %i %i %i \n", t.tm_sec, t.tm_min, t.tm_hour, t.tm_mday);
     write_alarm(t);
 }
