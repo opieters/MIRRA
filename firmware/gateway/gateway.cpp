@@ -33,10 +33,12 @@ Gateway::Gateway(Logger *log, PCF2129_RTC *rtc)
 
         log->print(Logger::info, "Retrieving time from WiFi....");
         wifiConnect();
-        log->print(Logger::debug, "Writing time to RTC...");
-        rtc->write_time_epoch(getWiFiTime());
-        WiFi.disconnect();
-
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            log->print(Logger::debug, "Writing time to RTC...");
+            rtc->write_time_epoch(getWiFiTime());
+            WiFi.disconnect();
+        }
         initialBoot = false;
     }
 
@@ -177,7 +179,7 @@ void Gateway::deepSleep(float sleep_time)
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep sleep
-    if (sleep_time < 10)
+    if (sleep_time <= 30)
     {
         log->print(Logger::debug, "Using internal timer for deep sleep.");
         esp_sleep_enable_timer_wakeup((uint64_t)(sleep_time * 1000 * 1000));
@@ -186,11 +188,12 @@ void Gateway::deepSleep(float sleep_time)
     {
         log->print(Logger::debug, "Using RTC for deep sleep.");
         // We use the external RTC
-        rtc->enable_alarm();
         rtc->write_alarm_epoch(rtc->read_time_epoch() + (uint32_t)round(sleep_time));
+        rtc->enable_alarm();
 
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc->getIntPin(), 0);
     }
+    digitalWrite(16, LOW);
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc->getIntPin(), 0);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(BOOT_PIN), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     lora.sleep();
     log->closeLogfile();
