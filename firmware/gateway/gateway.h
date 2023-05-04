@@ -54,7 +54,7 @@ public:
         void pruneSensorData(File &dataFile);
 
         char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
-        void uploadPeriod();
+        void uploadSensorData(Node n, SensorDataMessage sensorData);
 
         bool uploadData();
         bool printDataUART();
