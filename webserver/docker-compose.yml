@@ -7,6 +7,7 @@ services:
     image: mysql:5.7.25
     container_name: "gems_mysql"
     networks:
+      - internet # this is for dev purposes only (MySQL not exposed through firewall, but can be accessed through SSH tunnel)
       - no-internet
     ports:
       - "3306:3306"
@@ -46,9 +47,7 @@ services:
       - no-internet
   mqtt_parser:
     container_name: "mqtt_parser"
-    build:
-      context: ./mqtt_parser/
-      #dockerfile: Dockerfile
+    build: ./mqtt_parser/
     #ports:
     #  - "3306:3306"
     #  - "1883:1883"
@@ -61,15 +60,19 @@ services:
   # Start up Grafana -DONE
   grafana:
       restart: always
-      image: grafana/grafana:6.3.1
+      image: grafana/grafana:9.5.1
       ports:
         - "3000:3000"
       container_name: "gems_grafana"
+      volumes:
+        - ./grafana/data:/var/lib/grafana
+        - ./grafana/grafana.ini:/etc/grafana/grafana.ini
       depends_on:
         - db
       networks:
         - internet
         - no-internet
+
 volumes:
   db_data: {}
 

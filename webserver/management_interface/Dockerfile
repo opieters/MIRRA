@@ -19,7 +19,7 @@ RUN set -x \
 # docker build -t gems_image .
 
 ##  2. Create a container from that image and run it
-#  docker run -d --name gems_container -p 80:80 GEMS_image
+#  docker run -d --name gems_container -p 443:443 GEMS_image
 
 ## Optionals: debug with bash:
 #  docker run -ti gems_image bash

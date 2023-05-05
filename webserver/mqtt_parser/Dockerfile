@@ -7,4 +7,4 @@ COPY . /app/
 RUN set -x \ 
     && pip install  --no-cache-dir -r /app/requirements.txt 
 
-CMD [ "python", "./app/mqtt_parser.py" ]
+CMD [ "python", "-u", "./app/mqtt_parser.py" ]
