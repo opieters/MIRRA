@@ -1,8 +1,5 @@
 #include "gateway.h"
-#include <SPIFFS.h>
 #include <cstring>
-#include "utilities.h"
-#include <NTPClient.h>
 
 const char sensorDataTempFN[] = "/data_temp.dat";
 extern volatile bool commandPhaseEntry;
@@ -122,6 +119,10 @@ void Gateway::commandPhase()
         {
             printFile(&buffer[6]);
         }
+        else if (strncmp(buffer, "printhex ", 9) == 0)
+        {
+            printFile(&buffer[9], true);
+        }
         else if (strcmp(buffer, "format") == 0)
         {
             Serial.println("Formatting flash memory (this can take some time)...");
@@ -152,7 +153,7 @@ void Gateway::listFiles()
     file.close();
 }
 
-void Gateway::printFile(const char *filename)
+void Gateway::printFile(const char *filename, bool hex)
 {
     if (!SPIFFS.exists(filename))
     {
@@ -166,10 +167,21 @@ void Gateway::printFile(const char *filename)
         return;
     }
     Serial.printf("%s with size %u bytes\n", filename, file.size());
-    while (file.available())
+    if (hex)
     {
-        Serial.write(file.read());
+        while(file.available())
+        {
+            Serial.printf("%X", file.read());
+        }
     }
+    else
+    {
+        while (file.available())
+        {
+            Serial.write(file.read());
+        }
+    }
+
     Serial.flush();
     file.close();
 }
@@ -218,7 +230,7 @@ void Gateway::deepSleepUntil(uint32_t time)
 void Gateway::lightSleep(float sleep_time)
 {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    esp_sleep_enable_timer_wakeup((uint64_t)SECONDS_TO_US(sleep_time * 1000 * 1000));
+    esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
     esp_light_sleep_start();
 }
 
@@ -280,12 +292,12 @@ void Gateway::commPeriod()
         lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
         log->printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
         Message sensorDataM = lora.receiveMessage(SENSOR_DATA_TIMEOUT + COMMUNICATION_PERIOD_PADDING, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress());
-        SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
-        if (sensorData.isType(Message::ERROR))
+        if (sensorDataM.isType(Message::ERROR))
         {
             log->printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
             continue;
         }
+        SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
         log->printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
 
