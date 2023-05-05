@@ -73,6 +73,11 @@ private:
 public:
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval);
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t *data);
+    uint32_t getCTime() {return cur_time};
+    uint32_t getSampleTime() {return sample_time};
+    uint32_t getSampleInterval() {return sample_interval};
+    uint32_t getCommTime() {return comm_time};
+    uint32_t getCommInterval() {return comm_interval};
     size_t getLength();
     uint8_t *to_data(uint8_t *data);
 };
