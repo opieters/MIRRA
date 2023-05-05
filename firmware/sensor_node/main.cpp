@@ -19,42 +19,9 @@
 #include <ESPCamUART.h>
 #include <driver/adc.h>
 
-#define SS_PIN 27   // Slave select pin
-#define RST_PIN 26  // Reset pin
-#define DIO0_PIN 34 // DIO0 pin IRQ
-#define DIO1_PIN 14 // This pin is not connected in this board version
-#define TX_SWITCH 13
-#define RX_SWITCH 25
-// for debugging purposes
-#define __DEBUG__ // comment out when not debugging
-
-PCF2129_RTC rtc(RTC_INT_PIN, RTC_ADDRESS);
-RadioModule radio(&rtc, SS_PIN, RST_PIN, DIO0_PIN, DIO1_PIN, TX_SWITCH, RX_SWITCH);
-
-// RTC_DATA_ATTR geeft aan dat die variabele in speciaal deel van geheugen worden opgeslaan (want bij deepsleep wordt alles vergeten)
-RTC_DATA_ATTR bool firstBoot = true;
-
 // keep communication state in persistent memory
 RTC_DATA_ATTR CommunicationState state = CommunicationState::SEARCHING_GATEWAY, prev_state = CommunicationState::SLEEP;
 RTC_DATA_ATTR uint16_t n_errors = 0;
-
-constexpr uint8_t sda_pin = 21, scl_pin = 22;
-
-const char measurementDataFN[] = "/data.dat";
-
-File measurementData;
-
-const uint32_t gatewaySearchWindow = 120UL * 1000UL;
-const uint32_t gatewayCommunicationInterval = 10000UL;
-
-const uint32_t dummy_time = 1681717608 - 200; // Monday, April 17, 2023 7:08:17 AM GMT+02:00
-
-RTC_DATA_ATTR uint32_t next_sample_time;
-RTC_DATA_ATTR uint32_t next_communication_time;
-RTC_DATA_ATTR uint32_t sample_interval;
-RTC_DATA_ATTR uint32_t communication_interval;
-float sleepTime;
-const float maxSleepTime = 12 * 60 * 60; // sleep at most half a day
 
 RTC_DATA_ATTR size_t nBytesWritten;
 RTC_DATA_ATTR size_t nBytesRead;
