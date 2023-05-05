@@ -6,7 +6,9 @@
 #include "PubSubClient.h"
 #include <CommunicationCommon.h>
 #include "WiFi.h"
+#include <NTPClient.h>
 #include <FS.h>
+#include <SPIFFS.h>
 #include "config.h"
 #include <logging.h>
 #include <vector>
@@ -39,7 +41,7 @@ public:
 
         void commandPhase();
         void listFiles();
-        void printFile(const char *filename);
+        void printFile(const char *filename, bool hex = false);
 
         void deepSleep(float time);
         void deepSleepUntil(uint32_t time);
