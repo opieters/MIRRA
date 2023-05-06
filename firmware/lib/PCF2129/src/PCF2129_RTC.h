@@ -22,49 +22,46 @@
 #define PCF2129_ALARM_DAYS 0x0D
 #define PCF2129_ALARM_WEEKDAYS 0x0E
 
-
-
-
 /**
  * This class implements the communication with the PCF2129 through i2c.
  **/
 class PCF2129_RTC
 {
-    private:
-        uint8_t int_pin;
-        uint8_t address;
-        /**
-         * This buffer is used to convert the written or read time to an epoch
-         */
-        struct tm time_buf;
-        uint8_t bcd_to_dec(uint8_t value);
-        uint8_t dec_to_bcd(uint8_t value);
-    public:
-        PCF2129_RTC(uint8_t int_pin, uint8_t i2c_address);
-        void enable_alarm();
-        struct tm read_time();
-        void write_time(struct tm datetime);
-        void write_alarm(struct tm alarm_datetime);
+private:
+    uint8_t int_pin;
+    uint8_t address;
+    /**
+     * This buffer is used to convert the written or read time to an epoch
+     */
+    uint8_t bcd_to_dec(uint8_t value);
+    uint8_t dec_to_bcd(uint8_t value);
 
-        /**
-         * Reads the time from the rtc and returns an epoch
-        */
-        uint32_t read_time_epoch();
+public:
+    PCF2129_RTC(uint8_t int_pin, uint8_t address);
+    void enable_alarm();
+    struct tm read_time();
+    void write_time(struct tm datetime);
+    void write_alarm(struct tm alarm_datetime);
 
-        /**
-         * @brief writes the time to the RTC
-         * 
-         * @param epoch The epoch time (seconds sinds 1/1/1970)
-         */
-        void write_time_epoch(uint32_t epoch);
+    /**
+     * Reads the time from the rtc and returns an epoch
+     */
+    uint32_t read_time_epoch();
 
-        /**
-         * @brief Writes an alarm to the given epoch time the alarm can't be further away than 1 month from now
-         *  
-         * @param alarm_epoch The epoch time at which the alarm has to be triggered
-         */
-        void write_alarm_epoch(uint32_t alarm_epoch);
+    /**
+     * @brief writes the time to the RTC
+     *
+     * @param epoch The epoch time (seconds sinds 1/1/1970)
+     */
+    void write_time_epoch(uint32_t epoch);
 
-        uint8_t getIntPin() { return int_pin; };
-};       
+    /**
+     * @brief Writes an alarm to the given epoch time the alarm can't be further away than 1 month from now
+     *
+     * @param alarm_epoch The epoch time at which the alarm has to be triggered
+     */
+    void write_alarm_epoch(uint32_t alarm_epoch);
+
+    uint8_t getIntPin() { return int_pin; };
+};
 #endif

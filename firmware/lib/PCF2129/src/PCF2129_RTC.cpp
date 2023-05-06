@@ -1,11 +1,8 @@
 #include "PCF2129_RTC.h"
 #include "Arduino.h"
 
-PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t i2c_address)
+PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t address) : address{address}, int_pin{int_pin}
 {
-    this->address = i2c_address;
-    this->int_pin = int_pin;
-
     pinMode(int_pin, INPUT_PULLUP);
 }
 
@@ -37,9 +34,9 @@ struct tm PCF2129_RTC::read_time()
     now.tm_sec = seconds;
     now.tm_min = minutes;
     now.tm_hour = hours;
-    now.tm_mday = days; 
+    now.tm_mday = days;
     now.tm_wday = week_day;
-    now.tm_mon = months - 1; // (RTC uses 1-12 as months but C time structs use 0-11 as months)
+    now.tm_mon = months - 1;   // (RTC uses 1-12 as months but C time structs use 0-11 as months)
     now.tm_year = years + 100; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
     return now;
 }
