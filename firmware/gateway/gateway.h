@@ -1,16 +1,11 @@
 #ifndef __GATEWAY_H__
 #define __GATEWAY_H__
 
-#include "LoRaModule.h"
-#include "PCF2129_RTC.h"
-#include "PubSubClient.h"
-#include <CommunicationCommon.h>
+#include "MIRRAModule.h"
 #include "WiFi.h"
+#include <PubSubClient.h>
 #include <NTPClient.h>
-#include <FS.h>
-#include <SPIFFS.h>
 #include "config.h"
-#include <logging.h>
 #include <vector>
 
 class Node
@@ -23,7 +18,7 @@ private:
 
 public:
         Node(){};
-        Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {}
+        Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {};
         MACAddress getMACAddress() { return mac; }
         void updateLastCommTime(uint32_t ctime) { last_comm_time = ctime; };
         void updateNextCommTime(uint32_t time) { next_comm_time = time; };
@@ -31,22 +26,15 @@ public:
         uint32_t getNextCommTime() { return next_comm_time; }
 };
 
-class Gateway
+class Gateway : public MIRRAModule
 {
 public:
-        Gateway(Logger *log, PCF2129_RTC *rtc);
+        Gateway(const MIRRAPins &pins);
         void nodesFromFile();
 
         void wake();
 
-        void commandPhase();
-        void listFiles();
-        void printFile(const char *filename, bool hex = false);
-
-        void deepSleep(float time);
-        void deepSleepUntil(uint32_t time);
-        void lightSleep(float time);
-        void lightSleepUntil(uint32_t time);
+        CommandCode processCommands(char *command);
 
         void discovery();
         void storeNode(Node &n);
@@ -66,10 +54,6 @@ public:
         uint32_t getGSMTime();
 
 private:
-        Logger *log;
-        PCF2129_RTC *rtc;
-
-        LoRaModule lora;
         WiFiClient mqtt_client;
         PubSubClient mqtt;
 

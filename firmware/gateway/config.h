@@ -23,7 +23,6 @@
 #define RTC_ADDRESS 0x51 // i2c address
 
 // Filepaths
-#define LOG_FP "/"
 #define NODES_FP "/nodes.dat"
 #define DATA_FP "/data.dat"
 
@@ -36,10 +35,6 @@
 #define MQTT_SERVER IPAddress(5, 9, 199, 28)
 #define MQTT_PORT 1883
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
-
-// UART settings
-#define UART_PHASE_ENTRY_PERIOD 15  // s, length of time after wakeup and comm period in which command phase can be entered
-#define UART_PHASE_TIMEOUT (5 * 60) // s, length of UART inactivity required to automatically exit command phase
 
 // Communication and sensor settings
 #define COMMUNICATION_PERIOD_LENGTH ((SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000) // s, time reserved for communication between gateway and one node
