@@ -26,7 +26,7 @@ private:
     File logfile;
     void generate_logfile_path(char *buffer, struct tm &time);
     void delete_oldest_logfile(struct tm &time);
-    File open_logfile(char *logfile_path);
+    void open_logfile(char *logfile_path);
     void logfile_print(const char *string, struct tm &time);
 
     char *level_to_string(Level level, char *buffer, size_t buffer_length);

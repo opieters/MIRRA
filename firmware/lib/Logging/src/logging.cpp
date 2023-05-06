@@ -1,8 +1,7 @@
 #include "logging.h"
 
-Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc)
+Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc) : level{level}, rtc{rtc}, logfile_time{rtc->read_time()}
 {
-    this->level = level;
     if (logfile_base_path == nullptr)
     {
         this->logfile_enabled = false;
@@ -11,28 +10,24 @@ Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc)
     {
         strncpy(this->logfile_base_path, logfile_base_path, 18);
     }
-    this->rtc = rtc;
-    this->logfile_time = rtc->read_time();
     this->print(Logger::debug, "Logger initialised.");
 }
-File Logger::open_logfile(char *logfile_path)
+void Logger::open_logfile(char *logfile_path)
 {
-    File logfile;
     if (SPIFFS.exists(logfile_path))
     {
-        logfile = SPIFFS.open(logfile_path, FILE_APPEND);
+        this->logfile = SPIFFS.open(logfile_path, FILE_APPEND);
     }
     else
     {
-        logfile = SPIFFS.open(logfile_path, FILE_WRITE);
+        this->logfile = SPIFFS.open(logfile_path, FILE_WRITE);
     }
 
-    if (!logfile)
+    if (!this->logfile)
     {
         this->logfile_enabled = false;
         this->print(Level::error, "Unable to open/create logfile! Logger will disable logging to file.");
     }
-    return logfile;
 }
 
 void Logger::generate_logfile_path(char *buffer, struct tm &time)
@@ -70,7 +65,7 @@ void Logger::logfile_print(const char *string, struct tm &time)
             this->logfile.close();
         char logfile_path[32];
         generate_logfile_path(logfile_path, time);
-        this->logfile = open_logfile(logfile_path);
+        open_logfile(logfile_path);
         this->logfile_time = time;
         if (!this->logfile)
             return;
