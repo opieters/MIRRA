@@ -23,6 +23,7 @@ Message Message::from_data(uint8_t *data)
     case Message::TIME_CONFIG:
         return TimeConfigMessage(src, dest, (uint32_t *)(&data[read]));
     case Message::SENSOR_DATA:
+    case Message::SENSOR_DATA_LAST:
         return SensorDataMessage(src, dest, &data[read]);
     default:
         return Message(type, src, dest);
@@ -62,10 +63,8 @@ uint8_t *TimeConfigMessage::to_data(uint8_t *data)
     return data;
 }
 
-SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::SENSOR_DATA, src, dest)
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::SENSOR_DATA, src, dest), time{time}, n_values{n_values}
 {
-    this->time = time;
-    this->n_values = n_values;
     for (size_t i = 0; i < n_values; i++)
     {
         this->sensor_values[i] = sensor_values[i];

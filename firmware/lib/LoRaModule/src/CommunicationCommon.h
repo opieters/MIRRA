@@ -40,8 +40,10 @@ public:
         TIME_CONFIG = 3,
         ACK_TIME = 4,
         SENSOR_DATA = 5,
-        REPEAT = 6,
-        ALL = 7
+        SENSOR_DATA_LAST = 6,
+        DATA_ACK = 7,
+        REPEAT = 8,
+        ALL = 9
     };
 
 private:
@@ -89,7 +91,7 @@ private:
     uint8_t n_values;
 
 public:
-    static const size_t max_n_values = (max_length - header_length - sizeof(time)) / SensorValue::length;
+    static const size_t max_n_values = (max_length - header_length - sizeof(time) - sizeof(n_values)) / SensorValue::length;
 
 private:
     SensorValue sensor_values[max_n_values];
@@ -97,6 +99,7 @@ private:
 public:
     SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values);
     SensorDataMessage(MACAddress src, MACAddress dest, uint8_t *data);
+    bool isLast() { return isType(Message::SENSOR_DATA_LAST); }
     size_t getLength();
     uint8_t *to_data(uint8_t *data);
 };
