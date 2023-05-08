@@ -170,11 +170,11 @@ CREATE TABLE `sensor_types` (
 LOCK TABLES `sensor_types` WRITE;
 /*!40000 ALTER TABLE `sensor_types` DISABLE KEYS */;
 INSERT INTO `sensor_types` VALUES 
-  (3, 'Soil Moisture',3,  '%RH',  2.0,  '.'),
-  (4, 'Soil Temp',    4,  'C',    0.5,  'oil Temperature.'),
+  (3, 'Soil Moisture',3,  '%RH',  2.0,  'Soil moisture sensor'),
+  (4, 'Soil Temp',    4,  'C',    0.5,  'Soil temperature sensor'),
   (12,'SHT35',        12, 'C',    0.1,  "Temperature sensor"),
   (13,'SHT35',        13, 'RH',   0.5,  "Relative humidity sensor"),
-  (22,'APDS',         22,'A.U.', 1.0, "Light sensor.");
+  (22,'APDS',         22,'A.U.', 1.0, "Light sensor");
 /*!40000 ALTER TABLE `sensor_types` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
