@@ -56,7 +56,7 @@ void LoRaModule::sendMessage(Message message)
     }
 }
 
-Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size_t repeat_attempts, MACAddress source, bool promiscuous)
+Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size_t repeat_attempts, MACAddress source, uint32_t listen_ms, bool promiscuous)
 {
     if (source == MACAddress::broadcast && this->lastSent.getType() != Message::ERROR)
     {
@@ -68,7 +68,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size
     // When the LoRa module get's a message it will generate an interrupt on DIO0.
     esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
     // We use the timer wakeup as timeout for receiving a LoRa reply.
-    esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
+    esp_sleep_enable_timer_wakeup((timeout_ms + listen_ms) * 1000);
     do
     {
         log->printf(Logger::debug, "Starting receive ...");
@@ -104,6 +104,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size
                 {
                     this->sendMessage(this->lastSent);
                     esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
+                    repeat_attempts--;
                 }
                 continue;
             }

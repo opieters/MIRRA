@@ -40,7 +40,7 @@ public:
 
     MACAddress getMACAddress(void) { return mac; };
 
-    Message receiveMessage(uint32_t timeout_ms, Message::Type type = Message::Type::ALL, size_t repeat_attempts = 0, MACAddress source = MACAddress::broadcast, bool promiscuous = false);
+    Message receiveMessage(uint32_t timeout_ms, Message::Type type = Message::Type::ALL, size_t repeat_attempts = 0, MACAddress source = MACAddress::broadcast, uint32_t listen_ms = 0, bool promiscuous = false);
     void sendMessage(Message message);
 };
 
