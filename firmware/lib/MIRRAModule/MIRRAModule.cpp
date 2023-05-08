@@ -1,10 +1,10 @@
 #include "MIRRAModule.h"
 
-volatile bool commandPhaseEntry = false;
+volatile bool commandPhaseFlag = false;
 
 void IRAM_ATTR commandPhaseInterrupt()
 {
-    commandPhaseEntry = true;
+    commandPhaseFlag = true;
 }
 MIRRAModule MIRRAModule::start(const MIRRAPins &pins)
 {
@@ -33,6 +33,17 @@ MIRRAModule::MIRRAModule(const MIRRAPins &pins) : pins{pins}, rtc{pins.rtc_int_p
 
 void MIRRAModule::commandPhase()
 {
+    Serial.println("Press the BOOT pin to enter command phase ...");
+    for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
+    {
+        if (commandPhaseFlag)
+        {
+            log.print(Logger::info, "Entering command phase...");
+            break;
+        }
+        delay(100);
+    }
+
     Serial.println("COMMAND PHASE");
     size_t length;
     Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
