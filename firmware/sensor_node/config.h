@@ -22,22 +22,18 @@
 #define LOG_FP "/"
 #define DATA_FP "/data.dat"
 
-// UART settings
-#define UART_PHASE_ENTRY_PERIOD 15  // s, length of time after wakeup and comm period in which command phase can be entered
-#define UART_PHASE_TIMEOUT (5 * 60) // s, length of UART inactivity required to automatically exit command phase
-
 // Communication and sensor settings
 
-#define DEFAULT_SAMPLING_INTERVAL (60 * 60)//s, default sensor sampling interval to resort to when no communication with gateway is established
-#define SAMPLING_ROUNDING (60 * 60) // s, round sampling time to nearest... (only used in case of DEFAULT_SAMPLING_INTERVAL)
+#define DEFAULT_SAMPLING_INTERVAL (60 * 60) // s, default sensor sampling interval to resort to when no communication with gateway is established
+#define SAMPLING_ROUNDING (60 * 60)         // s, round sampling time to nearest... (only used in case of DEFAULT_SAMPLING_INTERVAL)
 
-#define DISCOVERY_TIMEOUT 5 * 60 * 1000 //ms, time to wait for a discovery message from gateway
+#define DISCOVERY_TIMEOUT (5 * 60 * 1000) // ms, time to wait for a discovery message from gateway
 
-#define TIME_CONFIG_TIMEOUT 10000 // ms
-#define TIME_CONFIG_ATTEMPTS 3
+#define TIME_CONFIG_TIMEOUT 6000 // ms
+#define TIME_CONFIG_ATTEMPTS 2
 
-#define SENSOR_DATA_TIMEOUT 10000 // ms
-#define SENSOR_DATA_ATTEMPTS 3
+#define SENSOR_DATA_TIMEOUT 6000 // ms
+#define SENSOR_DATA_ATTEMPTS 2
 
 #define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
 

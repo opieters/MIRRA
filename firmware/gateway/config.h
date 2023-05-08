@@ -37,9 +37,9 @@
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 
 // Communication and sensor settings
-#define COMMUNICATION_PERIOD_LENGTH ((SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000) // s, time reserved for communication between gateway and one node
-#define COMMUNICATION_PERIOD_PADDING 2                                                   // s, time between each node's communication period
-#define COMMUNICATION_INTERVAL 60 * 60 * 24                                              // s, time between communication times for every nodes
+#define COMMUNICATION_PERIOD_LENGTH ((MAX_SENSOR_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000) // s, time reserved for communication between gateway and one node, in function of how many sensor data messages are to be sent
+#define COMMUNICATION_PERIOD_PADDING 3                                                                         // s, time between each node's communication period
+#define COMMUNICATION_INTERVAL (60 * 60 * 12)                                                                  // s, time between communication times for every nodes
 
 #define WAKE_BEFORE_COMM_PERIOD 20 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
@@ -47,16 +47,18 @@
 
 #define UPLOAD_EVERY 3 // amount of times the gateway will communicate with the nodes before uploading data to the server
 
-#define SAMPLING_INTERVAL 60 * 60 * 3 // s, time between sensor sampling for every node
-#define SAMPLING_ROUNDING 60 * 60     // s, round sampling time to nearest ...
+#define SAMPLING_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
+#define SAMPLING_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
+
+#define MAX_SENSOR_MESSAGES (((3 * COMMUNICATION_INTERVAL) / (2 * SAMPLING_INTERVAL)) + 1)
 
 #define DISCOVERY_TIMEOUT 5000 // ms
 
-#define TIME_CONFIG_TIMEOUT 10000 // ms
-#define TIME_CONFIG_ATTEMPTS 3
+#define TIME_CONFIG_TIMEOUT 6000 // ms
+#define TIME_CONFIG_ATTEMPTS 2
 
-#define SENSOR_DATA_TIMEOUT 10000 // ms
-#define SENSOR_DATA_ATTEMPTS 3
+#define SENSOR_DATA_TIMEOUT 6000 // ms
+#define SENSOR_DATA_ATTEMPTS 2
 
 #define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
 
