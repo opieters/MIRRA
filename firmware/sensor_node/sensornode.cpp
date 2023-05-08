@@ -3,7 +3,7 @@
 RTC_DATA_ATTR bool initialBoot = true;
 extern volatile bool commandPhaseFlag;
 
-RTC_DATA_ATTR uint32_t nextCommTime;
+RTC_DATA_ATTR uint32_t nextCommTime = -1;
 RTC_DATA_ATTR uint32_t nextSampleTime;
 RTC_DATA_ATTR uint32_t commInterval;
 RTC_DATA_ATTR uint32_t samplingInterval = DEFAULT_SAMPLING_INTERVAL;
@@ -18,6 +18,8 @@ SensorNode::SensorNode(const MIRRAPins &pins) : MIRRAModule(MIRRAModule::start(p
             SPIFFS.remove(DATA_FP);
         File dataFile = SPIFFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
+        nextSampleTime = ((rtc.read_time_epoch() + DEFAULT_SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING;
+        discovery();
         initialBoot = false;
     }
 }
