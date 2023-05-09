@@ -37,7 +37,7 @@ MIRRAModule::CommandCode SensorNode::processCommands(char *command)
     CommandCode code = MIRRAModule::processCommands(command);
     if (code != CommandCode::COMMAND_NOT_FOUND)
         return code;
-    if (strcmp(command, "discovery"))
+    if (strcmp(command, "discovery") == 0)
     {
         discovery();
         return CommandCode::COMMAND_FOUND;

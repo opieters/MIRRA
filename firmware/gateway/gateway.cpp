@@ -59,17 +59,17 @@ MIRRAModule::CommandCode Gateway::processCommands(char *command)
     CommandCode code = MIRRAModule::processCommands(command);
     if (code != CommandCode::COMMAND_NOT_FOUND)
         return code;
-    if (strcmp(command, "discovery"))
+    if (strcmp(command, "discovery") == 0)
     {
         discovery();
         return CommandCode::COMMAND_FOUND;
     }
-    else if (strcmp(command, "rtc"))
+    else if (strcmp(command, "rtc") == 0)
     {
         rtcUpdateTime();
         return CommandCode::COMMAND_FOUND;
     }
-    else if (strcmp(command, "wifi"))
+    else if (strcmp(command, "wifi") == 0)
     {
         char ssid_buffer[sizeof(ssid)];
         char pass_buffer[sizeof(pass)];
