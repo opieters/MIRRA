@@ -56,7 +56,7 @@ public:
     MACAddress getSource() { return src; };
     MACAddress getDest() { return dest; };
 
-    bool isType(Message::Type type) { return type == type; };
+    bool isType(Message::Type type) { return this->type == type; };
 
     virtual size_t getLength() { return header_length; };
     virtual uint8_t *to_data(uint8_t *data);
