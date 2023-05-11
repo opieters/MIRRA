@@ -19,7 +19,7 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
                             LORA_SPREADING_FACTOR,
                             LORA_CODING_RATE,
                             LORA_SYNC_WORD,
-                            LORA_CURRENT_LIMIT,
+                            LORA_POWER,
                             LORA_PREAMBLE_LENGHT,
                             LORA_AMPLIFIER_GAIN);
 
