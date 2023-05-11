@@ -112,14 +112,7 @@ MACAddress::MACAddress(const uint8_t *address)
 
 char *MACAddress::toString(char *string)
 {
-    if (strlen(string) + 1 < MACAddress::string_length)
-        return string;
-    for (size_t i = 0; i < MACAddress::length; i++)
-    {
-        if (i != 0)
-            string[3 * i - 1] = ':';
-        snprintf(&string[3 * i], 2, "%02X", this->address[i]);
-    }
+    snprintf(string, MACAddress::string_length, "%02X:%02X:%02X:%02X:%02X:%02X", this->address[0], this->address[1], this->address[2], this->address[3], this->address[4], this->address[5]);
     return string;
 }
 
