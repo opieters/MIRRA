@@ -22,10 +22,9 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
                             LORA_POWER,
                             LORA_PREAMBLE_LENGHT,
                             LORA_AMPLIFIER_GAIN);
-    state = this->setCrcFiltering(true);
     if (state == RADIOLIB_ERR_NONE)
     {
-        log->print(Logger::info, "LoRa init successful!");
+        log->printf(Logger::info, "LoRa init successful for %s!", this->getMACAddress().toString());
     }
     else
     {
@@ -38,7 +37,8 @@ void LoRaModule::sendMessage(Message message)
 
     // When the transmission of the LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
-    log->printf(Logger::debug, "Sending message of type %u from %s to %s", message.getType(), message.getSource().toString(), message.getDest().toString());
+    char mac_src_buffer[MACAddress::string_length];
+    log->printf(Logger::debug, "Sending message of type %u from %s to %s", message.getType(), message.getSource().toString(mac_src_buffer), message.getDest().toString());
     uint8_t buffer[Message::max_length];
     int state = this->startTransmit(message.to_data(buffer), message.getLength());
     if (state == RADIOLIB_ERR_NONE)

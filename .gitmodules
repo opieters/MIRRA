@@ -1,0 +1,3 @@
+[submodule "firmware/lib/RadioLib"]
+	path = firmware/lib/RadioLib
+	url = https://github.com/jgromes/RadioLib
