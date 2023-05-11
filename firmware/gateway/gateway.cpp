@@ -5,7 +5,7 @@ const char sensorDataTempFN[] = "/data_temp.dat";
 extern volatile bool commandPhaseFlag;
 
 RTC_DATA_ATTR bool initialBoot = true;
-RTC_DATA_ATTR int commPeriods = 0;
+RTC_DATA_ATTR int collectionPeriods = 0;
 
 RTC_DATA_ATTR char ssid[32] = WIFI_SSID;
 RTC_DATA_ATTR char pass[32] = WIFI_PASS;
@@ -30,6 +30,7 @@ Gateway::Gateway(const MIRRAPins &pins)
 
         rtcUpdateTime();
         initialBoot = false;
+        collectionPeriods = 0;
     }
 
     nodesFromFile();
@@ -216,6 +217,7 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
         }
         sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
         log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
+        collectionPeriods++;
         storeSensorData(sensorData, dataFile);
     }
 
@@ -238,6 +240,11 @@ void Gateway::storeSensorData(SensorDataMessage &m, File &dataFile)
     buffer[0] = 0; // mark not uploaded (yet)
     dataFile.write((uint8_t)m.getLength());
     dataFile.write(buffer, m.getLength());
+    
+    if (collectionPeriods >= UPLOAD_EVERY) {
+        uploadSensorData(dataFile);
+        collectionPeriods = 0;
+    }
 }
 
 void Gateway::pruneSensorData(File &dataFile)
@@ -346,4 +353,73 @@ void Node::updateSampleTime(uint32_t sample_interval, uint32_t next_sample_time)
 {
     this->sample_interval = sample_interval;
     this->next_sample_time = next_sample_time;
+}
+
+/*
+Upload sensor data via MQTT
+data that needs to be send is identified by a 0 (ref. storeSensorData)
+the topic is formatted as follows: TOPIC_PREFIX/MAC address gateway/ MAC address node
+sensor data is formatted as follows: MAC node (6) | MAC gateway (6) | time (4) | n_values (1) | value_data (6) | ....
+value_data can be split up further in sensor_id (1) | data (4)
+total length of sensor data = 17 + 6 * n_values
+*/
+void Gateway::uploadSensorData(File &dataFile)
+{
+    uint8_t size;
+    dataFile.read(&size, sizeof(size));
+    uint8_t uploaded;
+    dataFile.read(&uploaded, sizeof(uploaded));
+    std::vector<uint8_t> mac_node(6);
+    std::vector<uint8_t> mac_gateway(6);
+    std::vector<uint8_t> time(4);
+    uint8_t n_values;
+    std::vector<uint8_t> value_data(6);
+    
+    //walk through file until upload flag is set to 0
+    while(uploaded = 1) {
+        dataFile.read(mac_node.data(), 6);
+        dataFile.read(mac_gateway.data(), 6);
+        dataFile.read(time.data(), 4);
+        dataFile.read(&n_values, sizeof(n_values));
+        for (int i = 0; i < n_values; i++) {
+            dataFile.read(value_data.data(), n_values);
+        }
+        dataFile.read(&size, sizeof(size));
+        dataFile.read(&uploaded, sizeof(uploaded));
+    }
+
+    wifiConnect();
+    char* WiFiMAC = new char[WiFi.macAddress().length() + 1];
+    strcpy(WiFiMAC, WiFi.macAddress().c_str());
+    char* topic_array; 
+
+    //measurements not yet uploaded
+    while(uploaded = 0) {
+        dataFile.read(mac_node.data(), 6);
+        dataFile.read(mac_gateway.data(), 6);
+        dataFile.read(time.data(), 4);
+        dataFile.read(&n_values, sizeof(n_values));
+        std::vector<uint8_t> measurements;
+        for (int i = 0; i < n_values; i++) {
+            std::vector<uint8_t> temp(6);
+            dataFile.read(temp.data(), 6);
+            measurements.insert(measurements.end(), temp.begin(), temp.end());
+            temp.clear();
+        }
+
+        //add information to payload in format: time(4) | n_values (1) | data (6) | ...
+        std::vector<uint8_t>payload;
+        payload.insert(payload.end(), time.begin(), time.end());
+        payload.insert(payload.end(), n_values);
+        payload.insert(payload.end(), measurements.begin(), measurements.end());
+
+        snprintf(topic_array, 36, "%s/%s/%s", TOPIC_PREFIX, WiFi.macAddress(), mac_node);
+        
+        if(mqtt.connect(WiFiMAC)) {
+            mqtt.publish(topic_array, payload.data(), payload.size());
+        }
+        dataFile.read(&size, sizeof(size));
+        dataFile.read(&uploaded, sizeof(uploaded));
+    }
+    WiFi.disconnect();
 }
