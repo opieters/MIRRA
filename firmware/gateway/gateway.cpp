@@ -74,10 +74,14 @@ MIRRAModule::CommandCode Gateway::processCommands(char *command)
         char ssid_buffer[sizeof(ssid)];
         char pass_buffer[sizeof(pass)];
         Serial.println("Enter WiFi SSID:");
-        ssid_buffer[Serial.readBytesUntil('\n', ssid_buffer, sizeof(ssid_buffer))] = '\0';
+        uint8_t ssid_buffer_length = Serial.readBytesUntil('\n', ssid_buffer, sizeof(ssid_buffer));
+        ssid_buffer[ssid_buffer_length] = '\0';
+        if (ssid_buffer[ssid_buffer_length - 1] == '\r') ssid_buffer[ssid_buffer_length - 1] = '\0';
         Serial.println(ssid_buffer);
         Serial.println("Enter WiFi password:");
-        pass_buffer[Serial.readBytesUntil('\n', pass_buffer, sizeof(pass_buffer))] = '\0';
+        uint8_t pass_buffer_length = Serial.readBytesUntil('\n', pass_buffer, sizeof(pass_buffer));
+        pass_buffer[pass_buffer_length] = '\0';
+        if (pass_buffer[pass_buffer_length - 1] == '\r') pass_buffer[pass_buffer_length - 1] = '\0';
         Serial.println(pass_buffer);
         wifiConnect(ssid_buffer, pass_buffer);
         if (WiFi.status() == WL_CONNECTED)
