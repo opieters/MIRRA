@@ -4,13 +4,13 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
     : log{log},
       DIO0Pin{DIO0Pin},
       DIO1Pin{DIO1Pin},
-      mod{Module(csPin, DIO0Pin, rstPin)},
-      SX1272(&mod),
+      module{Module(csPin, DIO0Pin, rstPin)},
+      SX1272(&module),
       lastSent{Message::error}
 {
-    pinMode(txPin, OUTPUT);
-    pinMode(rxPin, OUTPUT);
-    this->mod.setRfSwitchPins(rxPin, txPin);
+    this->reset();
+    this->explicitHeader();
+    this->module.setRfSwitchPins(rxPin, txPin);
 
     this->mac = MACAddress();
     esp_efuse_mac_get_default(this->mac.getAddress());
@@ -22,7 +22,7 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
                             LORA_POWER,
                             LORA_PREAMBLE_LENGHT,
                             LORA_AMPLIFIER_GAIN);
-
+    state = this->setCrcFiltering(true);
     if (state == RADIOLIB_ERR_NONE)
     {
         log->print(Logger::info, "LoRa init successful!");
@@ -38,7 +38,7 @@ void LoRaModule::sendMessage(Message message)
 
     // When the transmission of the LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
-
+    log->printf(Logger::debug, "Sending message of type %u from %s to %s", message.getType(), message.getSource().toString(), message.getDest().toString());
     uint8_t buffer[Message::max_length];
     int state = this->startTransmit(message.to_data(buffer), message.getLength());
     if (state == RADIOLIB_ERR_NONE)
@@ -54,6 +54,7 @@ void LoRaModule::sendMessage(Message message)
     {
         log->printf(Logger::error, "Send failed, code: %i", state);
     }
+    this->finishTransmit();
 }
 
 Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size_t repeat_attempts, MACAddress source, uint32_t listen_ms, bool promiscuous)
@@ -91,7 +92,7 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size
 
             if (state != RADIOLIB_ERR_NONE)
             {
-                log->printf(Logger::error, "Reading received data failed, code: %i", state);
+                log->printf(Logger::error, "Reading received data (%u bytes) failed, code: %i", this->getPacketLength(), state);
                 return Message::error;
             }
 

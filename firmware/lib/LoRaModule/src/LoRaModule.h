@@ -13,7 +13,7 @@
 #define LORA_FREQUENCY 866.0
 #define LORA_BANDWIDTH 125.0
 #define LORA_SPREADING_FACTOR 7
-#define LORA_CODING_RATE 6
+#define LORA_CODING_RATE 8
 #define LORA_SYNC_WORD 0x12
 #define LORA_POWER 10
 #define LORA_PREAMBLE_LENGHT 8
@@ -22,7 +22,7 @@
 class LoRaModule : public SX1272
 {
 private:
-    Module mod;
+    Module module;
 
     Logger *log;
 
