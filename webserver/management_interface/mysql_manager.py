@@ -285,6 +285,26 @@ class mysql_manager:
         finally:
             connection.close()
 
+    def get_all_sensors_from_location(self, loc_id):
+        """
+        This function gets all the sensors from a certain location with location_id loc_id and returns them.
+        :param loc_id: the location's id to get the sensors from
+	:return: The sensors with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT * FROM sensor_modules
+                              join locations on locations.id = sensor_modules.location_id
+					WHERE locations.id = %s;""",
+				   (loc_id))
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
+
     def get_forest_module_gateway_count(self):
         """
         This function returns the count of the amount of modules,
