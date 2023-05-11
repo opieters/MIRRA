@@ -90,14 +90,18 @@ Message LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, size
             uint8_t buffer[Message::max_length];
             state = this->readData(buffer, min(this->getPacketLength(), Message::max_length));
 
+            if (state == RADIOLIB_ERR_CRC_MISMATCH)
+            {
+                log->printf(Logger::error, "Reading received data (%u bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...", this->getPacketLength(false));
+                continue;
+            }
             if (state != RADIOLIB_ERR_NONE)
             {
-                log->printf(Logger::error, "Reading received data (%u bytes) failed, code: %i", this->getPacketLength(), state);
+                log->printf(Logger::error, "Reading received data (%u bytes) failed, code: %i", this->getPacketLength(false), state);
                 return Message::error;
             }
 
             Message received = Message::from_data(buffer);
-
             if (received.isType(Message::Type::REPEAT))
             {
                 log->printf(Logger::debug, "Received REPEAT message from %s", received.getSource().toString());
