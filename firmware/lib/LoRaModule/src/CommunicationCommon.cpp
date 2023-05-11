@@ -6,7 +6,7 @@ uint8_t *Message::to_data(uint8_t *data)
     written += sizeof(this->type);
     memcpy(&data[written], this->src.getAddress(), MACAddress::length);
     written += MACAddress::length;
-    memcpy(&data[written], this->src.getAddress(), MACAddress::length);
+    memcpy(&data[written], this->dest.getAddress(), MACAddress::length);
     return data;
 }
 Message Message::from_data(uint8_t *data)
