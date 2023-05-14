@@ -193,6 +193,7 @@ void Gateway::commPeriod()
         log.print(Logger::info, "No comm periods performed because no nodes have been registered.");
     }
     commPeriods++;
+    pruneSensorData(dataFile);
     dataFile.close();
 }
 
@@ -256,7 +257,7 @@ void Gateway::storeSensorData(SensorDataMessage &m, File &dataFile)
 void Gateway::pruneSensorData(File &dataFile)
 {
     size_t fileSize = dataFile.size();
-    if (fileSize < MAX_SENSORDATA_FILESIZE)
+    if (fileSize <= MAX_SENSORDATA_FILESIZE)
         return;
     File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
     while (dataFile.peek() != EOF)
@@ -265,7 +266,7 @@ void Gateway::pruneSensorData(File &dataFile)
         if (fileSize > MAX_SENSORDATA_FILESIZE)
         {
             fileSize -= message_length;
-            dataFile.seek(message_length, fs::SeekCur);
+            dataFile.seek(message_length, fs::SeekCur); // skip over the next message
         }
         else
         {
@@ -391,11 +392,12 @@ void Gateway::uploadPeriod()
         wdata.write(size);
         wdata.write(buffer, size);
     }
+    commPeriods = 0;
     rdata.close();
     wdata.close();
     SPIFFS.remove(DATA_FP);
     SPIFFS.rename(sensorDataTempFN, DATA_FP);
     rdata = SPIFFS.open(DATA_FP, FILE_READ);
     pruneSensorData(rdata);
-    commPeriods = 0;
+    rdata.close();
 }
