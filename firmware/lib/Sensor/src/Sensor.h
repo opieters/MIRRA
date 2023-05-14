@@ -45,13 +45,13 @@ public:
     SensorValue(uint16_t tag, float value) : tag{tag}, value{value} {};
     uint8_t *to_data(uint8_t *data);
 
-    struct SensorValue_struct
+    struct SensorValueStruct
     {
         uint16_t tag;
         float value;
     } __attribute__((packed));
 
-    static const size_t length = sizeof(SensorValue_struct);
+    static const size_t length = sizeof(SensorValueStruct);
 };
 
 #endif

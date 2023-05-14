@@ -35,6 +35,7 @@
 #define MQTT_SERVER IPAddress(5, 9, 199, 28)
 #define MQTT_PORT 1883
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
+#define MAX_MQTT_ERRORS 3       // max number of MQTT connection errors after which uploading should be aborted
 
 // Communication and sensor settings
 #define COMMUNICATION_PERIOD_LENGTH ((MAX_SENSOR_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000) // s, time reserved for communication between gateway and one node, in function of how many sensor data messages are to be sent

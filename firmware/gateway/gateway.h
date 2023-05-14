@@ -53,8 +53,9 @@ public:
         void pruneSensorData(File &dataFile);
         void printSensorData();
 
-        char *createTopic(char *buffer, size_t buffer_size, MACAddress &nodeMAC);
-        void uploadSensorData(File &dataFile);
+        const size_t topic_size = sizeof(TOPIC_PREFIX) + 1 + MACAddress::string_length + MACAddress::string_length;
+        char *createTopic(char *topic, MACAddress const &nodeMAC);
+        void uploadPeriod();
 
         void wifiConnect(const char *SSID, const char *password);
         void wifiConnect();
