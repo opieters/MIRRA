@@ -207,7 +207,7 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
     uint32_t listen_ms = COMMUNICATION_PERIOD_PADDING * 1000; // pre-listen in anticipation of message
-    while (true)
+    for (size_t i = 0; i < MAX_SENSOR_MESSAGES; i++)
     {
         log.printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
         SensorDataMessage sensorData = lora.receiveMessage<SensorDataMessage>(SENSOR_DATA_TIMEOUT, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), listen_ms);
@@ -219,7 +219,7 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
         }
         log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
-        if (sensorData.isLast())
+        if (sensorData.isLast() || i == (MAX_SENSOR_MESSAGES - 1))
             break;
         log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
         lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
