@@ -1,7 +1,7 @@
 #include "CommunicationCommon.h"
 #include <iostream>
 
-uint8_t *Message::to_data(uint8_t *data)
+uint8_t *Message::to_data(uint8_t *data) const
 {
     memcpy(data, &this->header, header_length);
     return data;
@@ -20,9 +20,7 @@ Message Message::from_data(uint8_t *data)
     }
 }
 
-const Message Message::error = Message();
-
-uint8_t *TimeConfigMessage::to_data(uint8_t *data)
+uint8_t *TimeConfigMessage::to_data(uint8_t *data) const
 {
     data = Message::to_data(data);
     memcpy(&data[Message::getLength()], &this->body, sizeof(this->body));
@@ -39,7 +37,7 @@ SensorDataMessage::SensorDataMessage(uint8_t *data) : Message(data), body{*reint
     memcpy(this->values, &data[Message::getLength() + sizeof(SensorDataStruct)], this->body.n_values * sizeof(SensorValue::SensorValueStruct));
 };
 
-uint8_t *SensorDataMessage::to_data(uint8_t *data)
+uint8_t *SensorDataMessage::to_data(uint8_t *data) const
 {
     data = Message::to_data(data);
     memcpy(&data[Message::getLength()], &this->body, sizeof(this->body));

@@ -120,7 +120,7 @@ void Gateway::discovery()
     log.print(Logger::info, "Sending discovery message.");
     lora.sendMessage(Message(Message::HELLO, lora.getMACAddress(), MACAddress::broadcast));
     log.print(Logger::debug, "Awaiting discovery response message ...");
-    Message hello_reply = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::HELLO_REPLY);
+    Message hello_reply = lora.receiveMessage<Message>(DISCOVERY_TIMEOUT, Message::HELLO_REPLY);
     if (hello_reply.isType(Message::ERROR))
     {
         log.print(Logger::error, "Error while awaiting/receiving reply to discovery message. Aborting discovery.");
@@ -134,7 +134,7 @@ void Gateway::discovery()
 
     log.printf(Logger::debug, "Sending time config message to %s ...", hello_reply.getSource().toString());
     lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
-    Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
+    Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
     if (time_ack.isType(Message::ERROR))
     {
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Aborting discovery.", hello_reply.getSource().toString());
@@ -206,37 +206,27 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
         return;
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
-    log.printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
-    Message sensorDataM = lora.receiveMessage(SENSOR_DATA_TIMEOUT, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), COMMUNICATION_PERIOD_PADDING);
-    if (sensorDataM.isType(Message::ERROR))
+    while(true)
     {
-        log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
-        return;
-    }
-    SensorDataMessage sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
-    log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
-    storeSensorData(sensorData, dataFile);
-
-    while (!sensorData.isLast())
-    {
-        log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
-        lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
         log.printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
-        sensorDataM = lora.receiveMessage(SENSOR_DATA_TIMEOUT, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress());
-        if (sensorDataM.isType(Message::ERROR))
+        SensorDataMessage sensorData = lora.receiveMessage<SensorDataMessage>(SENSOR_DATA_TIMEOUT, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), COMMUNICATION_PERIOD_PADDING);
+        if (sensorData.isType(Message::ERROR))
         {
-            log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping further communication with this node.", n.getMACAddress().toString());
+            log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
             return;
         }
-        sensorData = *static_cast<SensorDataMessage *>(&sensorDataM);
         log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
+        if (sensorData.isLast())
+            break;
+        log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
+        lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
     }
 
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     log.printf(Logger::debug, "Sending time config message to %s ...", n.getMACAddress().toString());
     lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
-    Message time_ack = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
+    Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (time_ack.isType(Message::ERROR))
     {
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());

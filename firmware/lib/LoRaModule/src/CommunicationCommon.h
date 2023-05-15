@@ -8,6 +8,8 @@
 
 #include "Sensor.h"
 
+// TODO : move from internal structs to serializing directly from/to the class object
+
 class MACAddress
 {
 private:
@@ -58,17 +60,16 @@ public:
     Message(HeaderStruct &header) : header{header} {};
     Message(Message::Type type, MACAddress src, MACAddress dest) : header{type, src, dest} {};
     Message(uint8_t *data) : Message(*reinterpret_cast<HeaderStruct *>(data)){};
-    Message::Type getType() { return header.type; };
-    MACAddress getSource() { return header.src; };
-    MACAddress getDest() { return header.dest; };
+    Message::Type getType() const { return header.type; };
+    MACAddress getSource() const { return header.src; };
+    MACAddress getDest() const { return header.dest; };
 
-    bool isType(Message::Type type) { return header.type == type; };
+    bool isType(Message::Type type) const { return header.type == type; };
 
-    virtual size_t getLength() { return header_length; };
-    virtual uint8_t *to_data(uint8_t *data);
+    size_t getLength() const { return header_length; };
+    uint8_t *to_data(uint8_t *data) const;
     static Message from_data(uint8_t *data);
 
-    static const Message error;
     static const size_t header_length = sizeof(HeaderStruct);
     static const size_t max_length = 256;
 };
@@ -85,6 +86,7 @@ private:
     TimeConfigStruct body{};
 
 public:
+    TimeConfigMessage() = default;
     TimeConfigMessage(HeaderStruct header, TimeConfigStruct body) : Message(header), body{body} {};
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval) : Message(Message::TIME_CONFIG, src, dest), body{cur_time, sample_time, sample_interval, comm_time, comm_interval} {};
     TimeConfigMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<TimeConfigStruct *>(&data[header_length])} {};
@@ -93,8 +95,8 @@ public:
     uint32_t getSampleInterval() { return body.sample_interval; };
     uint32_t getCommTime() { return body.comm_time; };
     uint32_t getCommInterval() { return body.comm_interval; };
-    size_t getLength() { return Message::getLength() + sizeof(body); };
-    uint8_t *to_data(uint8_t *data);
+    size_t getLength() const { return Message::getLength() + sizeof(body); };
+    uint8_t *to_data(uint8_t *data) const;
 };
 
 class SensorDataMessage : public Message
@@ -116,13 +118,14 @@ private:
     SensorValue::SensorValueStruct values[max_n_values];
 
 public:
+    SensorDataMessage() = default;
     SensorDataMessage(HeaderStruct header, SensorDataStruct body) : Message(header), body{body} {};
     SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue::SensorValueStruct *sensor_values);
     SensorDataMessage(uint8_t *data);
     bool isLast() { return isType(Message::SENSOR_DATA_LAST); }
     void setLast() { header.type = Message::SENSOR_DATA_LAST; }
-    size_t getLength() { return Message::getLength() + sizeof(body) + body.n_values * sizeof(SensorValue::SensorValueStruct); };
-    uint8_t *to_data(uint8_t *data);
+    size_t getLength() const { return Message::getLength() + sizeof(body) + body.n_values * sizeof(SensorValue::SensorValueStruct); };
+    uint8_t *to_data(uint8_t *data) const;
 };
 
 #endif
