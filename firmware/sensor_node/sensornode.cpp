@@ -48,7 +48,7 @@ MIRRAModule::CommandCode SensorNode::processCommands(char *command)
 void SensorNode::discovery()
 {
     log.print(Logger::info, "Awaiting discovery message...");
-    Message hello = lora.receiveMessage(DISCOVERY_TIMEOUT, Message::HELLO);
+    Message hello = lora.receiveMessage<Message>(DISCOVERY_TIMEOUT, Message::HELLO);
     if (hello.isType(Message::ERROR))
     {
         log.print(Logger::error, "Error while awaiting discovery message from gateway. Aborting discovery listening.");
@@ -58,17 +58,16 @@ void SensorNode::discovery()
     log.printf(Logger::info, "Gateway found at %s. Sending response message...", gatewayMAC.toString());
     lora.sendMessage(Message(Message::HELLO_REPLY, lora.getMACAddress(), gatewayMAC));
     log.print(Logger::debug, "Awaiting time config message...");
-    Message timeConfigM = lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
-    if (timeConfigM.isType(Message::ERROR))
+    TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
+    if (timeConfig.isType(Message::ERROR))
     {
         log.print(Logger::error, "Error while awaiting time config message from gateway. Aborting discovery listening.");
         return;
     }
     log.print(Logger::debug, "Time config message received. Sending TIME_ACK");
-    TimeConfigMessage timeConfig = *static_cast<TimeConfigMessage *>(&timeConfigM);
     lora.sendMessage(Message(Message::ACK_TIME, lora.getMACAddress(), gatewayMAC));
     this->timeConfig(timeConfig);
-    lora.receiveMessage(TIME_CONFIG_TIMEOUT, Message::REPEAT, 0, gatewayMAC);
+    lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::REPEAT, 0, gatewayMAC);
 }
 
 void SensorNode::timeConfig(TimeConfigMessage &m)
