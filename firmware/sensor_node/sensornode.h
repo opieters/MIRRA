@@ -9,7 +9,6 @@ class SensorNode : public MIRRAModule
 {
 public:
         SensorNode(const MIRRAPins &pins);
-        void sensorsInit();
 
         void wake();
 
@@ -17,6 +16,8 @@ public:
 
         void discovery();
         void timeConfig(TimeConfigMessage &m);
+
+        void samplePeriod();
 
         void commPeriod();
         void storeSensorData(SensorDataMessage &m, File &dataFile);
