@@ -242,7 +242,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
         return false;
     }
-    log.printf(Logger::info, "Communication with node %s successful." n.getMACAddress().toString());
+    log.printf(Logger::info, "Communication with node %s successful.", n.getMACAddress().toString());
     n.timeConfig(timeConfig);
     return true;
 }
