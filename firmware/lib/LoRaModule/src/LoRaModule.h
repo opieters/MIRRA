@@ -19,6 +19,8 @@
 #define LORA_PREAMBLE_LENGHT 8
 #define LORA_AMPLIFIER_GAIN 0 // 0 is automatic
 
+#define SEND_DELAY 500 //ms, time to wait before sending a message
+
 class LoRaModule : public SX1272
 {
 private:
@@ -41,7 +43,7 @@ public:
     MACAddress getMACAddress(void) { return mac; };
 
     template <class MessageType>
-    void sendMessage(MessageType const &message);
+    void sendMessage(MessageType const &message, uint32_t delay = SEND_DELAY);
     void sendPacket(uint8_t *buffer, size_t length);
     void resendPacket();
 
@@ -50,7 +52,7 @@ public:
 };
 
 template <class MessageType>
-void LoRaModule::sendMessage(MessageType const &message)
+void LoRaModule::sendMessage(MessageType const &message, uint32_t delay)
 {
 
     // When the transmission of the LoRa message is done an interrupt will be generated on DIO0,
@@ -59,10 +61,14 @@ void LoRaModule::sendMessage(MessageType const &message)
     size_t length = message.getLength();
     log->printf(Logger::debug, "Sending message of type %u and length %u from %s to %s", message.getType(), length, message.getSource().toString(mac_src_buffer), message.getDest().toString());
     uint8_t buffer[length];
+    message.toData(buffer);
     if (!message.isType(Message::Type::REPEAT))
         memcpy(this->lastSentBuffer, buffer, length);
     this->lastSentLength = length;
     this->lastDest = message.getDest();
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_sleep_enable_timer_wakeup(delay * 1000);
+    esp_light_sleep_start();
     sendPacket(buffer, length);
 }
 
@@ -110,10 +116,13 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 log->printf(Logger::error, "Reading received data (%u bytes) failed, code: %i", this->getPacketLength(false), state);
                 return MessageType();
             }
-
-            MessageType received = MessageType(buffer);
-
-            if (source != nullptr && source != received.getSource())
+            log->printf(Logger::debug, "Reading received data (%u bytes): success", this->getPacketLength(false));
+            MessageType received = MessageType(&buffer[0]);
+            log->print(Logger::debug, "Message reconstructed.");
+            log->printf(Logger::debug, "Type: %u", received.getType());
+            log->printf(Logger::debug, "Source: %s", received.getSource().toString());
+            log->printf(Logger::debug, "Dest: %s", received.getDest().toString());
+            if (source != MACAddress::broadcast && source != received.getSource())
             {
                 log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message", received.getSource().toString());
                 continue;
@@ -121,7 +130,7 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
 
             if ((!promiscuous) && (received.getDest() != this->mac) && (received.getDest() != MACAddress::broadcast))
             {
-                log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getDest().toString());
+                log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getSource().toString());
                 continue;
             }
             if (received.isType(Message::Type::REPEAT))

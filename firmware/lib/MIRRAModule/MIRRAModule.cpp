@@ -31,7 +31,7 @@ void MIRRAModule::prepare(const MIRRAPins &pins)
 
 MIRRAModule::MIRRAModule(const MIRRAPins &pins) : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, log{LOG_LEVEL, LOG_FP, &rtc}, lora{&log, pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin} {}
 
-void MIRRAModule::commandPhase()
+void MIRRAModule::enterCommandPhase()
 {
     Serial.println("Press the BOOT pin to enter command phase ...");
     for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
@@ -39,11 +39,15 @@ void MIRRAModule::commandPhase()
         if (commandPhaseFlag)
         {
             log.print(Logger::info, "Entering command phase...");
-            break;
+            commandPhase();
+            return;
         }
         delay(100);
     }
+}
 
+void MIRRAModule::commandPhase()
+{
     Serial.println("COMMAND PHASE");
     size_t length;
     Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
@@ -157,7 +161,7 @@ void MIRRAModule::printFile(const char *filename, bool hex)
 void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
 {
     uint8_t buffer[SensorDataMessage::max_length];
-    m.to_data(buffer);
+    m.toData(buffer);
     buffer[0] = 0; // mark not uploaded (yet)
     dataFile.write((uint8_t)m.getLength());
     dataFile.write(buffer, m.getLength());
@@ -166,7 +170,8 @@ void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
 void MIRRAModule::deepSleep(float sleep_time)
 {
     if (sleep_time <= 0)
-        return;
+        log.print(Logger::error, "Sleep time was zero or negative!");
+    return;
 
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
     // Therefore we force pin 15 to a LOW state here.
@@ -200,7 +205,7 @@ void MIRRAModule::deepSleep(float sleep_time)
 void MIRRAModule::deepSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    deepSleep((float)(time - ctime));
+    deepSleep(time - ctime);
 }
 
 void MIRRAModule::lightSleep(float sleep_time)
@@ -213,5 +218,5 @@ void MIRRAModule::lightSleep(float sleep_time)
 void MIRRAModule::lightSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    lightSleep((float)(time - ctime));
+    lightSleep(time - ctime);
 }

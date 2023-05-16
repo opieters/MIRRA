@@ -1,16 +1,19 @@
 #include "gateway.h"
 #include <cstring>
 
-void Node::updateCommTime(uint32_t last_comm_time, uint32_t next_comm_time)
+void Node::timeConfig(TimeConfigMessage &m)
 {
-    this->last_comm_time = last_comm_time;
-    this->next_comm_time = next_comm_time;
+    last_comm_time = m.getCTime();
+    next_sample_time = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
+    sample_interval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
+    next_comm_time = m.getCommTime();
+    comm_interval = m.getCommInterval();
+    comm_duration = m.getCommDuration();
 }
 
-void Node::updateSampleTime(uint32_t sample_interval, uint32_t next_sample_time)
+void Node::naiveTimeConfig()
 {
-    this->sample_interval = sample_interval;
-    this->next_sample_time = next_sample_time;
+    next_comm_time += comm_interval;
 }
 
 const char sensorDataTempFN[] = "/data_temp.dat";
@@ -56,7 +59,7 @@ void Gateway::wake()
     {
         uploadPeriod();
     }
-    commandPhase();
+    enterCommandPhase();
     log.print(Logger::debug, "Entering deep sleep...");
     if (nodes.empty())
         deepSleep(COMMUNICATION_INTERVAL);
@@ -141,7 +144,7 @@ void Gateway::discovery()
         return;
     }
 
-    log.printf(Logger::info, "Registering node %s", time_ack.getSource());
+    log.printf(Logger::info, "Registering node %s", time_ack.getSource().toString());
     Node new_node = Node(time_ack.getSource(), ctime, comm_time);
     storeNode(new_node);
 }
@@ -184,9 +187,11 @@ void Gateway::commPeriod()
 {
     log.print(Logger::info, "Starting comm period...");
     File dataFile = SPIFFS.open(DATA_FP, FILE_APPEND);
-    for (Node n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a node misses its new time config
+    for (Node &n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a node misses its new time config
     {
-        nodeCommPeriod(n, dataFile);
+
+        if (!nodeCommPeriod(n, dataFile))
+            n.naiveTimeConfig();
     }
     if (nodes.empty())
     {
@@ -199,13 +204,13 @@ void Gateway::commPeriod()
     dataFile.close();
 }
 
-void Gateway::nodeCommPeriod(Node &n, File &dataFile)
+bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
 {
     uint32_t ctime = rtc.read_time_epoch();
     if (ctime > n.getNextCommTime())
     {
         log.printf(Logger::error, "Node %s's comm time was faultily scheduled before this gateway's comm period. Skipping communication with this node.", n.getMACAddress().toString());
-        return;
+        return false;
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
     uint32_t listen_ms = COMMUNICATION_PERIOD_PADDING * 1000; // pre-listen in anticipation of message
@@ -217,7 +222,7 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
         if (sensorData.isType(Message::ERROR))
         {
             log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
-            return;
+            return false;
         }
         log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
@@ -229,14 +234,16 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
 
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     log.printf(Logger::debug, "Sending time config message to %s ...", n.getMACAddress().toString());
-    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
+    TimeConfigMessage timeConfig = TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH);
+    lora.sendMessage(timeConfig);
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (time_ack.isType(Message::ERROR))
     {
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
-        return;
+        return false;
     }
-    n.updateCommTime(ctime, comm_time);
+    n.timeConfig(timeConfig);
+    return true;
 }
 
 void Gateway::pruneSensorData(File &dataFile)
@@ -353,7 +360,7 @@ void Gateway::uploadPeriod()
         uint8_t size = rdata.read();
         uint8_t buffer[size];
         rdata.read(buffer, size);
-        if (buffer[0] == 0 && upload) //upload flag: not yet uploaded
+        if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
         {
             SensorDataMessage message(buffer);
             char topic[topic_size];
