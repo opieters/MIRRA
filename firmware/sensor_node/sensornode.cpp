@@ -174,7 +174,7 @@ uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress con
     log.print(Logger::debug, "Awaiting acknowledgement...");
     if (!message.isLast())
     {
-        Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, dest);
+        Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::DATA_ACK, SENSOR_DATA_ATTEMPTS, dest);
         if (!sensorAck.isType(Message::Type::ERROR))
         {
             return 1;
