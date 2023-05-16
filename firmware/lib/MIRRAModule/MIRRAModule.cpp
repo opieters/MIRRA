@@ -200,7 +200,7 @@ void MIRRAModule::deepSleep(float sleep_time)
 void MIRRAModule::deepSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    deepSleep((float)(time - ctime));
+    deepSleep(time - ctime);
 }
 
 void MIRRAModule::lightSleep(float sleep_time)
@@ -213,5 +213,5 @@ void MIRRAModule::lightSleep(float sleep_time)
 void MIRRAModule::lightSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    lightSleep((float)(time - ctime));
+    lightSleep(time - ctime);
 }
