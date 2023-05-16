@@ -7,8 +7,6 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
       module{Module(csPin, DIO0Pin, rstPin)},
       SX1272(&module)
 {
-    this->reset();
-    this->explicitHeader();
     this->module.setRfSwitchPins(rxPin, txPin);
 
     this->mac = MACAddress();
@@ -23,7 +21,7 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
                             LORA_AMPLIFIER_GAIN);
     if (state == RADIOLIB_ERR_NONE)
     {
-        log->printf(Logger::info, "LoRa init successful for %s!", this->getMACAddress().toString());
+        log->printf(Logger::debug, "LoRa init successful for %s!", this->getMACAddress().toString());
     }
     else
     {
