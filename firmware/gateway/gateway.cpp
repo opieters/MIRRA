@@ -348,6 +348,7 @@ total length of sensor data = 17 + 6 * n_values
 
 void Gateway::uploadPeriod()
 {
+    log.printf(Logger::info, "Commencing upload to MQTT server...");
     wifiConnect();
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -373,6 +374,7 @@ void Gateway::uploadPeriod()
                 mqtt.connect(lora.getMACAddress().toString());
             if (mqtt.connected() && mqtt.publish(topic, &buffer[Message::header_length], message.getLength() - Message::header_length))
             {
+                log.printf(Logger::debug, "MQTT message succesfully published.");
                 buffer[0] = 1; // mark uploaded
             }
             else
