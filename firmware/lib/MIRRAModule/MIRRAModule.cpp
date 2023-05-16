@@ -169,7 +169,8 @@ void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
 void MIRRAModule::deepSleep(float sleep_time)
 {
     if (sleep_time <= 0)
-        return;
+        log.print(Logger::error, "Sleep time was zero or negative!");
+    return;
 
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
     // Therefore we force pin 15 to a LOW state here.
