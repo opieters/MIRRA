@@ -19,7 +19,7 @@
 #define LORA_PREAMBLE_LENGHT 8
 #define LORA_AMPLIFIER_GAIN 0 // 0 is automatic
 
-#define SEND_DELAY 500 //ms, time to wait before sending a message
+#define SEND_DELAY 500 // ms, time to wait before sending a message
 
 class LoRaModule : public SX1272
 {
@@ -140,7 +140,6 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 {
                     this->resendPacket();
                     esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
-                    repeat_attempts--;
                 }
                 continue;
             }
