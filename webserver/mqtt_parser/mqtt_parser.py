@@ -56,8 +56,8 @@ def on_message(client, userdata, msg):
     n_values = payload[4]
     for i in range(n_values):
         try:
-            id = payload[read_start + i*5]
-            data = payload[read_start + i*5+1:read_start+(i+1)*5]
+            id = payload[read_start + i*6]
+            data = payload[read_start + i*6+1:read_start+(i+1)*6]
             value = struct.unpack('f', data)[0]
 
             # if not isinstance(value, int) or not isinstance(value, float):
