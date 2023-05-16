@@ -30,6 +30,9 @@ void SensorNode::wake()
 {
     log.print(Logger::debug, "Running wake()...");
     uint32_t ctime = rtc.read_time_epoch();
+    int64_t timeUntilSample = nextSampleTime - ctime;
+    int64_t timeUntilComm = nextCommTime - ctime;
+    log.printf(Logger::info, "Next sample in %is, next comm period in %is", timeUntilSample, timeUntilComm);
     if (ctime >= nextCommTime)
     {
         if (nextSampleTime >= nextCommTime && nextSampleTime <= (nextCommTime + (commDuration / 1000)))
@@ -42,6 +45,7 @@ void SensorNode::wake()
             commPeriod();
         }
     }
+    ctime = rtc.read_time_epoch();
     if (ctime >= nextSampleTime)
     {
         samplePeriod();
@@ -97,11 +101,13 @@ void SensorNode::timeConfig(TimeConfigMessage &m)
     nextCommTime = m.getCommTime();
     commInterval = m.getCommInterval();
     commDuration = m.getCommDuration();
+    log.printf(Logger::info, "Sample interval: %u, Comm interval: %u, Comm duration: %u", sampleInterval, commInterval, commDuration);
     gatewayMAC = m.getSource();
 }
 
 void SensorNode::samplePeriod()
 {
+    log.print(Logger::info, "Sampling sensors...");
     File data = SPIFFS.open(DATA_FP, FILE_WRITE);
     uint32_t ctime = rtc.read_time_epoch();
     SensorValue values[SensorDataMessage::max_n_values];
@@ -112,7 +118,8 @@ void SensorNode::samplePeriod()
     }
     SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, (rand() % SensorDataMessage::max_n_values) + 1, values);
     storeSensorData(message, data);
-    nextSampleTime += sampleInterval;
+    while (nextSampleTime <= ctime)
+        nextSampleTime += sampleInterval;
     data.close();
     data = SPIFFS.open(DATA_FP, FILE_READ);
     pruneSensorData(data);
@@ -120,9 +127,8 @@ void SensorNode::samplePeriod()
 
 void SensorNode::commPeriod()
 {
-    size_t n_errors = 0; // amount of errors while uploading
-    size_t messagesToSend = ((commDuration / 100) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
-    bool upload = true;
+    log.print(Logger::info, "Communicating with gateway...");
+    size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
     while (rdata.available())
@@ -130,15 +136,21 @@ void SensorNode::commPeriod()
         uint8_t size = rdata.read();
         uint8_t buffer[size];
         rdata.read(buffer, size);
-        if (buffer[0] == 1 && upload) // already uploaded
+        if (buffer[0] == 0) // not yet uploaded
         {
+            log.print(Logger::debug, "Reconstructing message from file...");
             SensorDataMessage message(buffer);
             if (messagesToSend == 1 || !rdata.available()) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
+            {
+                log.print(Logger::debug, "Last sensor data message...");
                 message.setLast();
+            }
+            log.print(Logger::debug, "Sending data message...");
             lora.sendMessage<SensorDataMessage>(message);
             messagesToSend--;
             if (message.isLast())
                 break;
+            log.print(Logger::debug, "Awaiting acknowledgement...");
             Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, gatewayMAC);
             if (!sensorAck.isType(Message::Type::ERROR))
             {
@@ -147,15 +159,22 @@ void SensorNode::commPeriod()
             }
             else
             {
-                log.printf(Logger::error, "Error while uploading to gateway.");
-                n_errors++;
+                log.print(Logger::error, "Error while uploading to gateway.");
             }
         }
         wdata.write(size);
         wdata.write(buffer, size);
     }
     TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::Type::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
-    this->timeConfig(timeConfig);
+    if (timeConfig.isType(Message::Type::ERROR))
+    {
+        log.print(Logger::error, "Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
+        nextCommTime += commInterval;
+    }
+    else
+    {
+        this->timeConfig(timeConfig);
+    }
     rdata.close();
     wdata.close();
     SPIFFS.remove(DATA_FP);
