@@ -167,12 +167,12 @@ void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
     dataFile.write(buffer, m.getLength());
 }
 
-void MIRRAModule::deepSleep(float sleep_time)
+void MIRRAModule::deepSleep(uint64_t sleep_time)
 {
     if (sleep_time <= 0)
     {
         log.print(Logger::error, "Sleep time was zero or negative!");
-        return;
+        return deepSleep(1);
     }
 
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
@@ -185,17 +185,17 @@ void MIRRAModule::deepSleep(float sleep_time)
     if (sleep_time <= 30)
     {
         log.print(Logger::debug, "Using internal timer for deep sleep.");
-        esp_sleep_enable_timer_wakeup((uint64_t)(sleep_time * 1000 * 1000));
+        esp_sleep_enable_timer_wakeup(sleep_time * 1000 * 1000);
     }
     else
     {
         log.print(Logger::debug, "Using RTC for deep sleep.");
         // We use the external RTC
-        rtc.write_alarm_epoch(rtc.read_time_epoch() + (uint32_t)round(sleep_time));
+        rtc.write_alarm_epoch(rtc.read_time_epoch() + sleep_time);
         rtc.enable_alarm();
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
     digitalWrite(16, LOW);
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     lora.sleep();
     log.closeLogfile();
