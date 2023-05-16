@@ -18,18 +18,3 @@ uint32_t Sensor::adaptive_sample_interval_update(time_t current_sample_timepoint
         return this->sample_interval;
     }
 }
-
-SensorValue::SensorValue(uint8_t *data)
-{
-    SensorValueStruct buffer = {0, 0};
-    memcpy(&buffer, data, sizeof(buffer));
-    this->tag = buffer.tag;
-    this->value = buffer.value;
-}
-
-uint8_t *SensorValue::to_data(uint8_t *data)
-{
-    SensorValueStruct buffer = {this->tag, this->value};
-    memcpy(data, &buffer, sizeof(buffer));
-    return data;
-}

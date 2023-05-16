@@ -133,7 +133,7 @@ void Gateway::discovery()
     uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING;
 
     log.printf(Logger::debug, "Sending time config message to %s ...", hello_reply.getSource().toString());
-    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
+    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
     if (time_ack.isType(Message::ERROR))
     {
@@ -193,6 +193,8 @@ void Gateway::commPeriod()
         log.print(Logger::info, "No comm periods performed because no nodes have been registered.");
     }
     commPeriods++;
+    dataFile.close();
+    dataFile = SPIFFS.open(DATA_FP, FILE_READ);
     pruneSensorData(dataFile);
     dataFile.close();
 }
@@ -227,7 +229,7 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
 
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     log.printf(Logger::debug, "Sending time config message to %s ...", n.getMACAddress().toString());
-    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL));
+    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (time_ack.isType(Message::ERROR))
     {
@@ -235,15 +237,6 @@ void Gateway::nodeCommPeriod(Node &n, File &dataFile)
         return;
     }
     n.updateCommTime(ctime, comm_time);
-}
-
-void Gateway::storeSensorData(SensorDataMessage &m, File &dataFile)
-{
-    uint8_t buffer[SensorDataMessage::max_length];
-    m.to_data(buffer);
-    buffer[0] = 0; // mark not uploaded (yet)
-    dataFile.write((uint8_t)m.getLength());
-    dataFile.write(buffer, m.getLength());
 }
 
 void Gateway::pruneSensorData(File &dataFile)
@@ -342,6 +335,7 @@ sensor data is formatted as follows: MAC node (6) | MAC gateway (6) | time (4) |
 value_data can be split up further in sensor_id (1) | data (4)
 total length of sensor data = 17 + 6 * n_values
 */
+
 void Gateway::uploadPeriod()
 {
     wifiConnect();
@@ -354,14 +348,12 @@ void Gateway::uploadPeriod()
     bool upload = true;
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
-    while (rdata.availableForWrite())
+    while (rdata.available())
     {
         uint8_t size = rdata.read();
         uint8_t buffer[size];
         rdata.read(buffer, size);
-        if (buffer[0] == 1) // already uploaded
-            continue;
-        if (upload)
+        if (buffer[0] == 0 && upload) //upload flag: not yet uploaded
         {
             SensorDataMessage message(buffer);
             char topic[topic_size];

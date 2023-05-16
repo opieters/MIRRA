@@ -45,6 +45,9 @@ public:
     void listFiles();
     void printFile(const char *filename, bool hex = false);
 
+    void storeSensorData(SensorDataMessage &m, File &dataFile);
+    void printSensorData();
+
     void deepSleep(float time);
     void deepSleepUntil(uint32_t time);
     void lightSleep(float time);

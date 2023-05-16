@@ -27,21 +27,21 @@ uint8_t *TimeConfigMessage::to_data(uint8_t *data) const
     return data;
 }
 
-SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue::SensorValueStruct *sensor_values) : Message(Message::SENSOR_DATA, src, dest), body{time, n_values}
+SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values) : Message(Message::SENSOR_DATA, src, dest), body{time, n_values}
 {
-    memcpy(this->values, sensor_values, this->body.n_values * sizeof(SensorValue::SensorValueStruct));
+    memcpy(this->values, sensor_values, this->body.n_values * sizeof(SensorValue));
 }
 
 SensorDataMessage::SensorDataMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<SensorDataStruct *>(&data[header_length])}
 {
-    memcpy(this->values, &data[Message::getLength() + sizeof(SensorDataStruct)], this->body.n_values * sizeof(SensorValue::SensorValueStruct));
+    memcpy(this->values, &data[Message::getLength() + sizeof(SensorDataStruct)], this->body.n_values * sizeof(SensorValue));
 };
 
 uint8_t *SensorDataMessage::to_data(uint8_t *data) const
 {
     data = Message::to_data(data);
     memcpy(&data[Message::getLength()], &this->body, sizeof(this->body));
-    memcpy(&data[Message::getLength() + sizeof(SensorDataStruct)], this->values, this->body.n_values * sizeof(SensorValue::SensorValueStruct));
+    memcpy(&data[Message::getLength() + sizeof(SensorDataStruct)], this->values, this->body.n_values * sizeof(SensorValue));
     return data;
 }
 

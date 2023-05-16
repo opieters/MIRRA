@@ -49,9 +49,7 @@ public:
         void commPeriod();
         void nodeCommPeriod(Node &n, File &dataFile);
 
-        void storeSensorData(SensorDataMessage &m, File &dataFile);
         void pruneSensorData(File &dataFile);
-        void printSensorData();
 
         const size_t topic_size = sizeof(TOPIC_PREFIX) + 1 + MACAddress::string_length + MACAddress::string_length;
         char *createTopic(char *topic, MACAddress const &nodeMAC);
