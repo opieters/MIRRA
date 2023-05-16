@@ -49,7 +49,7 @@ public:
     void storeSensorData(SensorDataMessage &m, File &dataFile);
     void printSensorData();
 
-    void deepSleep(uint64_t time);
+    void deepSleep(uint32_t time);
     void deepSleepUntil(uint32_t time);
     void lightSleep(float time);
     void lightSleepUntil(uint32_t time);
