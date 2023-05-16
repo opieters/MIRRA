@@ -277,7 +277,7 @@ class mysql_manager:
             cursor = connection.cursor()
             cursor.execute("""SELECT forests.id as forest_id, name, locations.id as location_id, lat, lng
                             FROM locations INNER JOIN forests
-                            ON locations.id = forests.location_id""")
+                            ON forests.id = location.forest_id""")
 
             return cursor.fetchall()
 
