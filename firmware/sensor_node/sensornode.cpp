@@ -129,7 +129,9 @@ void SensorNode::samplePeriod()
 void SensorNode::commPeriod()
 {
     log.print(Logger::info, "Communicating with gateway...");
+    MACAddress destMAC = gatewayMAC; // avoid access to slow RTC memory
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
+    log.printf(Logger::info, "Messages to send: %u", messagesToSend);
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
     while (rdata.available())
@@ -141,6 +143,7 @@ void SensorNode::commPeriod()
         {
             log.print(Logger::debug, "Reconstructing message from file...");
             SensorDataMessage message(buffer);
+            message.setDest(destMAC);
             if (messagesToSend == 1 || !rdata.available()) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
             {
                 log.print(Logger::debug, "Last sensor data message...");
@@ -149,33 +152,40 @@ void SensorNode::commPeriod()
             log.print(Logger::debug, "Sending data message...");
             lora.sendMessage<SensorDataMessage>(message);
             messagesToSend--;
-            if (message.isLast())
-                break;
             log.print(Logger::debug, "Awaiting acknowledgement...");
-            Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, gatewayMAC);
-            if (!sensorAck.isType(Message::Type::ERROR))
+            if (message.isLast())
             {
-                buffer[0] = 1; // mark uploaded
-                continue;
+                TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::Type::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
+                if (timeConfig.isType(Message::Type::ERROR))
+                {
+                    log.print(Logger::error, "Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
+                    nextCommTime += commInterval;
+                }
+                else
+                {
+                    this->timeConfig(timeConfig);
+                    buffer[0] = 1; // mark uploaded
+                    break;
+                }
             }
             else
             {
-                log.print(Logger::error, "Error while uploading to gateway.");
+                Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, gatewayMAC);
+                if (!sensorAck.isType(Message::Type::ERROR))
+                {
+                    buffer[0] = 1; // mark uploaded
+                    continue;
+                }
+                else
+                {
+                    log.print(Logger::error, "Error while uploading to gateway.");
+                }
             }
         }
         wdata.write(size);
         wdata.write(buffer, size);
     }
-    TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::Type::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
-    if (timeConfig.isType(Message::Type::ERROR))
-    {
-        log.print(Logger::error, "Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
-        nextCommTime += commInterval;
-    }
-    else
-    {
-        this->timeConfig(timeConfig);
-    }
+
     rdata.close();
     wdata.close();
     SPIFFS.remove(DATA_FP);
