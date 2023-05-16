@@ -57,7 +57,7 @@ protected:
 
 public:
     Message() = default;
-    Message(HeaderStruct &header) : header{header} {};
+    Message(HeaderStruct header) : header{header} {};
     Message(Message::Type type, MACAddress src, MACAddress dest) : header{type, src, dest} {};
     Message(uint8_t *data) : Message(*reinterpret_cast<HeaderStruct *>(data)){};
     Message::Type getType() const { return header.type; };
