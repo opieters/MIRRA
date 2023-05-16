@@ -171,7 +171,7 @@ void MIRRAModule::deepSleep(uint64_t sleep_time)
 {
     if (sleep_time <= 0)
     {
-        log.print(Logger::error, "Sleep time was zero or negative!");
+        log.print(Logger::error, "Sleep time was zero or negative! Sleeping one second to avert crisis.");
         return deepSleep(1);
     }
 
@@ -198,9 +198,8 @@ void MIRRAModule::deepSleep(uint64_t sleep_time)
     digitalWrite(16, LOW);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     lora.sleep();
-    log.closeLogfile();
     SPIFFS.end();
-    log.print(Logger::debug, "SPIFFS unmounted.");
+    log.print(Logger::info, "Good night.");
     esp_deep_sleep_start();
 }
 
