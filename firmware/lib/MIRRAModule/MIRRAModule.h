@@ -41,7 +41,7 @@ public:
     };
     void enterCommandPhase();
     void commandPhase();
-    CommandCode processCommands(char *command);
+    virtual CommandCode processCommands(char *command);
 
     void listFiles();
     void printFile(const char *filename, bool hex = false);
