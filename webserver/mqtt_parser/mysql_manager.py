@@ -72,7 +72,7 @@ class mysql_manager:
         is needed for further filtering in this class, given the gateway's UUI
         (MAC address)
 
-        :param gateway_uuid: The UUID of the module (MAC address) to search the ID for.
+        :param gateway_uuid: Thef UUID of the module (MAC address) to search the ID for.
         :return: The row ID of the gateway when found, 0 when not found.
         """
         connection = self.__create_connection()
@@ -265,6 +265,24 @@ class mysql_manager:
 
             return results
 
+    def get_all_locations(self):
+        """
+        This function gets all forests and locations and returns them.
+
+        :return: The forests and locations with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT forests.id as forest_id, name, locations.id as location_id, lat, lng
+                            FROM locations INNER JOIN forests
+                            ON forests.id = locations.forest_id""")
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
 
 
     def get_all_sensors(self):
@@ -279,6 +297,26 @@ class mysql_manager:
             cursor = connection.cursor()
             cursor.execute("""SELECT * FROM sensor_modules
                               join locations on locations.id = sensor_modules.location_id;""")
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
+
+    def get_all_sensors_from_location(self, loc_id):
+        """
+        This function gets all the sensors from a certain location with location_id loc_id and returns them.
+        :param loc_id: the location's id to get the sensors from
+	:return: The sensors with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT * FROM sensor_modules
+                              join locations on locations.id = sensor_modules.location_id
+					WHERE locations.id = %s;""",
+				   (loc_id))
 
             return cursor.fetchall()
 
@@ -606,25 +644,20 @@ class mysql_manager:
             connection.close()
         return True if (result['existing'] > 0) else False
 
-    def add_forest(self, forest_name, lat, lng):
+    def add_forest(self, forest_name):
         """
         This function adds a forest to the database and is used in the
         front end when submitting the form.
 
         :param forest_name: The easy to recognise name of the forest.
-        :param lat: The latitude of the forest's location.
-        :param lng: The longitude of the forest's location.
         :return: True on success, False on error.
         :rtype: bool
         """
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
 
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("""INSERT INTO forests VALUES(NULL,%s,%s)""", (forest_name, location_id,))
+            cursor.execute("""INSERT INTO forests VALUES(NULL,%s)""", (forest_name,))
             connection.commit()
             return True
         except:
