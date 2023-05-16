@@ -13,18 +13,19 @@ class Node
 private:
         MACAddress mac = MACAddress();
         uint32_t last_comm_time = 0;
-        uint32_t next_comm_time = 0;
-        uint32_t comm_interval = 0;
         uint32_t next_sample_time = 0;
         uint32_t sample_interval = 0;
+        uint32_t next_comm_time = 0;
+        uint32_t comm_interval = 0;
+        uint32_t comm_duration = 0;
         uint8_t errors = 0;
 
 public:
         Node(){};
         Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {};
         MACAddress getMACAddress() { return mac; }
-        void updateCommTime(uint32_t last_comm_time, uint32_t next_comm_time);
-        void updateSampleTime(uint32_t next_sample_time, uint32_t sample_interval = SAMPLING_INTERVAL);
+        void timeConfig(TimeConfigMessage &m);
+        void naiveTimeConfig();
         uint32_t getLastCommTime() { return last_comm_time; }
         uint32_t getNextCommTime() { return next_comm_time; }
         uint32_t getNextSampleTime() { return next_sample_time; }

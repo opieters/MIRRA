@@ -30,12 +30,9 @@ void SensorNode::wake()
 {
     log.print(Logger::debug, "Running wake()...");
     uint32_t ctime = rtc.read_time_epoch();
-    int64_t timeUntilSample = nextSampleTime - ctime;
-    int64_t timeUntilComm = nextCommTime - ctime;
-    log.printf(Logger::info, "Next sample in %is, next comm period in %is", timeUntilSample, timeUntilComm);
     if (ctime >= nextCommTime)
     {
-        if (nextSampleTime >= nextCommTime && nextSampleTime <= (nextCommTime + (commDuration / 1000)))
+        if (nextSampleTime >= nextCommTime && nextSampleTime <= (nextCommTime + (commDuration)))
         {
             commPeriod();
             samplePeriod();
@@ -50,7 +47,11 @@ void SensorNode::wake()
     {
         samplePeriod();
     }
+    log.printf(Logger::info, "Next sample in %us, next comm period in %us", nextSampleTime - ctime, nextCommTime - ctime);
     enterCommandPhase();
+    ctime = rtc.read_time_epoch();
+    if (ctime >= nextCommTime || ctime >= nextSampleTime)
+        wake();
     log.print(Logger::debug, "Entering deep sleep...");
     deepSleepUntil((nextCommTime < nextSampleTime) ? nextCommTime : nextSampleTime);
 }
