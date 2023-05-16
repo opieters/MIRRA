@@ -48,7 +48,7 @@ public:
         void printNodes();
 
         void commPeriod();
-        void nodeCommPeriod(Node &n, File &dataFile);
+        bool nodeCommPeriod(Node &n, File &dataFile);
 
         void pruneSensorData(File &dataFile);
 

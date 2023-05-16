@@ -4,8 +4,8 @@
 void Node::timeConfig(TimeConfigMessage &m)
 {
     last_comm_time = m.getCTime();
-    next_sample_time = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
-    sample_interval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
+    next_sample_time = (m.getSampleTime() == 0) ? next_sample_time : m.getSampleTime();
+    sample_interval = (m.getSampleInterval() == 0) ? sample_interval : m.getSampleInterval();
     next_comm_time = m.getCommTime();
     comm_interval = m.getCommInterval();
     comm_duration = m.getCommDuration();
