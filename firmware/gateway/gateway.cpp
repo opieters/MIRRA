@@ -141,7 +141,7 @@ void Gateway::discovery()
         return;
     }
 
-    log.printf(Logger::info, "Registering node %s", time_ack.getSource());
+    log.printf(Logger::info, "Registering node %s", time_ack.getSource().toString());
     Node new_node = Node(time_ack.getSource(), ctime, comm_time);
     storeNode(new_node);
 }
