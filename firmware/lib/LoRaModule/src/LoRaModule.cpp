@@ -52,7 +52,7 @@ void LoRaModule::resendPacket()
 {
     if (lastSentLength == 0)
     {
-        log->printf(Logger::error, "Could not repeat last sent packet because no packet has been sent yet.");
+        log->print(Logger::error, "Could not repeat last sent packet because no packet has been sent yet.");
         return;
     }
     log->printf(Logger::debug, "Resending last sent packet to %s", this->lastDest.toString());

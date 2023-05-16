@@ -110,10 +110,10 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 log->printf(Logger::error, "Reading received data (%u bytes) failed, code: %i", this->getPacketLength(false), state);
                 return MessageType();
             }
-
+            log->print(Logger::debug, "Reading received data: success");
             MessageType received = MessageType(buffer);
-
-            if (source != nullptr && source != received.getSource())
+            log->print(Logger::debug, "Message reconstructed.");
+            if (source != MACAddress::broadcast && source != received.getSource())
             {
                 log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message", received.getSource().toString());
                 continue;
@@ -121,7 +121,7 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
 
             if ((!promiscuous) && (received.getDest() != this->mac) && (received.getDest() != MACAddress::broadcast))
             {
-                log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getDest().toString());
+                log->printf(Logger::debug, "Message from %s discarded because its destination does not match this device.", received.getSource().toString());
                 continue;
             }
             if (received.isType(Message::Type::REPEAT))
