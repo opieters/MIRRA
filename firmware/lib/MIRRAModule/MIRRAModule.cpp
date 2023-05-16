@@ -31,7 +31,7 @@ void MIRRAModule::prepare(const MIRRAPins &pins)
 
 MIRRAModule::MIRRAModule(const MIRRAPins &pins) : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, log{LOG_LEVEL, LOG_FP, &rtc}, lora{&log, pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin} {}
 
-void MIRRAModule::commandPhase()
+void MIRRAModule::enterCommandPhase()
 {
     Serial.println("Press the BOOT pin to enter command phase ...");
     for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
@@ -39,11 +39,14 @@ void MIRRAModule::commandPhase()
         if (commandPhaseFlag)
         {
             log.print(Logger::info, "Entering command phase...");
-            return;
+            commandPhase();
         }
         delay(100);
     }
+}
 
+void MIRRAModule::commandPhase()
+{
     Serial.println("COMMAND PHASE");
     size_t length;
     Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);

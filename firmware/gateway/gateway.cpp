@@ -56,7 +56,7 @@ void Gateway::wake()
     {
         uploadPeriod();
     }
-    commandPhase();
+    enterCommandPhase();
     log.print(Logger::debug, "Entering deep sleep...");
     if (nodes.empty())
         deepSleep(COMMUNICATION_INTERVAL);

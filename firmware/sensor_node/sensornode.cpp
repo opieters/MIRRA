@@ -50,7 +50,7 @@ void SensorNode::wake()
     {
         samplePeriod();
     }
-    commandPhase();
+    enterCommandPhase();
     log.print(Logger::debug, "Entering deep sleep...");
     deepSleepUntil((nextCommTime < nextSampleTime) ? nextCommTime : nextSampleTime);
 }

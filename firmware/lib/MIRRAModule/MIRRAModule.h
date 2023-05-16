@@ -39,8 +39,9 @@ public:
         COMMAND_FOUND,
         COMMAND_EXIT
     };
+    void enterCommandPhase();
     void commandPhase();
-    virtual CommandCode processCommands(char *command);
+    CommandCode processCommands(char *command);
 
     void listFiles();
     void printFile(const char *filename, bool hex = false);
