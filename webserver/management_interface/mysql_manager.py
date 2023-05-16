@@ -644,25 +644,20 @@ class mysql_manager:
             connection.close()
         return True if (result['existing'] > 0) else False
 
-    def add_forest(self, forest_name, lat, lng):
+    def add_forest(self, forest_name):
         """
         This function adds a forest to the database and is used in the
         front end when submitting the form.
 
         :param forest_name: The easy to recognise name of the forest.
-        :param lat: The latitude of the forest's location.
-        :param lng: The longitude of the forest's location.
         :return: True on success, False on error.
         :rtype: bool
         """
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
 
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("""INSERT INTO forests VALUES(NULL,%s,%s)""", (forest_name, location_id,))
+            cursor.execute("""INSERT INTO forests VALUES(NULL,%s)""", (forest_name,))
             connection.commit()
             return True
         except:
