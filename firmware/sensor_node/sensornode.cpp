@@ -109,7 +109,6 @@ void SensorNode::timeConfig(TimeConfigMessage &m)
 void SensorNode::samplePeriod()
 {
     log.print(Logger::info, "Sampling sensors...");
-    File data = SPIFFS.open(DATA_FP, FILE_WRITE);
     uint32_t ctime = rtc.read_time_epoch();
     SensorValue values[SensorDataMessage::max_n_values];
     srand(ctime);
@@ -118,12 +117,14 @@ void SensorNode::samplePeriod()
         value = SensorValue(rand(), 0, rand());
     }
     SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, (rand() % SensorDataMessage::max_n_values) + 1, values);
+    log.printf(Logger::debug, "Constructed Sensor Message with length %u", message.getLength());
+    File data = SPIFFS.open(DATA_FP, FILE_WRITE);
     storeSensorData(message, data);
-    while (nextSampleTime <= ctime)
-        nextSampleTime += sampleInterval;
     data.close();
     data = SPIFFS.open(DATA_FP, FILE_READ);
     pruneSensorData(data);
+    while (nextSampleTime <= ctime)
+        nextSampleTime += sampleInterval;
 }
 
 void SensorNode::commPeriod()
@@ -190,7 +191,7 @@ uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress con
         if (!timeConfig.isType(Message::Type::ERROR))
         {
             this->timeConfig(timeConfig);
-            lora.sendMessage<Message>(Message(Message::ACK_TIME, timeConfig.getSource(), dest));
+            lora.sendMessage<Message>(Message(Message::ACK_TIME, lora.getMACAddress(), dest));
             lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::REPEAT, 0, gatewayMAC);
             return 1;
         }
