@@ -224,7 +224,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
             log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
             return false;
         }
-        log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
+        log.printf(Logger::info, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
         if (sensorData.isLast() || i == (MAX_SENSOR_MESSAGES - 1))
             break;
@@ -233,7 +233,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
     }
 
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
-    log.printf(Logger::debug, "Sending time config message to %s ...", n.getMACAddress().toString());
+    log.printf(Logger::info, "Sending time config message to %s ...", n.getMACAddress().toString());
     TimeConfigMessage timeConfig = TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH);
     lora.sendMessage(timeConfig);
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
@@ -242,6 +242,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
         return false;
     }
+    log.printf(Logger::info, "Communication with node %s successful." n.getMACAddress().toString());
     n.timeConfig(timeConfig);
     return true;
 }
