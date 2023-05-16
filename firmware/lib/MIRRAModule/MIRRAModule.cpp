@@ -157,7 +157,7 @@ void MIRRAModule::printFile(const char *filename, bool hex)
 void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
 {
     uint8_t buffer[SensorDataMessage::max_length];
-    m.to_data(buffer);
+    m.toData(buffer);
     buffer[0] = 0; // mark not uploaded (yet)
     dataFile.write((uint8_t)m.getLength());
     dataFile.write(buffer, m.getLength());
