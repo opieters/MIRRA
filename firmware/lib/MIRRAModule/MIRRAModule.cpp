@@ -40,6 +40,7 @@ void MIRRAModule::enterCommandPhase()
         {
             log.print(Logger::info, "Entering command phase...");
             commandPhase();
+            return;
         }
         delay(100);
     }
