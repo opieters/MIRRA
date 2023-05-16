@@ -20,7 +20,6 @@ public:
         void samplePeriod();
 
         void commPeriod();
-        void storeSensorData(SensorDataMessage &m, File &dataFile);
         void pruneSensorData(File &dataFile);
 
         void printSensorData();
