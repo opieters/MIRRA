@@ -136,7 +136,8 @@ void Gateway::discovery()
     uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING;
 
     log.printf(Logger::debug, "Sending time config message to %s ...", hello_reply.getSource().toString());
-    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
+    TimeConfigMessage timeConfig(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
+    lora.sendMessage(timeConfig);
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
     if (time_ack.isType(Message::ERROR))
     {
@@ -145,7 +146,7 @@ void Gateway::discovery()
     }
 
     log.printf(Logger::info, "Registering node %s", time_ack.getSource().toString());
-    Node new_node = Node(time_ack.getSource(), ctime, comm_time);
+    Node new_node = Node(timeConfig);
     storeNode(new_node);
 }
 
