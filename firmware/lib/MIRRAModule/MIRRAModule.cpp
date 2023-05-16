@@ -39,7 +39,7 @@ void MIRRAModule::commandPhase()
         if (commandPhaseFlag)
         {
             log.print(Logger::info, "Entering command phase...");
-            break;
+            return;
         }
         delay(100);
     }
