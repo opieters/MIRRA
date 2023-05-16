@@ -12,7 +12,7 @@
 #define LOG_FP "/"
 #define LOG_LEVEL Logger::debug
 
-#define UART_PHASE_ENTRY_PERIOD 15  // s, length of time after wakeup and comm period in which command phase can be entered
+#define UART_PHASE_ENTRY_PERIOD 5   // s, length of time after wakeup and comm period in which command phase can be entered
 #define UART_PHASE_TIMEOUT (5 * 60) // s, length of UART inactivity required to automatically exit command phase
 
 class MIRRAModule
