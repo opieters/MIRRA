@@ -13,7 +13,6 @@ Message Message::from_data(uint8_t *data)
     case Message::TIME_CONFIG:
         return TimeConfigMessage(data);
     case Message::SENSOR_DATA:
-    case Message::SENSOR_DATA_LAST:
         return SensorDataMessage(data);
     default:
         return Message(data);

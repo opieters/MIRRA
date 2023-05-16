@@ -40,10 +40,9 @@ public:
         TIME_CONFIG = 3,
         ACK_TIME = 4,
         SENSOR_DATA = 5,
-        SENSOR_DATA_LAST = 6,
-        DATA_ACK = 7,
-        REPEAT = 8,
-        ALL = 9
+        DATA_ACK = 6,
+        REPEAT = 7,
+        ALL = 8
     };
 
     struct HeaderStruct
@@ -57,15 +56,17 @@ protected:
 
 public:
     Message() = default;
-    Message(HeaderStruct header) : header(header) {};
-    Message(Message::Type type, MACAddress src, MACAddress dest) : header{type, src, dest} {};
+    Message(HeaderStruct header) : header(header){};
+    Message(Message::Type type, MACAddress src, MACAddress dest) : header{static_cast<Message::Type>(type << 1), src, dest} {};
     Message(uint8_t *data) : Message(*reinterpret_cast<HeaderStruct *>(data)){};
-    Message::Type getType() const { return header.type; };
+    Message::Type getType() const { return static_cast<Message::Type>(header.type >> 1); };
     MACAddress getSource() const { return header.src; };
     MACAddress getDest() const { return header.dest; };
+    bool isLast() { return header.type & 0x01; }
+    void setLast() { header.type = static_cast<Message::Type>(header.type | 0x01); }
     void setDest(MACAddress dest) { header.dest = dest; }
 
-    bool isType(Message::Type type) const { return header.type == type; };
+    bool isType(Message::Type type) const { return getType() == type; };
 
     size_t getLength() const { return header_length; };
     uint8_t *toData(uint8_t *data) const;
@@ -88,7 +89,7 @@ private:
 
 public:
     TimeConfigMessage() = default;
-    TimeConfigMessage(HeaderStruct header, TimeConfigStruct body) : Message(header), body(body) {};
+    TimeConfigMessage(HeaderStruct header, TimeConfigStruct body) : Message(header), body(body){};
     TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval, uint32_t comm_duration) : Message(Message::TIME_CONFIG, src, dest), body{cur_time, sample_time, sample_interval, comm_time, comm_interval, comm_duration} {};
     TimeConfigMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<TimeConfigStruct *>(&data[header_length])} {};
     uint32_t getCTime() { return body.cur_time; };
@@ -121,11 +122,9 @@ private:
 
 public:
     SensorDataMessage() = default;
-    SensorDataMessage(HeaderStruct header, SensorDataStruct body) : Message(header), body(body) {};
+    SensorDataMessage(HeaderStruct header, SensorDataStruct body) : Message(header), body(body){};
     SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values);
     SensorDataMessage(uint8_t *data);
-    bool isLast() { return isType(Message::SENSOR_DATA_LAST); }
-    void setLast() { header.type = Message::SENSOR_DATA_LAST; }
     size_t getLength() const { return Message::getLength() + sizeof(body) + body.n_values * sizeof(SensorValue); };
     uint8_t *toData(uint8_t *data) const;
 };
