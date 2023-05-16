@@ -118,7 +118,7 @@ void SensorNode::samplePeriod()
     }
     SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, (rand() % SensorDataMessage::max_n_values) + 1, values);
     log.printf(Logger::debug, "Constructed Sensor Message with length %u", message.getLength());
-    File data = SPIFFS.open(DATA_FP, FILE_WRITE);
+    File data = SPIFFS.open(DATA_FP, FILE_APPEND);
     storeSensorData(message, data);
     data.close();
     data = SPIFFS.open(DATA_FP, FILE_READ);
