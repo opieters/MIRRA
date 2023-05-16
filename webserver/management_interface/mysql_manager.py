@@ -72,7 +72,7 @@ class mysql_manager:
         is needed for further filtering in this class, given the gateway's UUI
         (MAC address)
 
-        :param gateway_uuid: Thef UUID of the module (MAC address) to search the ID for.
+        :param gateway_uuid: The UUID of the module (MAC address) to search the ID for.
         :return: The row ID of the gateway when found, 0 when not found.
         """
         connection = self.__create_connection()
