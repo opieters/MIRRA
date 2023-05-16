@@ -72,7 +72,7 @@ class mysql_manager:
         is needed for further filtering in this class, given the gateway's UUI
         (MAC address)
 
-        :param gateway_uuid: The UUID of the module (MAC address) to search the ID for.
+        :param gateway_uuid: Thef UUID of the module (MAC address) to search the ID for.
         :return: The row ID of the gateway when found, 0 when not found.
         """
         connection = self.__create_connection()
@@ -265,6 +265,24 @@ class mysql_manager:
 
             return results
 
+    def get_all_locations(self):
+        """
+        This function gets all forests and locations and returns them.
+
+        :return: The forests and locations with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT forests.id as forest_id, name, locations.id as location_id, lat, lng
+                            FROM locations INNER JOIN forests
+                            ON locations.id = forests.location_id""")
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
 
 
     def get_all_sensors(self):

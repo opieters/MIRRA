@@ -21,6 +21,7 @@
     <link href="{{ url_for('static', filename='vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this template-->
     <link href="{{ url_for('static', filename='css/sb-admin.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/css/ol.css" type="text/css">
 
     <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.6.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vendor/datatables/datatables.min.js') }}"></script>
@@ -86,7 +87,6 @@
                 <span style="font-size: 0.94rem">Gateway Management</span>
             </a>
             <div class="dropdown-menu" aria-labelledby="pagesDropdown">
-                <a class="dropdown-item" href="{{ url_for('gateway_overview')}}">Gateway overview</a>
                 <a class="dropdown-item" href="{{ url_for('assign_gateway')}}">Claim gateways</a>
                 <a class="dropdown-item" href="{{ url_for('remove_gateway')}}">Remove gateways</a>
             </div>
@@ -127,6 +127,8 @@
     <script src="{{ url_for('static', filename='vendor/bootstrap-4.0.0/js/bootstrap.bundle.min.js') }}"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ url_for('static', filename='js/sb-admin.min.js') }}"></script>
+
+    <script src="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/build/ol.js"></script>
 
 </body>
 

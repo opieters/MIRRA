@@ -62,7 +62,8 @@ def index():
                                'weekly_measurements'],
                            monthly_added_datapoints=database_statistics['monthly_added_datapoints'][
                                'monthly_measurements'],
-                           total_days=database_statistics['total_days']['time_range']
+                           total_days=database_statistics['total_days']['time_range'],
+                           locations=mysql_manager.get_all_locations()
                            # total days measured as recorder in the database
                            )
 
@@ -278,8 +279,6 @@ def remove_sensor():
         else:
             return jsonify({'success': False})
 
-
-
 @app.route('/forest_overview/', methods=['GET'], strict_slashes=False)
 @basic_auth.required
 def forest_overview():
@@ -294,6 +293,22 @@ def forest_overview():
         sensor_module['latest_measurements'] = mysql_manager.get_latest_measurements_from_sensor(sensor_module['id'])
 
     return render_template('forest_overview.html', forests=mysql_manager.get_all_forests(),
+                                                   sensors=all_sensors)
+
+@app.route('/sensor_overview/', methods=['GET'], strict_slashes=False)
+@basic_auth.required
+def sensor_overview():
+    """
+    Get overview of all sensors.
+
+    :return:  The sensor_overview.html page
+    """
+
+    all_sensors = mysql_manager.get_all_sensors()
+    for sensor_module in all_sensors:
+        sensor_module['latest_measurements'] = mysql_manager.get_latest_measurements_from_sensor(sensor_module['id'])
+
+    return render_template('sensor_overview.html', locations=mysql_manager.get_all_locations(),
                                                    sensors=all_sensors)
 
 @app.route('/help/', methods=['GET'], strict_slashes=False)

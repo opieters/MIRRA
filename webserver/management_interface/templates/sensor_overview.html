@@ -11,9 +11,9 @@
 
 {% for location in locations %}
 <div class="card">
-	<div class="card-header"> {{location.id}}</div>
+	<div class="card-header">{{location.name}} | ({{location.lat|round(3)}}, {{location.lng|round(3)}})</div>
 	<ul class="list-group list-group-flush">
-		{% for sensor in sensors if sensor.location_id == location.id %}
+		{% for sensor in sensors if sensor.location_id == location.location_id %}
 		<li class="list-group-item">
                     {{sensor.friendly_name}}
                     <small>({{sensor.name}})</small>
