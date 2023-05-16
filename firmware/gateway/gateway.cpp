@@ -227,7 +227,10 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::info, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
         if (sensorData.isLast() || i == (MAX_SENSOR_MESSAGES - 1))
+        {
+            log.print(Logger::debug, "Last message received.");
             break;
+        }
         log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
         lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
     }
