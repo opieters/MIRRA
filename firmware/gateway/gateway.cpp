@@ -252,7 +252,7 @@ void Gateway::pruneSensorData(File &dataFile)
     if (fileSize <= MAX_SENSORDATA_FILESIZE)
         return;
     File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
-    while (dataFile.peek() != EOF)
+    while (dataFile.available())
     {
         uint8_t message_length = sizeof(message_length) + dataFile.peek();
         if (fileSize > MAX_SENSORDATA_FILESIZE)
@@ -267,6 +267,8 @@ void Gateway::pruneSensorData(File &dataFile)
             dataFileTemp.write(buffer, message_length);
         }
     }
+    dataFileTemp.flush();
+    log.printf(Logger::info, "Sensor data pruned from %u bytes to %u bytes.", fileSize, dataFileTemp.size());
     dataFileTemp.close();
     SPIFFS.remove(DATA_FP);
     SPIFFS.rename(sensorDataTempFN, DATA_FP);
