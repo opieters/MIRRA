@@ -48,7 +48,7 @@ void SensorNode::wake()
         samplePeriod();
     }
     log.printf(Logger::info, "Next sample in %us, next comm period in %us", nextSampleTime - ctime, nextCommTime - ctime);
-    Serial.printf("Welcome! This is Sensor Node %s", lora.getMACAddress().toString());
+    Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
     enterCommandPhase();
     ctime = rtc.read_time_epoch();
     if (ctime >= nextCommTime || ctime >= nextSampleTime)

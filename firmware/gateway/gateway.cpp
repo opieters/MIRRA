@@ -59,7 +59,7 @@ void Gateway::wake()
     {
         uploadPeriod();
     }
-    Serial.printf("Welcome! This is Gateway %s", lora.getMACAddress().toString());
+    Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
     enterCommandPhase();
     log.print(Logger::debug, "Entering deep sleep...");
     if (nodes.empty())
@@ -281,7 +281,7 @@ void Gateway::pruneSensorData(File &dataFile)
 void Gateway::wifiConnect(const char *SSID, const char *password)
 {
     log.printf(Logger::info, "Connecting to WiFi with SSID: %s", SSID);
-    WiFi.begin(SSID, pass);
+    WiFi.begin(SSID, password);
     for (size_t i = 10; i > 0 && WiFi.status() != WL_CONNECTED; i--)
     {
         delay(1000);
