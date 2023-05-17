@@ -173,7 +173,7 @@ class mysql_manager:
         sensor_module_id = self.__get_module_id(module_uuid)
         if sensor_module_id == 0:
             # add new unclaimed sensor
-            inserted_row_id = self.add_new_sensor_module(module_uuid, None, None, None)
+            inserted_row_id = self.add_new_sensor_module(module_uuid, None, None)
             if inserted_row_id is not False:
                 # insert sensor reading
                 if (self.__insert_sensor_measurement(inserted_time, inserted_row_id, sensor_type,
