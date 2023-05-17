@@ -21,8 +21,8 @@ const char sensorDataTempFN[] = "/data_temp.dat";
 RTC_DATA_ATTR bool initialBoot = true;
 RTC_DATA_ATTR int commPeriods = 0;
 
-RTC_DATA_ATTR char ssid[32] = WIFI_SSID;
-RTC_DATA_ATTR char pass[32] = WIFI_PASS;
+RTC_DATA_ATTR char ssid[32];
+RTC_DATA_ATTR char pass[32];
 
 Gateway::Gateway(const MIRRAPins &pins)
     : MIRRAModule(MIRRAModule::start(pins)),
@@ -42,6 +42,8 @@ Gateway::Gateway(const MIRRAPins &pins)
         File dataFile = SPIFFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
 
+        strncpy(ssid, WIFI_SSID, sizeof(ssid));
+        strncpy(pass, WIFI_PASS, sizeof(pass));
         rtcUpdateTime();
         initialBoot = false;
     }
@@ -287,6 +289,7 @@ void Gateway::wifiConnect(const char *SSID, const char *password)
         delay(1000);
         Serial.print('.');
     }
+    Serial.print('\n');
     if (WiFi.status() != WL_CONNECTED)
     {
         log.print(Logger::error, "Could not connect to WiFi.");
