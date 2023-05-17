@@ -197,16 +197,16 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     }
     digitalWrite(16, LOW);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+    log.print(Logger::info, "Good night.");
     lora.sleep();
     SPIFFS.end();
-    log.print(Logger::info, "Good night.");
     esp_deep_sleep_start();
 }
 
 void MIRRAModule::deepSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    if(time <= ctime)
+    if (time <= ctime)
     {
         deepSleep(0);
     }
@@ -231,7 +231,7 @@ void MIRRAModule::lightSleep(float sleep_time)
 void MIRRAModule::lightSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    if(time <= ctime)
+    if (time <= ctime)
     {
         return;
     }
