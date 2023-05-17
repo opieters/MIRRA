@@ -285,9 +285,9 @@ void Gateway::wifiConnect(const char *SSID, const char *password)
     for (size_t i = 10; i > 0 && WiFi.status() != WL_CONNECTED; i--)
     {
         delay(1000);
-        log.print(Logger::info, ".");
+        Serial.print('.');
     }
-    if (WiFi.status() != WL_CONNECTED)
+    if (WiFi.status() != WL_)
     {
         log.print(Logger::error, "Could not connect to WiFi.");
         return;
