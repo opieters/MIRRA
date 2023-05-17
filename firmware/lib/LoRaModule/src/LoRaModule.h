@@ -63,12 +63,17 @@ void LoRaModule::sendMessage(MessageType const &message, uint32_t delay)
     uint8_t buffer[length];
     message.toData(buffer);
     if (!message.isType(Message::Type::REPEAT))
+    {
         memcpy(this->lastSentBuffer, buffer, length);
-    this->lastSentLength = length;
-    this->lastDest = message.getDest();
+        this->lastSentLength = length;
+        this->lastDest = message.getDest();
+    }
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    esp_sleep_enable_timer_wakeup(delay * 1000);
-    esp_light_sleep_start();
+    if (delay > 0)
+    {
+        esp_sleep_enable_timer_wakeup(delay * 1000);
+        esp_light_sleep_start();
+    }
     sendPacket(buffer, length);
 }
 
@@ -103,7 +108,7 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
 
         if (wakeup_cause == ESP_SLEEP_WAKEUP_GPIO || wakeup_cause == ESP_SLEEP_WAKEUP_EXT0)
         {
-            uint8_t buffer[Message::max_length];
+            uint8_t buffer[Message::max_length]{0};
             state = this->readData(buffer, min(this->getPacketLength(), Message::max_length));
 
             if (state == RADIOLIB_ERR_CRC_MISMATCH)
@@ -117,9 +122,8 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 return MessageType();
             }
             log->printf(Logger::debug, "Reading received data (%u bytes): success", this->getPacketLength(false));
-            MessageType received = MessageType(&buffer[0]);
-            log->print(Logger::debug, "Message reconstructed.");
-            log->printf(Logger::debug, "Type: %u", received.getType());
+            MessageType received = MessageType(buffer);
+            log->printf(Logger::debug, "Message Type: %u", received.getType());
             log->printf(Logger::debug, "Source: %s", received.getSource().toString());
             log->printf(Logger::debug, "Dest: %s", received.getDest().toString());
             if (source != MACAddress::broadcast && source != received.getSource())
