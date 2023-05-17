@@ -118,7 +118,7 @@ public:
     static const size_t max_n_values = (max_length - header_length - sizeof(body)) / sizeof(SensorValue);
 
 private:
-    SensorValue values[max_n_values];
+    SensorValue values[max_n_values]{};
 
 public:
     SensorDataMessage() = default;

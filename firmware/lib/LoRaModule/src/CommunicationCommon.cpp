@@ -57,7 +57,6 @@ char *MACAddress::toString(char *string) const
 
 bool operator==(const MACAddress &mac1, const MACAddress &mac2)
 {
-    size_t i = 0;
     for (size_t i = 0; i < MACAddress::length; i++)
     {
         if (mac1.address[i] != mac2.address[i])
