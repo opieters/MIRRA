@@ -42,7 +42,7 @@
 #define COMMUNICATION_PERIOD_PADDING 3                                                                         // s, time between each node's communication period
 #define COMMUNICATION_INTERVAL (60 * 60 * 12)                                                                  // s, time between communication times for every nodes
 
-#define WAKE_BEFORE_COMM_PERIOD 20 // s, time before comm period when gateway should wake from deep sleep
+#define WAKE_BEFORE_COMM_PERIOD 5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
 #define LISTEN_COMM_PERIOD(X) ((X)-COMMUNICATION_PERIOD_PADDING)
 
