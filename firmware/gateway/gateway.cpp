@@ -147,12 +147,7 @@ void Gateway::discovery()
 
     log.printf(Logger::info, "Registering node %s", time_ack.getSource().toString());
     Node new_node = Node(timeConfig);
-    storeNode(new_node);
-}
-
-void Gateway::storeNode(Node &n)
-{
-    nodes.push_back(n);
+    nodes.push_back(new_node);
     updateNodesFile();
 }
 
@@ -160,8 +155,7 @@ void Gateway::nodesFromFile()
 {
     log.print(Logger::debug, "Recovering nodes from file...");
     File nodesFile = SPIFFS.open(NODES_FP, FILE_READ);
-    uint8_t size;
-    nodesFile.read(&size, sizeof(uint8_t));
+    uint8_t size = nodesFile.read();
     log.printf(Logger::debug, "%u nodes found in %s", size, NODES_FP);
     nodes.resize(size);
     nodesFile.read((uint8_t *)nodes.data(), size * sizeof(Node));
@@ -197,6 +191,10 @@ void Gateway::commPeriod()
     if (nodes.empty())
     {
         log.print(Logger::info, "No comm periods performed because no nodes have been registered.");
+    }
+    else
+    {
+        updateNodesFile()
     }
     commPeriods++;
     dataFile.close();

@@ -42,7 +42,6 @@ public:
 
         void discovery();
 
-        void storeNode(Node &n);
         void nodesFromFile();
         void updateNodesFile();
         void printNodes();
