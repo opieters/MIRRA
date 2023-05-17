@@ -18,25 +18,6 @@ USE mms;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
---
--- Table structure for table `forests`
---
-
-DROP TABLE IF EXISTS `forests`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `forests` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(128) NOT NULL,
-  `location_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name_UNIQUE` (`name`),
-  UNIQUE KEY `id_UNIQUE` (`id`),
-  KEY `fk_forests_1_idx` (`location_id`),
-  CONSTRAINT `fk_forests_1` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
 
 -- 
 -- Table structure for table `gateways` --
@@ -57,6 +38,7 @@ CREATE TABLE `gateways` (
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+
 --
 -- Table structure for table `locations`
 --
@@ -68,35 +50,12 @@ CREATE TABLE `locations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `lat` decimal(32,8) NOT NULL,
   `lng` decimal(32,8) NOT NULL,
+  `forest_id` int(11) DEFAULT NULL
   PRIMARY KEY (`id`)
+  KEY `fk_locations_1_idx` (`forest_id`),
+  CONSTRAINT `fk_locations_1` FOREIGN KEY (`forest_id`) REFERENCES `forests` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `sensor_classes`
---
-
-DROP TABLE IF EXISTS `sensor_classes`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `sensor_classes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `class` varchar(45) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_UNIQUE` (`id`),
-  UNIQUE KEY `class_UNIQUE` (`class`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `sensor_classes`
---
-
-LOCK TABLES `sensor_classes` WRITE;
-/*!40000 ALTER TABLE `sensor_classes` DISABLE KEYS */;
-INSERT INTO `sensor_classes` VALUES (11,'AIR_HUMIDITY'),(22,'PAR'),(10,'AIR_TEMPERATURE'),(3,'SOIL_HUMIDITY'),(4,'SOIL_TEMPERATURE');
-/*!40000 ALTER TABLE `sensor_classes` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `sensor_measurements`
@@ -143,6 +102,22 @@ CREATE TABLE `sensor_modules` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `forests`
+--
+
+DROP TABLE IF EXISTS `forests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `forests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name_UNIQUE` (`name`),
+  UNIQUE KEY `id_UNIQUE` (`id`),
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `sensor_types`
 --
 
@@ -176,6 +151,32 @@ INSERT INTO `sensor_types` VALUES
   (13,'SHT35',        13, 'RH',   0.5,  "Relative humidity sensor"),
   (22,'APDS',         22,'A.U.', 1.0, "Light sensor");
 /*!40000 ALTER TABLE `sensor_types` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sensor_classes`
+--
+
+DROP TABLE IF EXISTS `sensor_classes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `sensor_classes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `class` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id_UNIQUE` (`id`),
+  UNIQUE KEY `class_UNIQUE` (`class`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sensor_classes`
+--
+
+LOCK TABLES `sensor_classes` WRITE;
+/*!40000 ALTER TABLE `sensor_classes` DISABLE KEYS */;
+INSERT INTO `sensor_classes` VALUES (11,'AIR_HUMIDITY'),(22,'PAR'),(10,'AIR_TEMPERATURE'),(3,'SOIL_HUMIDITY'),(4,'SOIL_TEMPERATURE');
+/*!40000 ALTER TABLE `sensor_classes` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
