@@ -19,7 +19,7 @@
 #define LORA_PREAMBLE_LENGHT 8
 #define LORA_AMPLIFIER_GAIN 0 // 0 is automatic
 
-#define SEND_DELAY 500 //ms, time to wait before sending a message
+#define SEND_DELAY 500 // ms, time to wait before sending a message
 
 class LoRaModule : public SX1272
 {
@@ -124,7 +124,8 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
             log->printf(Logger::debug, "Dest: %s", received.getDest().toString());
             if (source != MACAddress::broadcast && source != received.getSource())
             {
-                log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message", received.getSource().toString());
+                char mac_src_buffer[MACAddress::string_length];
+                log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message, namely %s", received.getSource().toString(), source.toString(mac_src_buffer));
                 continue;
             }
 
@@ -140,7 +141,6 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 {
                     this->resendPacket();
                     esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
-                    repeat_attempts--;
                 }
                 continue;
             }

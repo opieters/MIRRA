@@ -13,7 +13,6 @@ Message Message::from_data(uint8_t *data)
     case Message::TIME_CONFIG:
         return TimeConfigMessage(data);
     case Message::SENSOR_DATA:
-    case Message::SENSOR_DATA_LAST:
         return SensorDataMessage(data);
     default:
         return Message(data);
@@ -58,7 +57,6 @@ char *MACAddress::toString(char *string) const
 
 bool operator==(const MACAddress &mac1, const MACAddress &mac2)
 {
-    size_t i = 0;
     for (size_t i = 0; i < MACAddress::length; i++)
     {
         if (mac1.address[i] != mac2.address[i])

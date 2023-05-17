@@ -8,7 +8,7 @@ RTC_DATA_ATTR uint32_t sampleInterval = DEFAULT_SAMPLING_INTERVAL;
 RTC_DATA_ATTR uint32_t nextCommTime = -1;
 RTC_DATA_ATTR uint32_t commInterval;
 RTC_DATA_ATTR uint32_t commDuration;
-RTC_DATA_ATTR MACAddress gatewayMAC = MACAddress::broadcast;
+RTC_DATA_ATTR MACAddress gatewayMAC;
 
 const char sensorDataTempFN[] = "/data_temp.dat";
 
@@ -88,9 +88,9 @@ void SensorNode::discovery()
         log.print(Logger::error, "Error while awaiting time config message from gateway. Aborting discovery listening.");
         return;
     }
+    this->timeConfig(timeConfig);
     log.print(Logger::debug, "Time config message received. Sending TIME_ACK");
     lora.sendMessage(Message(Message::ACK_TIME, lora.getMACAddress(), gatewayMAC));
-    this->timeConfig(timeConfig);
     lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::REPEAT, 0, gatewayMAC);
 }
 
@@ -102,14 +102,13 @@ void SensorNode::timeConfig(TimeConfigMessage &m)
     nextCommTime = m.getCommTime();
     commInterval = m.getCommInterval();
     commDuration = m.getCommDuration();
-    log.printf(Logger::info, "Sample interval: %u, Comm interval: %u, Comm duration: %u", sampleInterval, commInterval, commDuration);
     gatewayMAC = m.getSource();
+    log.printf(Logger::info, "Sample interval: %u, Comm interval: %u, Comm duration: %u, Gateway MAC: %s", sampleInterval, commInterval, commDuration, gatewayMAC.toString());
 }
 
 void SensorNode::samplePeriod()
 {
     log.print(Logger::info, "Sampling sensors...");
-    File data = SPIFFS.open(DATA_FP, FILE_WRITE);
     uint32_t ctime = rtc.read_time_epoch();
     SensorValue values[SensorDataMessage::max_n_values];
     srand(ctime);
@@ -118,18 +117,22 @@ void SensorNode::samplePeriod()
         value = SensorValue(rand(), 0, rand());
     }
     SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, (rand() % SensorDataMessage::max_n_values) + 1, values);
+    log.printf(Logger::debug, "Constructed Sensor Message with length %u", message.getLength());
+    File data = SPIFFS.open(DATA_FP, FILE_APPEND);
     storeSensorData(message, data);
-    while (nextSampleTime <= ctime)
-        nextSampleTime += sampleInterval;
     data.close();
     data = SPIFFS.open(DATA_FP, FILE_READ);
     pruneSensorData(data);
+    while (nextSampleTime <= ctime)
+        nextSampleTime += sampleInterval;
 }
 
 void SensorNode::commPeriod()
 {
-    log.print(Logger::info, "Communicating with gateway...");
+    MACAddress destMAC = gatewayMAC; // avoid access to slow RTC memory
+    log.printf(Logger::info, "Communicating with gateway %s ...", destMAC.toString());
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
+    log.printf(Logger::info, "Messages to send: %u", messagesToSend);
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
     while (rdata.available())
@@ -139,43 +142,22 @@ void SensorNode::commPeriod()
         rdata.read(buffer, size);
         if (buffer[0] == 0) // not yet uploaded
         {
-            log.print(Logger::debug, "Reconstructing message from file...");
+            log.print(Logger::debug, "Reconstructing message from buffer...");
+            buffer[0] = Message::Type::SENSOR_DATA << 1;
             SensorDataMessage message(buffer);
-            if (messagesToSend == 1 || !rdata.available()) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
+            message.setDest(destMAC);
+            if ((messagesToSend == 1) || (!rdata.available())) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
             {
                 log.print(Logger::debug, "Last sensor data message...");
                 message.setLast();
             }
-            log.print(Logger::debug, "Sending data message...");
-            lora.sendMessage<SensorDataMessage>(message);
+            buffer[0] = sendSensorMessage(message, destMAC);
             messagesToSend--;
-            if (message.isLast())
-                break;
-            log.print(Logger::debug, "Awaiting acknowledgement...");
-            Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, gatewayMAC);
-            if (!sensorAck.isType(Message::Type::ERROR))
-            {
-                buffer[0] = 1; // mark uploaded
-                continue;
-            }
-            else
-            {
-                log.print(Logger::error, "Error while uploading to gateway.");
-            }
         }
         wdata.write(size);
         wdata.write(buffer, size);
     }
-    TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::Type::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, gatewayMAC);
-    if (timeConfig.isType(Message::Type::ERROR))
-    {
-        log.print(Logger::error, "Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
-        nextCommTime += commInterval;
-    }
-    else
-    {
-        this->timeConfig(timeConfig);
-    }
+
     rdata.close();
     wdata.close();
     SPIFFS.remove(DATA_FP);
@@ -185,13 +167,50 @@ void SensorNode::commPeriod()
     rdata.close();
 }
 
+uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress const &dest)
+{
+    log.print(Logger::debug, "Sending data message...");
+    lora.sendMessage<SensorDataMessage>(message);
+    log.print(Logger::debug, "Awaiting acknowledgement...");
+    if (!message.isLast())
+    {
+        Message sensorAck = lora.receiveMessage<Message>(SENSOR_DATA_TIMEOUT, Message::Type::DATA_ACK, SENSOR_DATA_ATTEMPTS, dest);
+        if (!sensorAck.isType(Message::Type::ERROR))
+        {
+            return 1;
+        }
+        else
+        {
+            log.print(Logger::error, "Error while uploading to gateway.");
+            return 0;
+        }
+    }
+    else
+    {
+        TimeConfigMessage timeConfig = lora.receiveMessage<TimeConfigMessage>(TIME_CONFIG_TIMEOUT, Message::Type::TIME_CONFIG, TIME_CONFIG_ATTEMPTS, dest);
+        if (!timeConfig.isType(Message::Type::ERROR))
+        {
+            this->timeConfig(timeConfig);
+            lora.sendMessage<Message>(Message(Message::ACK_TIME, lora.getMACAddress(), dest));
+            lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::REPEAT, 0, gatewayMAC);
+            return 1;
+        }
+        else
+        {
+            log.print(Logger::error, "Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
+            nextCommTime += commInterval;
+            return 0;
+        }
+    }
+}
+
 void SensorNode::pruneSensorData(File &dataFile)
 {
     size_t fileSize = dataFile.size();
     if (fileSize <= MAX_SENSORDATA_FILESIZE)
         return;
     File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
-    while (dataFile.peek() != EOF)
+    while (dataFile.available())
     {
         uint8_t message_length = sizeof(message_length) + dataFile.peek();
         if (fileSize > MAX_SENSORDATA_FILESIZE)
@@ -206,6 +225,8 @@ void SensorNode::pruneSensorData(File &dataFile)
             dataFileTemp.write(buffer, message_length);
         }
     }
+    dataFileTemp.flush();
+    log.printf(Logger::info, "Sensor data pruned from %u bytes to %u bytes.", fileSize, dataFileTemp.size());
     dataFileTemp.close();
     SPIFFS.remove(DATA_FP);
     SPIFFS.rename(sensorDataTempFN, DATA_FP);

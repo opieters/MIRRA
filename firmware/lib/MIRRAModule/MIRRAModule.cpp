@@ -167,11 +167,13 @@ void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
     dataFile.write(buffer, m.getLength());
 }
 
-void MIRRAModule::deepSleep(float sleep_time)
+void MIRRAModule::deepSleep(uint32_t sleep_time)
 {
     if (sleep_time <= 0)
-        log.print(Logger::error, "Sleep time was zero or negative!");
-    return;
+    {
+        log.print(Logger::error, "Sleep time was zero or negative! Sleeping one second to avert crisis.");
+        return deepSleep(1);
+    }
 
     // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
     // Therefore we force pin 15 to a LOW state here.
@@ -183,33 +185,44 @@ void MIRRAModule::deepSleep(float sleep_time)
     if (sleep_time <= 30)
     {
         log.print(Logger::debug, "Using internal timer for deep sleep.");
-        esp_sleep_enable_timer_wakeup((uint64_t)(sleep_time * 1000 * 1000));
+        esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
     }
     else
     {
         log.print(Logger::debug, "Using RTC for deep sleep.");
         // We use the external RTC
-        rtc.write_alarm_epoch(rtc.read_time_epoch() + (uint32_t)round(sleep_time));
+        rtc.write_alarm_epoch(rtc.read_time_epoch() + sleep_time);
         rtc.enable_alarm();
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
     digitalWrite(16, LOW);
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     lora.sleep();
-    log.closeLogfile();
     SPIFFS.end();
-    log.print(Logger::debug, "SPIFFS unmounted.");
+    log.print(Logger::info, "Good night.");
     esp_deep_sleep_start();
 }
 
 void MIRRAModule::deepSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    deepSleep(time - ctime);
+    if(time <= ctime)
+    {
+        deepSleep(0);
+    }
+    else
+    {
+        deepSleep(time - ctime);
+    }
 }
 
 void MIRRAModule::lightSleep(float sleep_time)
 {
+    if (sleep_time <= 0)
+    {
+        log.print(Logger::error, "Sleep time was zero or negative! Skipping to avert crisis. ");
+        return;
+    }
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
     esp_light_sleep_start();
@@ -218,5 +231,12 @@ void MIRRAModule::lightSleep(float sleep_time)
 void MIRRAModule::lightSleepUntil(uint32_t time)
 {
     uint32_t ctime = rtc.read_time_epoch();
-    lightSleep(time - ctime);
+    if(time <= ctime)
+    {
+        return;
+    }
+    else
+    {
+        lightSleep(time - ctime);
+    }
 }

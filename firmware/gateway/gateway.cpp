@@ -4,8 +4,8 @@
 void Node::timeConfig(TimeConfigMessage &m)
 {
     last_comm_time = m.getCTime();
-    next_sample_time = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
-    sample_interval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
+    next_sample_time = (m.getSampleTime() == 0) ? next_sample_time : m.getSampleTime();
+    sample_interval = (m.getSampleInterval() == 0) ? sample_interval : m.getSampleInterval();
     next_comm_time = m.getCommTime();
     comm_interval = m.getCommInterval();
     comm_duration = m.getCommDuration();
@@ -136,7 +136,8 @@ void Gateway::discovery()
     uint32_t comm_time = nodes.empty() ? ctime + COMMUNICATION_INTERVAL : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING;
 
     log.printf(Logger::debug, "Sending time config message to %s ...", hello_reply.getSource().toString());
-    lora.sendMessage(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
+    TimeConfigMessage timeConfig(TimeConfigMessage(lora.getMACAddress(), hello_reply.getSource(), ctime, sample_time, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH));
+    lora.sendMessage(timeConfig);
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, hello_reply.getSource());
     if (time_ack.isType(Message::ERROR))
     {
@@ -145,13 +146,8 @@ void Gateway::discovery()
     }
 
     log.printf(Logger::info, "Registering node %s", time_ack.getSource().toString());
-    Node new_node = Node(time_ack.getSource(), ctime, comm_time);
-    storeNode(new_node);
-}
-
-void Gateway::storeNode(Node &n)
-{
-    nodes.push_back(n);
+    Node new_node = Node(timeConfig);
+    nodes.push_back(new_node);
     updateNodesFile();
 }
 
@@ -159,8 +155,7 @@ void Gateway::nodesFromFile()
 {
     log.print(Logger::debug, "Recovering nodes from file...");
     File nodesFile = SPIFFS.open(NODES_FP, FILE_READ);
-    uint8_t size;
-    nodesFile.read(&size, sizeof(uint8_t));
+    uint8_t size = nodesFile.read();
     log.printf(Logger::debug, "%u nodes found in %s", size, NODES_FP);
     nodes.resize(size);
     nodesFile.read((uint8_t *)nodes.data(), size * sizeof(Node));
@@ -197,6 +192,10 @@ void Gateway::commPeriod()
     {
         log.print(Logger::info, "No comm periods performed because no nodes have been registered.");
     }
+    else
+    {
+        updateNodesFile()
+    }
     commPeriods++;
     dataFile.close();
     dataFile = SPIFFS.open(DATA_FP, FILE_READ);
@@ -224,16 +223,19 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
             log.printf(Logger::error, "Error while awaiting/receiving data from %s. Skipping communication with this node.", n.getMACAddress().toString());
             return false;
         }
-        log.printf(Logger::debug, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
+        log.printf(Logger::info, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
         if (sensorData.isLast() || i == (MAX_SENSOR_MESSAGES - 1))
+        {
+            log.print(Logger::debug, "Last message received.");
             break;
+        }
         log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
         lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
     }
 
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
-    log.printf(Logger::debug, "Sending time config message to %s ...", n.getMACAddress().toString());
+    log.printf(Logger::info, "Sending time config message to %s ...", n.getMACAddress().toString());
     TimeConfigMessage timeConfig = TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH);
     lora.sendMessage(timeConfig);
     Message time_ack = lora.receiveMessage<Message>(TIME_CONFIG_TIMEOUT, Message::ACK_TIME, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
@@ -242,6 +244,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
         return false;
     }
+    log.printf(Logger::info, "Communication with node %s successful.", n.getMACAddress().toString());
     n.timeConfig(timeConfig);
     return true;
 }
@@ -252,7 +255,7 @@ void Gateway::pruneSensorData(File &dataFile)
     if (fileSize <= MAX_SENSORDATA_FILESIZE)
         return;
     File dataFileTemp = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
-    while (dataFile.peek() != EOF)
+    while (dataFile.available())
     {
         uint8_t message_length = sizeof(message_length) + dataFile.peek();
         if (fileSize > MAX_SENSORDATA_FILESIZE)
@@ -267,6 +270,8 @@ void Gateway::pruneSensorData(File &dataFile)
             dataFileTemp.write(buffer, message_length);
         }
     }
+    dataFileTemp.flush();
+    log.printf(Logger::info, "Sensor data pruned from %u bytes to %u bytes.", fileSize, dataFileTemp.size());
     dataFileTemp.close();
     SPIFFS.remove(DATA_FP);
     SPIFFS.rename(sensorDataTempFN, DATA_FP);
@@ -345,6 +350,7 @@ total length of sensor data = 17 + 6 * n_values
 
 void Gateway::uploadPeriod()
 {
+    log.printf(Logger::info, "Commencing upload to MQTT server...");
     wifiConnect();
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -370,6 +376,7 @@ void Gateway::uploadPeriod()
                 mqtt.connect(lora.getMACAddress().toString());
             if (mqtt.connected() && mqtt.publish(topic, &buffer[Message::header_length], message.getLength() - Message::header_length))
             {
+                log.printf(Logger::debug, "MQTT message succesfully published.");
                 buffer[0] = 1; // mark uploaded
             }
             else

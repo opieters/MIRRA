@@ -22,10 +22,10 @@ private:
 
 public:
         Node(){};
-        Node(MACAddress mac, uint32_t last_comm_time, uint32_t next_comm_time) : mac{mac}, last_comm_time{last_comm_time}, next_comm_time{next_comm_time} {};
-        MACAddress getMACAddress() { return mac; }
+        Node(TimeConfigMessage &m) : mac{m.getDest()} { timeConfig(m); };
         void timeConfig(TimeConfigMessage &m);
         void naiveTimeConfig();
+        MACAddress getMACAddress() { return mac; }
         uint32_t getLastCommTime() { return last_comm_time; }
         uint32_t getNextCommTime() { return next_comm_time; }
         uint32_t getNextSampleTime() { return next_sample_time; }
@@ -42,13 +42,12 @@ public:
 
         void discovery();
 
-        void storeNode(Node &n);
         void nodesFromFile();
         void updateNodesFile();
         void printNodes();
 
         void commPeriod();
-        void nodeCommPeriod(Node &n, File &dataFile);
+        bool nodeCommPeriod(Node &n, File &dataFile);
 
         void pruneSensorData(File &dataFile);
 
