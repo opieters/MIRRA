@@ -20,7 +20,7 @@ public:
         void samplePeriod();
 
         void commPeriod();
-        uint8_t sendSensorMessage(SensorDataMessage &message, MACAddress const &dest);
+        uint8_t sendSensorMessage(SensorDataMessage &message, MACAddress const &dest, bool &firstMessage);
         void pruneSensorData(File &dataFile);
 
         void printSensorData();

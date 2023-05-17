@@ -131,6 +131,7 @@ void SensorNode::commPeriod()
 {
     MACAddress destMAC = gatewayMAC; // avoid access to slow RTC memory
     log.printf(Logger::info, "Communicating with gateway %s ...", destMAC.toString());
+    bool firstMessage = true;
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
     log.printf(Logger::info, "Messages to send: %u", messagesToSend);
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
@@ -151,7 +152,7 @@ void SensorNode::commPeriod()
                 log.print(Logger::debug, "Last sensor data message...");
                 message.setLast();
             }
-            buffer[0] = sendSensorMessage(message, destMAC);
+            buffer[0] = sendSensorMessage(message, destMAC, firstMessage);
             messagesToSend--;
         }
         wdata.write(size);
@@ -167,10 +168,18 @@ void SensorNode::commPeriod()
     rdata.close();
 }
 
-uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress const &dest)
+uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress const &dest, bool &firstMessage)
 {
     log.print(Logger::debug, "Sending data message...");
-    lora.sendMessage<SensorDataMessage>(message);
+    if (firstMessage)
+    {
+        lora.sendMessage<SensorDataMessage>(message, 0); // gateway should already be listening for first message
+        firstMessage = false;
+    }
+    else
+    {
+        lora.sendMessage<SensorDataMessage>(message);
+    }
     log.print(Logger::debug, "Awaiting acknowledgement...");
     if (!message.isLast())
     {
