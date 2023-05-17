@@ -229,10 +229,8 @@ def add_forest():
         return render_template('add_forest.html')
     elif request.method == 'POST':
         forest_name = request.form['forest_name']
-        lat = request.form['lat']
-        lng = request.form['lng']
 
-        if mysql_manager.add_forest(forest_name, lat, lng):
+        if mysql_manager.add_forest(forest_name):
             flash('Forest was successfully added!', 'success')
         else:
             flash('Error when adding the forest!', 'danger')
