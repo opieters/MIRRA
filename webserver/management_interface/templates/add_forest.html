@@ -25,15 +25,6 @@
                 <input type="text" class="form-control" required="required" id="forest_name" name="forest_name" placeholder="Enter forest name">
             </div>
             <hr>
-            <div class="form-group">
-                <label for="location_id">Forest</label>
-                <select class="form-control" required="required" id="location_id" name="location_id">
-                    {% for location in locations %}
-                    <option value="{{ forest.id }}">{{ forest.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <hr>
             <input value="Add Forest" type="submit" class="btn btn-primary">
         </form>
     </div>
