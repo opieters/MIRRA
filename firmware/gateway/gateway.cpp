@@ -216,7 +216,8 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
     uint32_t listen_ms = COMMUNICATION_PERIOD_PADDING * 1000; // pre-listen in anticipation of message
-    for (size_t i = 0; i < MAX_SENSOR_MESSAGES; i++)
+    size_t messages_received = 0;
+    while (true)
     {
         log.printf(Logger::debug, "Awaiting data from %s ...", n.getMACAddress().toString());
         SensorDataMessage sensorData = lora.receiveMessage<SensorDataMessage>(SENSOR_DATA_TIMEOUT, Message::SENSOR_DATA, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), listen_ms);
@@ -228,7 +229,8 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         }
         log.printf(Logger::info, "Sensor data received from %s with length %u.", n.getMACAddress().toString(), sensorData.getLength());
         storeSensorData(sensorData, dataFile);
-        if (sensorData.isLast() || i == (MAX_SENSOR_MESSAGES - 1))
+        messages_received++;
+        if (sensorData.isLast() || messages_received == MAX_SENSOR_MESSAGES)
         {
             log.print(Logger::debug, "Last message received.");
             break;
@@ -236,7 +238,6 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::debug, "Sending data ACK to %s ...", n.getMACAddress().toString());
         lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
     }
-
     ctime = rtc.read_time_epoch();
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     log.printf(Logger::info, "Sending time config message to %s ...", n.getMACAddress().toString());
@@ -248,7 +249,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         log.printf(Logger::error, "Error while receiving ack to time config message from %s. Skipping communication with this node.", n.getMACAddress().toString());
         return false;
     }
-    log.printf(Logger::info, "Communication with node %s successful.", n.getMACAddress().toString());
+    log.printf(Logger::info, "Communication with node %s successful: %u messages received", n.getMACAddress().toString(), messages_received);
     n.timeConfig(timeConfig);
     return true;
 }
