@@ -237,6 +237,7 @@ bool Gateway::nodeCommPeriod(Node &n, File &dataFile)
         lora.sendMessage(Message(Message::DATA_ACK, lora.getMACAddress(), n.getMACAddress()));
     }
 
+    ctime = rtc.read_time_epoch();
     uint32_t comm_time = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     log.printf(Logger::info, "Sending time config message to %s ...", n.getMACAddress().toString());
     TimeConfigMessage timeConfig = TimeConfigMessage(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, comm_time, COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH);
