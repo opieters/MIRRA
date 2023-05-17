@@ -35,11 +35,16 @@
             </div>
             <hr>
             <div class="form-group">
-                <label> Location</label>
-                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat">
-                <br>
-                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng">
+                <label for="location_id">Location</label>
+                <select class="form-control" required="required" id="location_id" name="location_id">
+                    {% for location in locations %}
+                    <option value="{{ location.location_id }}">{{ location.forest_name }} - {{ location.location_name }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            <small id="emailHelp" class="form-text text-muted">
+                <small class="fa fa-info-circle"></small> You can define new locations in forests using <a href="{{url_for('add_location')}}">this link</a>.
+            </small>
             <hr>
             <input value="Claim" type="submit" class="btn btn-primary">
         </form>

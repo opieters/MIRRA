@@ -742,29 +742,3 @@ class mysql_manager:
             return False
         finally:
             connection.close()
-
-    def assign_gateway(self, lat, lng, friendly_name, gateway_id):
-        """
-        This function assigns a given gateway to a location and sets a name.
-
-        :param friendly_name: The friendly name that should be given to the gateway.
-        :param lat: The latitude of the sensor module's location.
-        :param lng: The longitude of the sensor module's location.
-        :return:
-        """
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
-
-        connection = self.__create_connection()
-        try:
-            cursor = connection.cursor()
-            cursor.execute("""UPDATE gateways SET location_id = %s, friendly_name = %s WHERE id = %s;""",
-                           (location_id, friendly_name, gateway_id))
-            connection.commit()
-            return True
-        except Exception as e:
-            debug_print(e)
-            return False
-        finally:
-            connection.close()

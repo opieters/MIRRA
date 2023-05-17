@@ -37,7 +37,7 @@ body.fixed-nav.sidebar-toggled #content-wrapper {
 
 @media (min-width: 768px) {
   body.fixed-nav #content-wrapper {
-    padding-left: 225px;
+    padding-left: 230px;
   }
   body.fixed-nav.sidebar-toggled #content-wrapper {
     padding-left: 90px;
@@ -183,14 +183,14 @@ body.fixed-nav.sidebar-toggled #content-wrapper {
 
 @media (min-width: 768px) {
   .sidebar {
-    width: 225px !important;
+    width: 230px !important;
   }
   .sidebar .nav-item .nav-link {
     display: block;
     width: 100%;
     text-align: left;
-    padding: 1rem;
-    width: 225px;
+    padding: 0.7rem;
+    width: 230px;
   }
   .sidebar .nav-item .nav-link span {
     font-size: 1rem;
@@ -358,7 +358,7 @@ footer.sticky-footer .copyright {
 
 @media (min-width: 768px) {
   footer.sticky-footer {
-    width: calc(100% - 225px);
+    width: calc(100% - 230px);
   }
 }
 
