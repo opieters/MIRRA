@@ -11,7 +11,7 @@
     <meta name="description" content="Microclimate Measuring System - Mechatronics UGent case 12 - 2018">
     <meta name="author" content="">
 
-    <title>Microclimate Monitoring System</title>
+    <title>MIRRA - Microclimate Monitoring System</title>
 
     <!-- Bootstrap core CSS-->
     <link href="{{ url_for('static', filename='vendor/bootstrap-4.0.0/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -34,7 +34,7 @@
 
 <nav class="navbar navbar-expand navbar-dark bg-dark static-top">
 
-    <a class="navbar-brand mr-1" href="{{ url_for('index') }}">Microclimate Monitoring system</a>
+    <a class="navbar-brand mr-1" href="{{ url_for('index') }}">MIRRA - Microclimate Monitoring System</a>
 
     <button class="btn btn-link btn-sm text-white order-1 order-sm-0" id="sidebarToggle" href="#">
         <i class="fas fa-bars"></i>
@@ -69,38 +69,40 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown2" role="button" data-toggle="dropdown"
                aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-fw fa-thermometer-three-quarters"></i>
-                <span>Sensor Management</span>
+                <i class="fas fa-fw fa-map-marker-alt"></i>
+                <span>Location Management</span>
             </a>
             <div class="dropdown-menu" aria-labelledby="pagesDropdown">
-                <a class="dropdown-item" href="{{ url_for('sensor_overview')}}">Sensor overview</a>
-                <a class="dropdown-item" href="{{ url_for('assign')}}">Assign Sensors</a>
-                <a class="dropdown-item" href="{{ url_for('remove_sensor')}}">Remove Sensors</a>
-
-
+                <a class="dropdown-item" href="{{ url_for('add_location')}}">Add location</a>
+                <a class="dropdown-item" href="{{ url_for('remove_location')}}">Remove location</a>
             </div>
         </li>
-         <li class="nav-item dropdown">
+        <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown3" role="button" data-toggle="dropdown"
                aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-fw fa-broadcast-tower"></i>
-                <span style="font-size: 0.94rem">Gateway Management</span>
+                <span>Gateway Management</span>
             </a>
             <div class="dropdown-menu" aria-labelledby="pagesDropdown">
                 <a class="dropdown-item" href="{{ url_for('assign_gateway')}}">Claim gateways</a>
                 <a class="dropdown-item" href="{{ url_for('remove_gateway')}}">Remove gateways</a>
             </div>
         </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown4" role="button" data-toggle="dropdown"
+               aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-fw fa-thermometer-three-quarters"></i>
+                <span>Sensor Management</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="pagesDropdown">
+                <a class="dropdown-item" href="{{ url_for('assign')}}">Assign Sensors</a>
+                <a class="dropdown-item" href="{{ url_for('remove_sensor')}}">Remove Sensors</a>
+            </div>
+        </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('generate_report')}}">
                 <i class="fas fa-fw fa-table"></i>
                 <span>Reports</span></a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('help')}}">
-                <i class="fas fa-fw fa-question-circle"></i>
-                <span>Help</span></a>
         </li>
 
     </ul>
@@ -117,8 +119,7 @@
     <footer class="sticky-footer">
         <div class="container my-auto">
             <div class="copyright text-center my-auto">
-                <span>Copyright © Ugent Mechatronics Case 12 - 2018 - </span>
-                <a target="_blank" href="{{url_for('get_documentation', path='index.html') }}">Code Documentation</a>
+                <span>Copyright © UGent ForNaLab - 2023 </span>
             </div>
         </div>
     </footer>

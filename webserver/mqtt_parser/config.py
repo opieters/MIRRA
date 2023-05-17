@@ -13,8 +13,7 @@
 
 general = {
     'port': 80,  # the port to run the application on. ports under 1024 will require root/admin privileges.
-    'enable_HTTP_API': False,
-    'DOCUMENTATION_DIR': 'docs/build/html/'
+    'enable_HTTP_API': False
 }
 
 debug_settings = {

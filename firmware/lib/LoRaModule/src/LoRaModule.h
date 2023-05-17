@@ -124,7 +124,8 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
             log->printf(Logger::debug, "Dest: %s", received.getDest().toString());
             if (source != MACAddress::broadcast && source != received.getSource())
             {
-                log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message", received.getSource().toString());
+                char mac_src_buffer[MACAddress::string_length];
+                log->printf(Logger::debug, "Message from %s discared because it is not the desired source of the message, namely %s", received.getSource().toString(), source.toString(mac_src_buffer));
                 continue;
             }
 

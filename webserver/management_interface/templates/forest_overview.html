@@ -25,51 +25,60 @@
         <div class="card">
             <div class="card-header"><i class="fa fa-tree tree"></i> {{forest.name}}</div>
             <ul class="list-group list-group-flush">
-                {% for sensor in sensors if sensor.forest_id == forest.id %}
-                <li class="list-group-item">
-                    <button class="collapsible">
-                        <i class="fa fa-microchip"></i>
-                        {{sensor.friendly_name}}
-                        <small>({{sensor.name}})</small>
-                    </button>
+                {% for location in locations if location.forest_id == forest.id %}
+                <div class="row">
+                    <div class="col-sm-8">
+                        <li class="list-group-item list-group-item-info"><i class="fa fa-map-marker-alt"></i> <strong>{{ location.location_name }} - ({{location.lat|round(3)}}, {{location.lng|round(3)}})</strong></li>
+                        {% for sensor in sensors if sensor.location_id == location.location_id %}
+                        <li class="list-group-item">
+                            <button class="collapsible">
+                                <i class="fa fa-microchip"></i>
+                                {{sensor.friendly_name}}
+                                <small>({{sensor.name}})</small>
+                            </button>
 
-                    <div class="content">
-                        <ul>
-                            <li>
-                                <i class="fa fa-map-marker-alt"></i>    <a href="https://www.google.com/maps/search/?api=1&query={{sensor.lat}},{{sensor.lng}}">
-                                    {{'%0.3f' % sensor.lat|float}} {{'%0.3f' % sensor.lng|float}}
-                                </a>
-                            </li>
-                            <li>
-                                {% if sensor.latest_measurements|length %}
-                                <p><i class="fa fa-chart-line"></i>    Latest Measurements</p>
-                                <table class="table">
-                                    <thead>
-                                    <tr>
-                                        <th scope="col">timestamp</th>
-                                        <th scope="col">gateway id</th>
-                                        <th scope="col">Value</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {% for measurement in sensor.latest_measurements %}
-                                    <tr>
-                                        <td>{{measurement.timestamp}}</td>
-                                        <td>{{measurement.gateway_id}}</td>
-                                        <td>{{'%0.3f' % measurement.value|float}} ± {{measurement.accuracy|round(1, 'ceil')}} {{measurement.unit}}</td>
-                                    </tr>
-                                    {% endfor %}
-                                    </tbody>
-                                </table>
-                                {% else %}
-                                <b>Latest Measurements</b>
-                                <p style="color: #b21f2d;">There are no measurements in the last week! Please check sensor
-                                    health!</p>
-                                {% endif %}
-                            </li>
-                        </ul>
+                            <div class="content">
+                                <ul>
+                                    <li>
+                                        <b>Latest Measurements</b>
+                                        {% if not sensor.latest_measurements|length %}
+                                        <p style="color: #b21f2d;">There are no measurements in the last week! Please check sensor health!</p>
+                                        {% endif %}
+                                        <div class="row">
+                                            {% if sensor.id == 1 %}
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/e6970947-36ec-41f8-acd4-1e8d2d9e505b/sensor-1?orgId=1&theme=light&panelId=2" class="col-sm-12 data-visualization" height="200" frameborder="0" title="Temperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/e6970947-36ec-41f8-acd4-1e8d2d9e505b/sensor-1?orgId=1&theme=light&panelId=6" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Luchtvochtigheid"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/e6970947-36ec-41f8-acd4-1e8d2d9e505b/sensor-1?orgId=1&theme=light&panelId=4" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Lichtsterkte"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/e6970947-36ec-41f8-acd4-1e8d2d9e505b/sensor-1?orgId=1&theme=light&panelId=3" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemtemperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/e6970947-36ec-41f8-acd4-1e8d2d9e505b/sensor-1?orgId=1&theme=light&panelId=5" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemvochtigheid"></iframe>
+                                            {% elif sensor.id == 2 %}
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/bec8a53c-84bd-4938-927b-1471589373ae/sensor-2?orgId=1&theme=light&panelId=6" class="col-sm-12 data-visualization" height="200" frameborder="0" title="Temperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/bec8a53c-84bd-4938-927b-1471589373ae/sensor-2?orgId=1&theme=light&panelId=2" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Luchtvochtigheid"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/bec8a53c-84bd-4938-927b-1471589373ae/sensor-2?orgId=1&theme=light&panelId=4" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Lichtsterkte"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/bec8a53c-84bd-4938-927b-1471589373ae/sensor-2?orgId=1&theme=light&panelId=5" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemtemperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/bec8a53c-84bd-4938-927b-1471589373ae/sensor-2?orgId=1&theme=light&panelId=3" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemvochtigheid"></iframe>
+                                            {% elif sensor.id == 3 %}
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/ed7f7b70-792e-483c-9641-36c802e62f38/sensor-3?orgId=1&theme=light&panelId=6" class="col-sm-12 data-visualization" height="200" frameborder="0" title="Temperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/ed7f7b70-792e-483c-9641-36c802e62f38/sensor-3?orgId=1&theme=light&panelId=2" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Luchtvochtigheid"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/ed7f7b70-792e-483c-9641-36c802e62f38/sensor-3?orgId=1&theme=light&panelId=4" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Lichtsterkte"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/ed7f7b70-792e-483c-9641-36c802e62f38/sensor-3?orgId=1&theme=light&panelId=5" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemtemperatuur"></iframe>
+                                            <iframe data-src="https://28.199.9.5.static.mznet.works:3000/d-solo/ed7f7b70-792e-483c-9641-36c802e62f38/sensor-3?orgId=1&theme=light&panelId=3" class="col-sm-6 data-visualization" height="200" frameborder="0" title="Bodemvochtigheid"></iframe>
+                                            {% else %}
+                                            <p>
+                                                <i>Sensor not linked to Grafana.</i>
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        {% endfor %}
                     </div>
-                </li>
+                    <div class="col-sm-4">
+                        <iframe width="100%" height="400" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?width=100%25&height=300&q={{ location.lat }},{{ location.lng }}&t=k&z=15&ie=UTF8&iwloc=B&output=embed"></iframe>
+                    </div>
+                </div>
                 {% endfor %}
             </ul>
         </div>
@@ -112,6 +121,10 @@
         transition: max-height 0.2s ease-out;
         background-color: #FFFFFF;
     }
+
+    .tree {
+        color: #017a00
+    }
 </style>
 
 <script>
@@ -122,6 +135,9 @@
         coll[i].addEventListener("click", function () {
             this.classList.toggle("active");
             var content = this.nextElementSibling;
+            $(content).find("iframe").prop("src", function() {
+                return $(this).data("src");
+            });
             if (content.style.maxHeight) {
                 content.style.maxHeight = null;
             } else {
@@ -130,5 +146,13 @@
         });
     }
 </script>
+
+<style>
+    .data-visualization {
+        margin-bottom: 10px;
+        background-color: #f4f5f5;
+        background-clip: content-box;
+    }
+</style>
 
 {% endblock %}

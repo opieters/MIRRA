@@ -22,10 +22,10 @@
 
         <form action="/reports/" method="POST">
             <div class="form-group">
-                <label for="forest_select">Forest(s)</label>
-                <select multiple class="form-control" required="required" id="forest_select" name="forests">
-                    {% for forest in forests %}
-                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                <label for="location_id">Location(s)</label>
+                <select multiple class="form-control" required="required" id="location_id" name="locations">
+                    {% for location in locations %}
+                    <option value="{{ location.location_id }}">{{ location.forest_name }} - {{ location.location_name }}</option>
                     {% endfor %}
                 </select>
             </div>
