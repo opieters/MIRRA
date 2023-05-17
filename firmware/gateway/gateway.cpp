@@ -59,6 +59,7 @@ void Gateway::wake()
     {
         uploadPeriod();
     }
+    Serial.printf("Welcome! This is Gateway %s", lora.getMACAddress().toString());
     enterCommandPhase();
     log.print(Logger::debug, "Entering deep sleep...");
     if (nodes.empty())
@@ -194,7 +195,7 @@ void Gateway::commPeriod()
     }
     else
     {
-        updateNodesFile()
+        updateNodesFile();
     }
     commPeriods++;
     dataFile.close();
