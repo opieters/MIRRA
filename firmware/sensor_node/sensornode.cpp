@@ -30,7 +30,7 @@ void SensorNode::wake()
 {
     log.print(Logger::debug, "Running wake()...");
     uint32_t ctime = rtc.read_time_epoch();
-    if (ctime >= nextCommTime)
+    if (ctime >= WAKE_COMM_PERIOD(nextCommTime))
     {
         if (nextSampleTime >= nextCommTime && nextSampleTime <= (nextCommTime + (commDuration)))
         {
@@ -54,7 +54,7 @@ void SensorNode::wake()
     if (ctime >= nextCommTime || ctime >= nextSampleTime)
         wake();
     log.print(Logger::debug, "Entering deep sleep...");
-    deepSleepUntil((nextCommTime < nextSampleTime) ? nextCommTime : nextSampleTime);
+    deepSleepUntil((nextCommTime < nextSampleTime) ? WAKE_COMM_PERIOD(nextCommTime) : nextSampleTime);
 }
 
 MIRRAModule::CommandCode SensorNode::processCommands(char *command)
@@ -131,6 +131,7 @@ void SensorNode::samplePeriod()
 void SensorNode::commPeriod()
 {
     MACAddress destMAC = gatewayMAC; // avoid access to slow RTC memory
+    lightSleepUntil(nextCommTime);
     log.printf(Logger::info, "Communicating with gateway %s ...", destMAC.toString());
     bool firstMessage = true;
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
@@ -142,7 +143,7 @@ void SensorNode::commPeriod()
         uint8_t size = rdata.read();
         uint8_t buffer[size];
         rdata.read(buffer, size);
-        if (buffer[0] == 0) // not yet uploaded
+        if (buffer[0] == 0 && messagesToSend > 0) // not yet uploaded
         {
             log.print(Logger::debug, "Reconstructing message from buffer...");
             buffer[0] = Message::Type::SENSOR_DATA << 1;
