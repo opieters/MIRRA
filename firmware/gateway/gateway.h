@@ -52,6 +52,7 @@ public:
         void pruneSensorData(File &dataFile);
 
         const size_t topic_size = sizeof(TOPIC_PREFIX) + 1 + MACAddress::string_length + MACAddress::string_length;
+        bool mqttConnect();
         char *createTopic(char *topic, MACAddress const &nodeMAC);
         void uploadPeriod();
 

@@ -338,6 +338,21 @@ void Gateway::rtcUpdateTime()
     WiFi.disconnect();
 }
 
+bool Gateway::mqttConnect()
+{
+    char *clientID = lora.getMACAddress().toString();
+
+    for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
+    {
+        if (mqtt.connect(clientID))
+            return true;
+        delay(MQTT_TIMEOUT);
+        if (mqtt.connected())
+            return true;
+    }
+    return false;
+}
+
 // (TOPIC_PREFIX)/(MAC address gateway)/(MAC address node)
 char *Gateway::createTopic(char *topic, MACAddress const &nodeMAC)
 {
@@ -364,6 +379,7 @@ void Gateway::uploadPeriod()
         return;
     }
     size_t n_errors = 0; // amount of errors while uploading
+    size_t messages_published = 0;
     bool upload = true;
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
@@ -378,24 +394,36 @@ void Gateway::uploadPeriod()
             char topic[topic_size];
             createTopic(topic, message.getSource());
 
-            if (!mqtt.connected())
-                mqtt.connect(lora.getMACAddress().toString());
-            if (mqtt.connected() && mqtt.publish(topic, &buffer[Message::header_length], message.getLength() - Message::header_length))
+            if (!mqtt.connected() || mqttConnect())
             {
-                log.printf(Logger::debug, "MQTT message succesfully published.");
-                buffer[0] = 1; // mark uploaded
+                if (mqtt.publish(topic, &buffer[Message::header_length], message.getLength() - Message::header_length))
+                {
+                    log.printf(Logger::debug, "MQTT message succesfully published.");
+                    buffer[0] = 1; // mark uploaded
+                    messages_published++;
+                }
+                else
+                {
+                    log.printf(Logger::error, "Error while publishing to MQTT server. State: %i", mqtt.state());
+                    n_errors++;
+                }
             }
             else
             {
-                log.printf(Logger::error, "Error while connecting/publishing to MQTT server. State:  %i", mqtt.state());
-                n_errors++;
+                log.printf(Logger::error, "Error while connecting to MQTT server. Aborting upload. State: %i", mqtt.state());
+                upload = false;
             }
         }
         if (n_errors >= MAX_MQTT_ERRORS)
+        {
+            log.print(Logger::error, "Too many errors while publishing to MQTT server. Aborting upload.");
             upload = false;
+        }
         wdata.write(size);
         wdata.write(buffer, size);
     }
+    mqtt.disconnect();
+    log.printf(Logger::info, "MQTT upload finished with %u messages sent.", messages_published);
     commPeriods = 0;
     rdata.close();
     wdata.close();
