@@ -1,5 +1,4 @@
 #include "CommunicationCommon.h"
-#include <algorithm>
 
 uint8_t *Message::toData(uint8_t *data) const
 {
@@ -33,7 +32,9 @@ SensorDataMessage::SensorDataMessage(MACAddress src, MACAddress dest, uint32_t t
 
 SensorDataMessage::SensorDataMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<SensorDataStruct *>(&data[header_length])}
 {
-    memcpy(this->values, &data[Message::getLength() + sizeof(SensorDataStruct)], std::min(static_cast<size_t>(this->body.n_values), SensorDataMessage::max_n_values) * sizeof(SensorValue));
+    if (this->body.n_values > SensorDataMessage::max_n_values)
+        this->body.n_values = SensorDataMessage::max_n_values;
+    memcpy(this->values, &data[Message::getLength() + sizeof(SensorDataStruct)], this->body.n_values * sizeof(SensorValue));
 };
 
 uint8_t *SensorDataMessage::toData(uint8_t *data) const
