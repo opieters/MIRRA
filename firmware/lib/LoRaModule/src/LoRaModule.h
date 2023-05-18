@@ -40,7 +40,7 @@ public:
     LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin,
                const uint8_t DIOPin, const uint8_t rxPin, const uint8_t txPin);
 
-    MACAddress getMACAddress(void) { return mac; };
+    const MACAddress &getMACAddress(void) { return mac; };
 
     template <class MessageType>
     void sendMessage(MessageType const &message, uint32_t delay = SEND_DELAY);
