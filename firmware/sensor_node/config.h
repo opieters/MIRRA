@@ -23,6 +23,8 @@
 #define DATA_FP "/data.dat"
 
 // Communication and sensor settings
+#define WAKE_BEFORE_COMM_PERIOD 3 // s, time before comm period when node should wake from deep sleep
+#define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
 
 #define DEFAULT_SAMPLING_INTERVAL (60 * 60) // s, default sensor sampling interval to resort to when no communication with gateway is established
 #define SAMPLING_ROUNDING (60 * 60)         // s, round sampling time to nearest... (only used in case of DEFAULT_SAMPLING_INTERVAL)
