@@ -340,8 +340,8 @@ void Gateway::rtcUpdateTime()
 
 bool Gateway::mqttConnect()
 {
+    mqtt.setBufferSize(512);
     char *clientID = lora.getMACAddress().toString();
-
     for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
     {
         if (mqtt.connect(clientID))
@@ -394,7 +394,7 @@ void Gateway::uploadPeriod()
             char topic[topic_size];
             createTopic(topic, message.getSource());
 
-            if (!mqtt.connected() || mqttConnect())
+            if (mqtt.connected() || mqttConnect())
             {
                 if (mqtt.publish(topic, &buffer[Message::header_length], message.getLength() - Message::header_length))
                 {
