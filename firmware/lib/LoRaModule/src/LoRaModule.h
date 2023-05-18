@@ -164,7 +164,7 @@ MessageType LoRaModule::receiveMessage(uint32_t timeout_ms, Message::Type type, 
                 return MessageType();
             }
             log->printf(Logger::debug, "Sending REPEAT message...");
-            this->sendMessage(Message(Message::Type::REPEAT, this->mac, source));
+            this->sendMessage(Message(Message::Type::REPEAT, this->mac, source), 0);
             esp_sleep_enable_timer_wakeup(timeout_ms * 1000);
             repeat_attempts--;
         }
