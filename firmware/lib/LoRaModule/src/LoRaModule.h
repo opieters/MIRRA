@@ -13,7 +13,7 @@
 #define LORA_FREQUENCY 866.0
 #define LORA_BANDWIDTH 125.0
 #define LORA_SPREADING_FACTOR 7
-#define LORA_CODING_RATE 8
+#define LORA_CODING_RATE 6
 #define LORA_SYNC_WORD 0x12
 #define LORA_POWER 10
 #define LORA_PREAMBLE_LENGHT 8
@@ -68,9 +68,9 @@ void LoRaModule::sendMessage(MessageType const &message, uint32_t delay)
         this->lastSentLength = length;
         this->lastDest = message.getDest();
     }
-    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     if (delay > 0)
     {
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
         esp_sleep_enable_timer_wakeup(delay * 1000);
         esp_light_sleep_start();
     }

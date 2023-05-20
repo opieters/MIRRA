@@ -32,10 +32,10 @@
 #define DISCOVERY_TIMEOUT (5 * 60 * 1000) // ms, time to wait for a discovery message from gateway
 
 #define TIME_CONFIG_TIMEOUT 6000 // ms
-#define TIME_CONFIG_ATTEMPTS 2
+#define TIME_CONFIG_ATTEMPTS 1
 
 #define SENSOR_DATA_TIMEOUT 6000 // ms
-#define SENSOR_DATA_ATTEMPTS 2
+#define SENSOR_DATA_ATTEMPTS 1
 
 #define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
 
