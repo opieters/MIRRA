@@ -32,15 +32,7 @@ void SensorNode::wake()
     uint32_t ctime = rtc.read_time_epoch();
     if (ctime >= WAKE_COMM_PERIOD(nextCommTime))
     {
-        if (nextSampleTime >= nextCommTime && nextSampleTime <= (nextCommTime + (commDuration)))
-        {
-            commPeriod();
-            samplePeriod();
-        }
-        else
-        {
-            commPeriod();
-        }
+        commPeriod();
     }
     ctime = rtc.read_time_epoch();
     if (ctime >= nextSampleTime)
@@ -135,7 +127,7 @@ void SensorNode::commPeriod()
     log.printf(Logger::info, "Communicating with gateway %s ...", destMAC.toString());
     bool firstMessage = true;
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
-    log.printf(Logger::info, "Messages to send: %u", messagesToSend);
+    log.printf(Logger::info, "Max messages to send: %u", messagesToSend);
     File rdata = SPIFFS.open(DATA_FP, FILE_READ);
     File wdata = SPIFFS.open(sensorDataTempFN, FILE_WRITE, true);
     while (rdata.available())
