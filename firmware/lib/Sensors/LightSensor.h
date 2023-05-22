@@ -5,23 +5,21 @@
 #include "Sensor.h"
 #include <AsyncAPDS9306.h>
 
-class LightSensor : public Sensor {
-    public:
-        LightSensor();
+#define LIGHT_KEY 22
 
-        void setup(void);
+class LightSensor : public Sensor
+{
+private:
+    AsyncAPDS9306 baseSensor;
+    float measurement;
 
-        void start_measurement(void);
-
-        uint8_t read_measurement(float* meas, uint8_t n_meas);
-
-        void stop_measurement(void) {};
-
-        ~LightSensor();
-
-        const uint8_t getID() { return 22; };
-
-    private:
-        AsyncAPDS9306 baseSensor;
+public:
+    LightSensor() : baseSensor{AsyncAPDS9306()} {}
+    void setup(){};
+    void startMeasurement(void);
+    void readMeasurement();
+    void stopMeasurement(){};
+    SensorValue getValue() { return SensorValue(getID(), this->measurement); };
+    const uint8_t getID() { return LIGHT_KEY; };
 };
 #endif

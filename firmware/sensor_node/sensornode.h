@@ -17,6 +17,7 @@ public:
         void discovery();
         void timeConfig(TimeConfigMessage &m);
 
+        void initSensors();
         void samplePeriod();
 
         void commPeriod();
@@ -26,7 +27,7 @@ public:
         void printSensorData();
 
 private:
-        std::vector<Sensor> sensors;
+        std::vector<Sensor *> sensors;
 };
 
 #endif

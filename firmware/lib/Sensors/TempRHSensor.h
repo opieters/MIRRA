@@ -5,21 +5,21 @@
 #include "Sensor.h"
 #include <SHTSensor.h>
 
-class TempRHSensor : public Sensor {
-    public:
-        TempRHSensor();
+#define TEMP_RH_KEY 12
 
-        void setup(void);
+class TempRHSensor : public Sensor
+{
+private:
+    SHTSensor baseSensor;
+    float measurement[2];
 
-        void start_measurement(void);
-
-        uint8_t read_measurement(float* meas, uint8_t n_meas);
-
-        void stop_measurement(void) {};
-
-        const uint8_t getID() { return 12; };
-
-    private:
-        SHTSensor baseSensor;
+public:
+    TempRHSensor() : baseSensor{SHTSensor(SHTSensor::SHT3X)} {};
+    void setup();
+    void startMeasurement(){};
+    void readMeasurement();
+    void stopMeasurement(){};
+    SensorValue getValue() { return SensorValue(getID(), static_cast<float>(this->measurement[0])); };
+    const uint8_t getID() { return TEMP_RH_KEY; };
 };
 #endif

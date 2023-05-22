@@ -1,4 +1,5 @@
 #include "sensornode.h"
+#include "RandomSensor.h"
 
 RTC_DATA_ATTR bool initialBoot = true;
 extern volatile bool commandPhaseFlag;
@@ -99,23 +100,33 @@ void SensorNode::timeConfig(TimeConfigMessage &m)
     log.printf(Logger::info, "Sample interval: %u, Comm interval: %u, Comm duration: %u, Gateway MAC: %s", sampleInterval, commInterval, commDuration, gatewayMAC.toString());
 }
 
+void SensorNode::initSensors()
+{
+    sensors.push_back(new RandomSensor(rtc.read_time_epoch()));
+    sensors.back()->setup();
+}
+
 void SensorNode::samplePeriod()
 {
+    initSensors();
     log.print(Logger::info, "Sampling sensors...");
-    uint32_t ctime = rtc.read_time_epoch();
-    SensorValue values[SensorDataMessage::max_n_values];
-    srand(ctime);
-    for (SensorValue &value : values)
+    for (Sensor *s : sensors)
     {
-        value = SensorValue(rand(), 0, rand());
+        s->startMeasurement();
     }
-    SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, (rand() % SensorDataMessage::max_n_values) + 1, values);
+    uint32_t ctime = rtc.read_time_epoch();
+    size_t nSensors = sensors.size();
+    SensorValue values[nSensors];
+    for (size_t i = 0; i < sizeof(values); i++)
+    {
+        sensors[i]->readMeasurement();
+        values[i] = sensors[i]->getValue();
+    }
+    SensorDataMessage message(lora.getMACAddress(), gatewayMAC, ctime, nSensors, values);
     log.printf(Logger::debug, "Constructed Sensor Message with length %u", message.getLength());
     File data = SPIFFS.open(DATA_FP, FILE_APPEND);
     storeSensorData(message, data);
     data.close();
-    data = SPIFFS.open(DATA_FP, FILE_READ);
-    pruneSensorData(data);
     while (nextSampleTime <= ctime)
         nextSampleTime += sampleInterval;
 }
@@ -123,7 +134,6 @@ void SensorNode::samplePeriod()
 void SensorNode::commPeriod()
 {
     MACAddress destMAC = gatewayMAC; // avoid access to slow RTC memory
-    lightSleepUntil(nextCommTime);
     log.printf(Logger::info, "Communicating with gateway %s ...", destMAC.toString());
     bool firstMessage = true;
     size_t messagesToSend = ((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT;
@@ -167,6 +177,7 @@ uint8_t SensorNode::sendSensorMessage(SensorDataMessage &message, MACAddress con
     log.print(Logger::debug, "Sending data message...");
     if (firstMessage)
     {
+        lightSleepUntil(nextCommTime);
         lora.sendMessage<SensorDataMessage>(message, 0); // gateway should already be listening for first message
         firstMessage = false;
     }
@@ -229,7 +240,7 @@ void SensorNode::pruneSensorData(File &dataFile)
         }
     }
     dataFileTemp.flush();
-    log.printf(Logger::info, "Sensor data pruned from %u bytes to %u bytes.", fileSize, dataFileTemp.size());
+    log.printf(Logger::info, "Sensor data pruned from %u bytes to %u bytes.", dataFile.size(), dataFileTemp.size());
     dataFileTemp.close();
     SPIFFS.remove(DATA_FP);
     SPIFFS.rename(sensorDataTempFN, DATA_FP);
