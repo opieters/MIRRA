@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "esp32-hal.h": "c",
-        "ctime": "cpp"
-    }
-}

@@ -62,7 +62,8 @@ def index():
                                'weekly_measurements'],
                            monthly_added_datapoints=database_statistics['monthly_added_datapoints'][
                                'monthly_measurements'],
-                           total_days=database_statistics['total_days']['time_range']
+                           total_days=database_statistics['total_days']['time_range'],
+                           locations=mysql_manager.get_all_locations()
                            # total days measured as recorder in the database
                            )
 
@@ -82,19 +83,19 @@ def generate_report():
         max_date = str(dates['max_date']).split(' ')[0]
 
         return render_template('reports.html',
-                               forests=mysql_manager.get_all_forests(),
+                               locations=mysql_manager.get_all_locations(),
                                sensor_types=mysql_manager.get_sensor_classes(),
                                min_date=min_date,
                                max_date=max_date)
 
     elif request.method == 'POST':
-        forests = request.form.getlist('forests')
+        locations = request.form.getlist('locations')
         start_date = request.form['start_date']
         end_date = request.form['end_date']
         sensor_types = request.form.getlist('sensor_types')
         advanced_options = request.form.getlist('advanced_options')
 
-        successful, result = mysql_manager.get_all_sensor_readings_from_forest(forests, start_date, end_date,
+        successful, result = mysql_manager.get_all_sensor_readings_from_location(locations, start_date, end_date,
                                                                                sensor_types)
 
         if successful:
@@ -138,24 +139,21 @@ def assign():
     """
     if request.method == 'GET':
         unclaimed_sensors = mysql_manager.get_unclaimed_sensors()
-        forests = mysql_manager.get_all_forests()
 
         return render_template('assign.html',
                                unclaimed_sensors=unclaimed_sensors,
-                               forests=forests)
+                               locations=mysql_manager.get_all_locations())
     elif request.method == 'POST':
 
         sensor_module_id = request.form['sensor']
-        forest_id = request.form['forest']
+        location_id = request.form['location_id']
         friendly_name = request.form['sensor_module_name']
-        lat = request.form['lat']
-        lng = request.form['lng']
 
         # if not (is_valid_float(lat) and is_valid_float(lng)):
         #     flash('The submitted coordinates do not have the correct format!','danger')
         #     return redirect('/assign/')
 
-        if (mysql_manager.assign_sensor_module(sensor_module_id, forest_id, friendly_name, lat, lng)):
+        if (mysql_manager.assign_sensor_module(sensor_module_id, location_id, friendly_name)):
             flash('Sensor(s) were successfully added to the forest(s)', 'success')
         else:
             flash('An error occurred assigning the sensors', 'danger')
@@ -165,7 +163,7 @@ def assign():
 
         return render_template('assign.html',
                                unclaimed_sensors=unclaimed_sensors,
-                               forests=forests)
+                               locations=mysql_manager.get_all_locations())
         # return redirect does not work anymore for some reasons
 
 
@@ -178,20 +176,21 @@ def assign_gateway():
     :return: The assign views.
     """
     if request.method == 'GET':
-        return render_template('assign_gateways.html', unclaimed_gateways=mysql_manager.get_unclaimed_gateways())
+        return render_template('assign_gateways.html', unclaimed_gateways=mysql_manager.get_unclaimed_gateways(),
+                                                       locations=mysql_manager.get_all_locations(),)
     elif request.method == 'POST':
 
         gateway_id = request.form['gateway']
         friendly_name = request.form['gateway_friendly_name']
-        lat = request.form['lat']
-        lng = request.form['lng']
+        location_id = request.form['location_id']
 
-        if (mysql_manager.assign_gateway(lat, lng, friendly_name, gateway_id)):
+        if (mysql_manager.assign_gateway(friendly_name, location_id, gateway_id)):
             flash('Gateway was successfully claimed', 'success')
         else:
             flash('An error occurred claiming the gateway', 'danger')
 
-        return render_template('assign_gateways.html', unclaimed_gateways=mysql_manager.get_unclaimed_gateways())
+        return render_template('assign_gateways.html', unclaimed_gateways=mysql_manager.get_unclaimed_gateways(),
+                                                       locations=mysql_manager.get_all_locations(),)
 
 
 @app.route('/remove_gateway/', methods=['GET', 'POST'], strict_slashes=False)
@@ -209,9 +208,9 @@ def remove_gateway():
         gateway_id = request.form['gateway_id']
 
         if mysql_manager.remove_gateway(gateway_id):
-            flash('Gateway was successfully Removed!', 'success')
+            flash('Gateway was successfully removed!', 'success')
         else:
-            flash('Error when removing the gateway!', 'danger')
+            flash('Error while removing the gateway!', 'danger')
 
         return render_template('remove_gateway.html', gateways=mysql_manager.get_all_gateways())
 
@@ -228,15 +227,57 @@ def add_forest():
         return render_template('add_forest.html')
     elif request.method == 'POST':
         forest_name = request.form['forest_name']
+
+        if mysql_manager.add_forest(forest_name):
+            flash('Forest was successfully added!', 'success')
+        else:
+            flash('Error while adding the forest!', 'danger')
+        return render_template('add_forest.html')
+
+@app.route('/add_location/', methods=['GET', 'POST'], strict_slashes=False)
+@basic_auth.required
+def add_location():
+    """
+    The add forest URL handler
+
+    :return: The add_location.html template
+    """
+    if request.method == 'GET':
+        return render_template('add_location.html',
+                                forests=mysql_manager.get_all_forests())
+    elif request.method == 'POST':
+        forest_id = request.form['forest_id']
+        location_name = request.form['location_friendly_name']
         lat = request.form['lat']
         lng = request.form['lng']
 
-        if mysql_manager.add_forest(forest_name, lat, lng):
-            flash('Forest was successfully added!', 'success')
+        if mysql_manager.add_new_location(forest_id, location_name, lat, lng):
+            flash('Location was successfully added!', 'success')
         else:
-            flash('Error when adding the forest!', 'danger')
-        return render_template('add_forest.html')
+            flash('Error while adding the location!', 'danger')
+        return render_template('add_location.html',
+                                forests=mysql_manager.get_all_forests())
 
+@app.route('/remove_location/', methods=['GET', 'POST'], strict_slashes=False)
+@basic_auth.required
+def remove_location():
+    """
+    The remove location URL handler.
+
+    :return:  The remove_location.html page
+    """
+    if request.method == 'GET':
+        return render_template('remove_location.html', locations=mysql_manager.get_all_locations())
+
+    elif request.method == 'POST':
+        location_id = request.form['location_id']
+
+        if mysql_manager.remove_location(location_id):
+            flash('Location was successfully removed!', 'success')
+        else:
+            flash('Error while removing the location! Is it still linked to sensors or gateways?', 'danger')
+
+        return render_template('remove_location.html', locations=mysql_manager.get_all_locations())
 
 @app.route('/remove_forest/', methods=['GET', 'POST'], strict_slashes=False)
 @basic_auth.required
@@ -253,9 +294,9 @@ def remove_forest():
         forest_id = request.form['forest_id']
 
         if mysql_manager.remove_forest(forest_id):
-            flash('Forest was successfully Removed!', 'success')
+            flash('Forest was successfully removed!', 'success')
         else:
-            flash('Error when removing the forest!', 'danger')
+            flash('Error while removing the forest!', 'danger')
 
         return render_template('remove_forest.html', forests=mysql_manager.get_all_forests())
 
@@ -278,8 +319,6 @@ def remove_sensor():
         else:
             return jsonify({'success': False})
 
-
-
 @app.route('/forest_overview/', methods=['GET'], strict_slashes=False)
 @basic_auth.required
 def forest_overview():
@@ -294,35 +333,24 @@ def forest_overview():
         sensor_module['latest_measurements'] = mysql_manager.get_latest_measurements_from_sensor(sensor_module['id'])
 
     return render_template('forest_overview.html', forests=mysql_manager.get_all_forests(),
+                                                   locations=mysql_manager.get_all_locations(),
                                                    sensors=all_sensors)
 
-@app.route('/help/', methods=['GET'], strict_slashes=False)
+@app.route('/sensor_overview/', methods=['GET'], strict_slashes=False)
 @basic_auth.required
-def help():
+def sensor_overview():
     """
-    The help URL handler.
+    Get overview of all sensors.
 
-    :return: The help.html view
+    :return:  The sensor_overview.html page
     """
-    return render_template('help.html')
 
+    all_sensors = mysql_manager.get_all_sensors()
+    for sensor_module in all_sensors:
+        sensor_module['latest_measurements'] = mysql_manager.get_latest_measurements_from_sensor(sensor_module['id'])
 
-@app.route('/documentation/<path:path>', methods=['GET'], strict_slashes=False)
-def get_documentation(path):
-    """
-    This function is the handler for serving the documentation on the /documentation endpoint.
-    :param path: The path from the url.
-    :return: The corresponding documentation HTML file.
-    """
-    return send_from_directory(config.general['DOCUMENTATION_DIR'], path)
-
+    return render_template('sensor_overview.html', locations=mysql_manager.get_all_locations(),
+                                                   sensors=all_sensors)
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=80, debug=False)
-
-
-"""
-@app.route('/add_sensor_type/', methods=['GET', 'POST'], strict_slashes=False)
-@basic_auth.required
-def add_sensor_type():
-"""

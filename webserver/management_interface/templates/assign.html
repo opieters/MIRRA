@@ -35,20 +35,17 @@
             </div>
             <hr>
             <div class="form-group">
-                <label> Location</label>
-                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat">
-                <br>
-                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng">
-            </div>
-            <hr>
-            <div class="form-group">
-                <label for="forest_select">Select the forest you want to assign the sensor(s) to</label>
-                <select class="form-control" required="required" id="forest_select" name="forest">
-                    {% for forest in forests %}
-                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                <label for="location_id">Location</label>
+                <select class="form-control" required="required" id="location_id" name="location_id">
+                    {% for location in locations %}
+                    <option value="{{ location.location_id }}">{{ location.forest_name }} - {{ location.location_name }}</option>
                     {% endfor %}
                 </select>
             </div>
+            <small id="emailHelp" class="form-text text-muted">
+                <small class="fa fa-info-circle"></small> You can define new locations in forests using <a href="{{url_for('add_location')}}">this link</a>.
+            </small>
+            <hr>
             <input value="Assign" type="submit" class="btn btn-primary">
         </form>
     </div>

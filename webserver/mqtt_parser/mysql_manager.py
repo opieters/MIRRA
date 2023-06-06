@@ -89,12 +89,11 @@ class mysql_manager:
         else:
             return 0
 
-    def add_new_sensor_module(self, name, forest_id, location_id, friendly_name):
+    def add_new_sensor_module(self, name, location_id, friendly_name):
         """
         This function adds a new sensor module to the database.
 
         :param str name: The name identifier of the sensor module, concrete the MAC address of the module.
-        :param forest_id: The ID of the forest the sensor module is in.
         :param location_id: The ID of the location of the sensor module
         :param str friendly_name: A friendly, easy to humanly recognise name for the sensor module.
         :return: The row ID of the last inserted sensor module, False when an error occurred.
@@ -102,8 +101,8 @@ class mysql_manager:
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("""INSERT INTO sensor_modules VALUES(NULL,%s,%s,%s,%s)""",
-                           (name, forest_id, location_id, friendly_name))
+            cursor.execute("""INSERT INTO sensor_modules VALUES(NULL,%s,%s,%s)""",
+                           (name, location_id, friendly_name))
             connection.commit()
             return cursor.lastrowid
         except:
@@ -174,7 +173,7 @@ class mysql_manager:
         sensor_module_id = self.__get_module_id(module_uuid)
         if sensor_module_id == 0:
             # add new unclaimed sensor
-            inserted_row_id = self.add_new_sensor_module(module_uuid, None, None, None)
+            inserted_row_id = self.add_new_sensor_module(module_uuid, None, None)
             if inserted_row_id is not False:
                 # insert sensor reading
                 if (self.__insert_sensor_measurement(inserted_time, inserted_row_id, sensor_type,
@@ -265,6 +264,24 @@ class mysql_manager:
 
             return results
 
+    def get_all_locations(self):
+        """
+        This function gets all forests and locations and returns them.
+
+        :return: The forests and locations with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT forests.id as forest_id, forests.name as forest_name, locations.friendly_name as location_name, locations.id as location_id, lat, lng
+                            FROM locations INNER JOIN forests
+                            ON forests.id = locations.forest_id""")
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
 
 
     def get_all_sensors(self):
@@ -279,6 +296,26 @@ class mysql_manager:
             cursor = connection.cursor()
             cursor.execute("""SELECT * FROM sensor_modules
                               join locations on locations.id = sensor_modules.location_id;""")
+
+            return cursor.fetchall()
+
+        finally:
+            connection.close()
+
+    def get_all_sensors_from_location(self, loc_id):
+        """
+        This function gets all the sensors from a certain location with location_id loc_id and returns them.
+        :param loc_id: the location's id to get the sensors from
+	:return: The sensors with all their properties.
+        :rtype: dict
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT * FROM sensor_modules
+                              join locations on locations.id = sensor_modules.location_id
+					WHERE locations.id = %s;""",
+				   (loc_id))
 
             return cursor.fetchall()
 
@@ -412,7 +449,7 @@ class mysql_manager:
                 'max_date': max_date['max_date']
             }
 
-    def add_new_location(self, lat, lng):
+    def add_new_location(self, forest_id, location_name, lat, lng):
         """
         This function takes a geographical location defined by a latitude and
         longitude and inserts a new location for it in the database.
@@ -424,9 +461,28 @@ class mysql_manager:
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("INSERT INTO locations VALUES(NULL,%s,%s)", (lat, lng,))
+            cursor.execute("INSERT INTO locations VALUES(NULL,%s,%s,%s,%s)", (location_name, lat, lng, forest_id))
             connection.commit()
             return cursor.lastrowid
+        except:
+            return False
+        finally:
+            connection.close()
+    
+    def remove_location(self, location_id):
+        """
+        This function removes a forest from the database.
+
+        :param forest_id: The id of the forest to be removed.
+        :return: True on success, False when not
+        :rtype: bool
+        """
+        connection = self.__create_connection()
+        try:
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM locations WHERE id = %s", (location_id,))
+            connection.commit()
+            return True
         except:
             return False
         finally:
@@ -457,31 +513,25 @@ class mysql_manager:
         else:
             return 0
 
-    def assign_sensor_module(self, sensor_module_id, forest_id, friendly_name, lat, lng):
+    def assign_sensor_module(self, sensor_module_id, location_id, friendly_name):
         """
         This function assigns a given sensor_module to a forest.
 
         :param sensor_module_id: The ID of the sensor module.
-        :param forest_id: The ID of the forest.
+        :param location_id: The ID of the location.
         :param str friendly_name: The friendly name that should be given to the sensor_module.
         :param lat: The latitude of the sensor module's location.
         :param lng: The longitude of the sensor module's location.
         :return:
         """
-        # debug_print(type(sensor_module_id), type(forest_id), type(friendly_name), type(lat), type(lng))
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
-
         connection = self.__create_connection()
 
         try:
             cursor = connection.cursor()
             cursor.execute("""UPDATE sensor_modules SET 
-                forest_id = %s,
                 location_id = %s,
                 friendly_name = %s
-                WHERE id = %s;""", (forest_id, location_id, friendly_name, sensor_module_id))
+                WHERE id = %s;""", (location_id, friendly_name, sensor_module_id))
             connection.commit()
             return True
         except:
@@ -489,22 +539,21 @@ class mysql_manager:
         finally:
             connection.close()
 
-    def get_all_sensor_readings_from_forest(self, forest_ids, min_date, max_date, sensor_classes):
+    def get_all_sensor_readings_from_location(self, location_ids, min_date, max_date, sensor_classes):
         """
         This function gathers all the measurements of chosen classes
-        of all the sensors in the given forest(s).
+        of all the sensors in the given location(s).
 
-        :param forest_ids: List: The list of forest IDs to search in.
+        :param location_ids: List: The list of location IDs to search in.
         :param min_date: The earliest date of which measurements should be included.
         :param max_date: The latest date of which measurements should be included.
         :param sensor_classes: List: The list of types of sensors (expressed in sensor classes IDs) that need to be included.
         :return: (True, <List_of_results>) on success, (False, <error_message>) on error.
         :rtype: tuple
         """
-        # get all sensors belonging to the forest
         connection = self.__create_connection()
 
-        forest_ids_in_list = "(" + ",".join("'" + connection.escape_string(str(x)) + "'" for x in forest_ids) + ")"
+        location_ids_in_list = "(" + ",".join("'" + connection.escape_string(str(x)) + "'" for x in location_ids) + ")"
         classes_in_list = "(" + ",".join("'" + connection.escape_string(str(x)) + "'" for x in sensor_classes) + ")"
 
         try:
@@ -521,7 +570,7 @@ class mysql_manager:
                               JOIN sensor_classes as classes on stypes.class = classes.id
 
                               WHERE classes.class in """ + classes_in_list + """
-                              AND   forest_id in""" + forest_ids_in_list)
+                              AND   location_id in""" + location_ids_in_list)
 
             result = cursor.fetchall()
             return True, result
@@ -541,7 +590,7 @@ class mysql_manager:
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("SELECT * FROM sensor_modules where forest_id is NULL;")
+            cursor.execute("SELECT * FROM sensor_modules where location_id is NULL;")
             unclaimed_sensor_modules = cursor.fetchall()
         finally:
             connection.close()
@@ -606,25 +655,20 @@ class mysql_manager:
             connection.close()
         return True if (result['existing'] > 0) else False
 
-    def add_forest(self, forest_name, lat, lng):
+    def add_forest(self, forest_name):
         """
         This function adds a forest to the database and is used in the
         front end when submitting the form.
 
         :param forest_name: The easy to recognise name of the forest.
-        :param lat: The latitude of the forest's location.
-        :param lng: The longitude of the forest's location.
         :return: True on success, False on error.
         :rtype: bool
         """
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
 
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("""INSERT INTO forests VALUES(NULL,%s,%s)""", (forest_name, location_id,))
+            cursor.execute("""INSERT INTO forests VALUES(NULL,%s)""", (forest_name,))
             connection.commit()
             return True
         except:
@@ -682,7 +726,7 @@ class mysql_manager:
         connection = self.__create_connection()
         try:
             cursor = connection.cursor()
-            cursor.execute("""UPDATE sensor_modules SET forest_id = NULL WHERE id = %s;""", (sensor_id,))
+            cursor.execute("""UPDATE sensor_modules SET location_id = NULL WHERE id = %s;""", (sensor_id,))
             connection.commit()
             return True
         except:
@@ -710,7 +754,7 @@ class mysql_manager:
         finally:
             connection.close()
 
-    def assign_gateway(self, lat, lng, friendly_name, gateway_id):
+    def assign_gateway(self, friendly_name, location_id, gateway_id):
         """
         This function assigns a given gateway to a location and sets a name.
 
@@ -719,9 +763,6 @@ class mysql_manager:
         :param lng: The longitude of the sensor module's location.
         :return:
         """
-        location_id = self.__get_location_id(lat, lng)
-        if (location_id == 0):
-            location_id = self.add_new_location(lat, lng)
 
         connection = self.__create_connection()
         try:

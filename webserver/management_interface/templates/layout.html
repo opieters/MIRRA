@@ -11,20 +11,20 @@
     <meta name="description" content="Microclimate Measuring System - Mechatronics UGent case 12 - 2018">
     <meta name="author" content="">
 
-    <title>Microclimate Monitoring System</title>
+    <title>MIRRA - Microclimate Monitoring System</title>
 
     <!-- Bootstrap core CSS-->
-    <link href="{{ url_for('static', filename='vendor/bootstrap/dist/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/bootstrap-4.0.0/css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Custom fonts for this template-->
-    <link href="{{ url_for('static', filename='vendor/fontawesome/web-fonts-with-css/css/fontawesome-all.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='vendor/datatables/media/css/dataTables.bootstrap4.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/fontawesome-5.14.4/css/solid.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/fontawesome-5.14.4/css/fontawesome.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/datatables/datatables.min.css') }}" rel="stylesheet">
     <!-- Custom styles for this template-->
     <link href="{{ url_for('static', filename='css/sb-admin.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/css/ol.css" type="text/css">
 
-    <script
-            src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-            crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='vendor/jquery/jquery-3.6.3.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/datatables/datatables.min.js') }}"></script>
     {% block head %} {% endblock %}
 
 
@@ -34,7 +34,7 @@
 
 <nav class="navbar navbar-expand navbar-dark bg-dark static-top">
 
-    <a class="navbar-brand mr-1" href="{{ url_for('index') }}">Microclimate Monitoring system</a>
+    <a class="navbar-brand mr-1" href="{{ url_for('index') }}">MIRRA - Microclimate Monitoring System</a>
 
     <button class="btn btn-link btn-sm text-white order-1 order-sm-0" id="sidebarToggle" href="#">
         <i class="fas fa-bars"></i>
@@ -69,37 +69,40 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown2" role="button" data-toggle="dropdown"
                aria-haspopup="true" aria-expanded="false">
-                <i class="fas fa-fw fa-thermometer-three-quarters"></i>
-                <span>Sensor Management</span>
+                <i class="fas fa-fw fa-map-marker-alt"></i>
+                <span>Location Management</span>
             </a>
             <div class="dropdown-menu" aria-labelledby="pagesDropdown">
-                <a class="dropdown-item" href="{{ url_for('assign')}}">Assign Sensors</a>
-                <a class="dropdown-item" href="{{ url_for('remove_sensor')}}">Remove Sensors</a>
-
-
+                <a class="dropdown-item" href="{{ url_for('add_location')}}">Add location</a>
+                <a class="dropdown-item" href="{{ url_for('remove_location')}}">Remove location</a>
             </div>
         </li>
-         <li class="nav-item dropdown">
+        <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown3" role="button" data-toggle="dropdown"
                aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-fw fa-broadcast-tower"></i>
-                <span style="font-size: 0.94rem">Gateway Management</span>
+                <span>Gateway Management</span>
             </a>
             <div class="dropdown-menu" aria-labelledby="pagesDropdown">
                 <a class="dropdown-item" href="{{ url_for('assign_gateway')}}">Claim gateways</a>
                 <a class="dropdown-item" href="{{ url_for('remove_gateway')}}">Remove gateways</a>
             </div>
         </li>
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="pagesDropdown4" role="button" data-toggle="dropdown"
+               aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-fw fa-thermometer-three-quarters"></i>
+                <span>Sensor Management</span>
+            </a>
+            <div class="dropdown-menu" aria-labelledby="pagesDropdown">
+                <a class="dropdown-item" href="{{ url_for('assign')}}">Assign Sensors</a>
+                <a class="dropdown-item" href="{{ url_for('remove_sensor')}}">Remove Sensors</a>
+            </div>
+        </li>
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('generate_report')}}">
                 <i class="fas fa-fw fa-table"></i>
                 <span>Reports</span></a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('help')}}">
-                <i class="fas fa-fw fa-question-circle"></i>
-                <span>Help</span></a>
         </li>
 
     </ul>
@@ -116,17 +119,17 @@
     <footer class="sticky-footer">
         <div class="container my-auto">
             <div class="copyright text-center my-auto">
-                <span>Copyright © Ugent Mechatronics Case 12 - 2018 - </span>
-                <a target="_blank" href="{{url_for('get_documentation', path='index.html') }}">Code Documentation</a>
+                <span>Copyright © UGent ForNaLab - 2023 </span>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap core JavaScript-->
-    <script src="{{ url_for('static', filename='vendor/jquery/dist/jquery.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap-4.0.0/js/bootstrap.bundle.min.js') }}"></script>
     <!-- Custom scripts for all pages-->
     <script src="{{ url_for('static', filename='js/sb-admin.min.js') }}"></script>
+
+    <script src="https://cdn.rawgit.com/openlayers/openlayers.github.io/master/en/v5.3.0/build/ol.js"></script>
 
 </body>
 

@@ -27,7 +27,7 @@ mysql_manager = mysql_manager(config.db_settings['host'],
 # the callback to be executed when connected to the broker.
 def on_connect(client, userdata, flags, rc):
     client.subscribe(config.mqqt_settings['prefix'])
-    debug_print("[MQTT] Client connected Connected with result code " + str(rc))
+    debug_print("[MQTT] Connected to broker with prefix " + config.mqqt_settings['prefix'] + ". Result code: " + str(rc))
 
 
 def on_message(client, userdata, msg):
@@ -47,6 +47,8 @@ def on_message(client, userdata, msg):
     gateway_uuid = hierarchy[1]
     module_uuid = hierarchy[2]
 
+    debug_print(f"gateway_uuid: {hierarchy[1]} / module_uuid: {hierarchy[2]}")
+
     epoch_timestamp = struct.unpack('i', payload[0:4])
     timestamp = convert_epoch_to_mysql_timestamp(epoch_timestamp[0])
 
@@ -54,8 +56,8 @@ def on_message(client, userdata, msg):
     n_values = payload[4]
     for i in range(n_values):
         try:
-            id = payload[read_start + i*5]
-            data = payload[read_start + i*5+1:read_start+(i+1)*5]
+            id = payload[read_start + i*6:read_start + i*6 + 1]
+            data = payload[read_start + i*6+2:read_start+(i+1)*6]
             value = struct.unpack('f', data)[0]
 
             # if not isinstance(value, int) or not isinstance(value, float):

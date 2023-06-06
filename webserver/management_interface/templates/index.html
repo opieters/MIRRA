@@ -104,8 +104,7 @@
         <div class="card ext-white bg-light o-hidden h-85">
             <div class="card-body h-100" style="padding: 8px">
                 <h5 class="card-title">Sensor Locations</h5>
-                <iframe style="width: 100%; height: 500px;"
-                        src="https://www.google.com/maps/d/u/0/embed?mid=14850OJy0A4BW4qCdzqsvEvKujcOp0p1q&output=embed"></iframe>
+                 <div id="map" style="width: 100%; height: 400px;"></div>
             </div>
         </div>
     </div>
@@ -133,4 +132,44 @@
         </div>
     </div>
 </div>
+
+<script type="text/javascript">
+window.onload = function() {
+    var map = new ol.Map({
+        controls: ol.control.defaults({attribution: false}),
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.OSM({
+                    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    maxZoom: 18
+                })
+            })
+        ],
+        target: 'map',
+        view: new ol.View({
+            center: ol.proj.fromLonLat([4.35247, 50.84673]),
+            maxZoom: 18,
+            zoom: 4
+        })
+    });
+
+    var markers = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+            style: new ol.style.Style({
+                image: new ol.style.Icon({
+                    anchor: [0.5, 1],
+                    src: 'static/img/tree.png'
+                })
+            })
+    });
+    
+    let marker;
+    {% for location in locations %}
+    marker = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([{{location.lng}}, {{location.lat}}])));
+    markers.getSource().addFeature(marker);
+    {% endfor %}
+    map.addLayer(markers);
+}
+</script>
+
 {% endblock %}

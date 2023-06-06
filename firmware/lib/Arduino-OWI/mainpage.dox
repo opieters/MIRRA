@@ -1,0 +1,29 @@
+/** @mainpage Arduino-OWI
+
+The OWI library has been developed to support the implementation of
+1-wire device drivers. Includes abstract OWI bus manager class, GPIO
+based Software::OWI bus manager, DS2482 based Hardware::OWI bus
+manager, Slave::OWI for slave devices, and device driver for DS18B20.
+
+Version: 1.8
+*/
+
+/** @page License
+
+Copyright (C) 2017, Mikael Patel
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General
+Public License along with this library; if not, write to the
+Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+Boston, MA  02111-1307  USA
+*/

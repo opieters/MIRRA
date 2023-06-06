@@ -1,0 +1,78 @@
+{% extends 'layout.html' %}
+{% block body %}
+<!-- Breadcrumbs-->
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">
+        <a href="#">Location Management</a>
+    </li>
+    <li class="breadcrumb-item active">Add Location</li>
+</ol>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}" role="alert">
+    {{ message }}
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+<div class="card">
+    <div class="card-header">Add a location</div>
+    <div class="card-body row">
+        <form class="col-sm-8" action="{{url_for('add_location')}}" method="POST">
+            <div class="form-group">
+                <label for="forest_id">Select the forest where this location is situated</label>
+                <select class="form-control" required="required" id="forest_select" name="forest_id">
+                    {% for forest in forests %}
+                    <option value="{{ forest.id }}">{{ forest.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <small id="emailHelp" class="form-text text-muted">
+                <small class="fa fa-info-circle"></small> You can define new forests using <a href="{{url_for('add_forest')}}">this link</a>.
+            </small>
+            <hr>
+            <div class="form-group">
+                <label for="location_friendly_name">Location name</label>
+                <input type="text" required="required" class="form-control" id="location_friendly_name" name="location_friendly_name" maxlength="64" placeholder="Enter a friendly location name">
+            </div>    
+            <hr>        
+            <div class="form-group">
+                <label>Location</label>
+                <input type="number" step="any" class="form-control" required="required" id="lat" placeholder="Latitude" name="lat" min="-90" max="90" onkeyup="if(value < -90) value = -90; if(value > 90) value = 90;">
+                <br>
+                <input type="number" step="any" class="form-control" required="required" id="lng" placeholder="Longitude" name="lng" min="-180" max="180" onkeyup="if(value < -180) value = -180; if(value > 180) value = 180;">
+            </div>
+            <hr>
+            <input value="Add Location" type="submit" class="btn btn-primary">
+        </form>
+        <div class="col-sm-4" style="background:#eee;padding:0;height:400px;">
+            <iframe width="100%" height="400" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" id="map" style="visibility:hidden"></iframe>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    let lat = "";
+    let lng = "";
+    $("#lat").on("input", function() {
+        if($(this).val() != "") {
+            lat = $(this).val();
+            updateMap();
+        }
+    });
+    $("#lng").on("input", function() {
+        if($(this).val() != "") {
+            lng = $(this).val();
+            updateMap();
+        }
+    });
+    function updateMap() {
+        if(lat == "" || lng == "") return;
+        console.log("herllo");
+        $("#map").attr("src", "https://maps.google.com/maps?width=100%25&height=300&q=" + lat + "," + lng + "&t=k&z=15&ie=UTF8&iwloc=B&output=embed");
+        if($("#map").css("visibility") == "hidden") $("#map").css("visibility","");
+    }
+</script>
+
+{% endblock %}
