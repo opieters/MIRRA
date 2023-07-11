@@ -355,12 +355,10 @@ Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
     if (strcmp(command, "discovery") == 0)
     {
         parent->discovery();
-        return CommandCode::COMMAND_FOUND;
     }
     else if (strcmp(command, "rtc") == 0)
     {
         parent->rtcUpdateTime();
-        return CommandCode::COMMAND_FOUND;
     }
     else if (strcmp(command, "wifi") == 0)
     {
@@ -382,7 +380,10 @@ Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
         {
             Serial.println("Could not connect to the supplied WiFi network.");
         }
-        return CommandCode::COMMAND_FOUND;
     }
-    return CommandCode::COMMAND_NOT_FOUND;
+    else
+    {
+        return CommandCode::COMMAND_NOT_FOUND;
+    }
+    return CommandCode::COMMAND_FOUND;
 };
