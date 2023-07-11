@@ -1,170 +1,80 @@
-#include "MIRRAModule.h"
+#include <MIRRAModule.h>
 
-volatile bool commandPhaseFlag = false;
+volatile bool commandPhaseFlag{false};
 
-void IRAM_ATTR commandPhaseInterrupt()
-{
-    commandPhaseFlag = true;
-}
-MIRRAModule MIRRAModule::start(const MIRRAPins &pins)
+void IRAM_ATTR commandPhaseInterrupt() { commandPhaseFlag = true; }
+
+MIRRAModule MIRRAModule::start(const MIRRAPins& pins)
 {
     prepare(pins);
     return MIRRAModule(pins);
 }
 
-void MIRRAModule::prepare(const MIRRAPins &pins)
+void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
     Serial2.begin(9600);
     Wire.begin(pins.sda_pin, pins.scl_pin); // i2c
     Serial.println("I2C wire initialised.");
-    if (!SPIFFS.begin(true))
+    if (!LittleFS.begin())
     {
-        Serial.println("Mounting SPIFFS failed! Restarting ...");
+        Serial.println("Mounting LittleFS failed! Formatting and restarting ...");
+        LittleFS.format();
         ESP.restart();
     }
-    Serial.println("SPIFFS initialsed.");
+    Serial.println("LittleFS initialsed.");
     pinMode(pins.boot_pin, INPUT);
     attachInterrupt(pins.boot_pin, commandPhaseInterrupt, FALLING);
 }
 
-MIRRAModule::MIRRAModule(const MIRRAPins &pins) : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, log{LOG_LEVEL, LOG_FP, &rtc}, lora{&log, pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin} {}
-
-void MIRRAModule::enterCommandPhase()
+MIRRAModule::MIRRAModule(const MIRRAPins& pins)
+    : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, log{LOG_LEVEL, LOG_FP, &rtc},
+      lora{&log, pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
 {
-    Serial.println("Press the BOOT pin to enter command phase ...");
-    for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
-    {
-        if (commandPhaseFlag)
-        {
-            log.print(Logger::info, "Entering command phase...");
-            commandPhase();
-            return;
-        }
-        delay(100);
-    }
 }
 
-void MIRRAModule::commandPhase()
+void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)
 {
-    Serial.println("COMMAND PHASE");
-    size_t length;
-    Serial.setTimeout(UART_PHASE_TIMEOUT * 1000);
-    while (true)
+    dataFile.write(static_cast<uint8_t>(m.getLength()));
+    dataFile.write(0); // mark not uploaded (yet)
+    dataFile.write(&m.toData()[1], m.getLength() - 1);
+}
+
+void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
+{
+    char fileName[strlen(dataFile.path()) + 1];
+    strcpy(fileName, dataFile.path());
+    char tempFileName[strlen(fileName) - strlen(strrchr(fileName, '.')) + 4 + 1];
+    strcpy(tempFileName, fileName);
+    strcpy(strrchr(tempFileName, '.'), ".tmp");
+
+    size_t fileSize = dataFile.size();
+    if (fileSize <= maxSize)
+        return;
+    File dataFileTemp{LittleFS.open(tempFileName, "w", true)};
+    while (dataFile.available())
     {
-        char buffer[256];
-        length = Serial.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
-        if (length >= 1 && buffer[length - 1] == '\r')
+        uint8_t message_length = sizeof(message_length) + dataFile.peek();
+        if (fileSize > maxSize)
         {
-            buffer[length - 1] = '\0';
+            fileSize -= message_length;
+            dataFile.seek(message_length, SeekCur); // skip over the next message
         }
         else
         {
-            buffer[length] = '\0';
-        }
-        Serial.println(buffer);
-        switch (processCommands(buffer))
-        {
-        case COMMAND_FOUND:
-            break;
-        case COMMAND_NOT_FOUND:
-            Serial.printf("Command '%s' not found or invalid argument(s) given.\n", buffer);
-            break;
-        case COMMAND_EXIT:
-            return;
+            uint8_t buffer[message_length];
+            dataFile.read(buffer, message_length);
+            dataFileTemp.write(buffer, message_length);
         }
     }
-}
-MIRRAModule::CommandCode MIRRAModule::processCommands(char *command)
-{
-    if (strcmp(command, "") == 0 || strcmp(command, "exit") == 0 || strcmp(command, "close") == 0)
-    {
-        Serial.println("Exiting command phase...");
-        return COMMAND_EXIT;
-    }
-    else if (strcmp(command, "ls") == 0 || strcmp(command, "list") == 0)
-    {
-        listFiles();
-    }
-    else if (strncmp(command, "print ", 6) == 0)
-    {
-        printFile(&command[6]);
-    }
-    else if (strncmp(command, "printhex ", 9) == 0)
-    {
-        printFile(&command[9], true);
-    }
-    else if (strcmp(command, "format") == 0)
-    {
-        Serial.println("Formatting flash memory (this can take some time)...");
-        SPIFFS.format();
-        Serial.println("Restarting ...");
-        ESP.restart();
-    }
-    else if (strncmp(command, "echo ", 5) == 0)
-    {
-        Serial.println(&command[5]);
-    }
-    else
-    {
-        return COMMAND_NOT_FOUND;
-    }
-    return COMMAND_FOUND;
-}
-void MIRRAModule::listFiles()
-{
-    File root = SPIFFS.open("/");
-    File file = root.openNextFile();
-    while (file)
-    {
-        Serial.println(file.path());
-        file = root.openNextFile();
-    }
-    root.close();
-    file.close();
-}
+    LittleFS.remove(fileName);
+    dataFile.close();
+    dataFileTemp.flush();
+    log.printf(Logger::info, "Sensor data pruned from %u KB to %u KB.", fileSize / 1000, dataFileTemp.size() / 1000);
+    dataFileTemp.close();
 
-void MIRRAModule::printFile(const char *filename, bool hex)
-{
-    if (!SPIFFS.exists(filename))
-    {
-        Serial.printf("File '%s' does not exist.\n", filename);
-        return;
-    }
-    File file = SPIFFS.open(filename, FILE_READ);
-    if (!file)
-    {
-        Serial.printf("Error while opening file '%s'\n", filename);
-        return;
-    }
-    Serial.printf("%s with size %u bytes\n", filename, file.size());
-    if (hex)
-    {
-        while (file.available())
-        {
-            Serial.printf("%X", file.read());
-        }
-    }
-    else
-    {
-        while (file.available())
-        {
-            Serial.write(file.read());
-        }
-    }
-
-    Serial.flush();
-    file.close();
-}
-
-void MIRRAModule::storeSensorData(SensorDataMessage &m, File &dataFile)
-{
-    uint8_t buffer[SensorDataMessage::max_length];
-    m.toData(buffer);
-    buffer[0] = 0; // mark not uploaded (yet)
-    dataFile.write((uint8_t)m.getLength());
-    dataFile.write(buffer, m.getLength());
+    LittleFS.rename(tempFileName, fileName);
 }
 
 void MIRRAModule::deepSleep(uint32_t sleep_time)
@@ -175,13 +85,14 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
         return deepSleep(1);
     }
 
-    // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered off.
-    // Therefore we force pin 15 to a LOW state here.
+    // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered
+    // off. Therefore we force pin 15 to a LOW state here.
     pinMode(15, OUTPUT);
     digitalWrite(15, LOW);
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep sleep
+    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep
+    // sleep
     if (sleep_time <= 30)
     {
         log.print(Logger::debug, "Using internal timer for deep sleep.");
@@ -199,13 +110,14 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     log.print(Logger::info, "Good night.");
     lora.sleep();
-    SPIFFS.end();
+    log.close();
+    LittleFS.end();
     esp_deep_sleep_start();
 }
 
 void MIRRAModule::deepSleepUntil(uint32_t time)
 {
-    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t ctime{rtc.read_time_epoch()};
     if (time <= ctime)
     {
         deepSleep(0);

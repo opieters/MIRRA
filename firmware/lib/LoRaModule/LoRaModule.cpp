@@ -1,23 +1,11 @@
 #include "LoRaModule.h"
 
-LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
-    : log{log},
-      DIO0Pin{DIO0Pin},
-      DIO1Pin{DIO1Pin},
-      module{Module(csPin, DIO0Pin, rstPin)},
-      SX1272(&module)
+LoRaModule::LoRaModule(Logger* log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
+    : module{csPin, DIO0Pin, rstPin}, log{log}, DIO0Pin{DIO0Pin}, SX1272(&module)
 {
     this->module.setRfSwitchPins(rxPin, txPin);
-
-    this->mac = MACAddress();
     esp_efuse_mac_get_default(this->mac.getAddress());
-    int state = this->begin(LORA_FREQUENCY,
-                            LORA_BANDWIDTH,
-                            LORA_SPREADING_FACTOR,
-                            LORA_CODING_RATE,
-                            LORA_SYNC_WORD,
-                            LORA_POWER,
-                            LORA_PREAMBLE_LENGHT,
+    int state = this->begin(LORA_FREQUENCY, LORA_BANDWIDTH, LORA_SPREADING_FACTOR, LORA_CODING_RATE, LORA_SYNC_WORD, LORA_POWER, LORA_PREAMBLE_LENGHT,
                             LORA_AMPLIFIER_GAIN);
     if (state == RADIOLIB_ERR_NONE)
     {
@@ -29,7 +17,14 @@ LoRaModule::LoRaModule(Logger *log, const uint8_t csPin, const uint8_t rstPin, c
     }
 };
 
-void LoRaModule::sendPacket(uint8_t *buffer, size_t length)
+void LoRaModule::sendRepeat(const MACAddress& dest)
+{
+    log->printf(Logger::debug, "Sending REPEAT message to %s", dest.toString());
+    auto repeatMessage = Message<REPEAT>(this->mac, dest);
+    sendPacket(repeatMessage.toData(), repeatMessage.getLength());
+}
+
+void LoRaModule::sendPacket(uint8_t* buffer, size_t length)
 {
     int state = this->startTransmit(buffer, length);
     if (state == RADIOLIB_ERR_NONE)
@@ -48,11 +43,11 @@ void LoRaModule::sendPacket(uint8_t *buffer, size_t length)
 
 void LoRaModule::resendPacket()
 {
-    if (lastSentLength == 0)
+    if (sendLength == 0)
     {
         log->print(Logger::error, "Could not repeat last sent packet because no packet has been sent yet.");
         return;
     }
     log->printf(Logger::debug, "Resending last sent packet to %s", this->lastDest.toString());
-    sendPacket(this->lastSentBuffer, this->lastSentLength);
+    sendPacket(this->sendBuffer, this->sendLength);
 }

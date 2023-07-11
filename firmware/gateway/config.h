@@ -25,6 +25,7 @@
 // Filepaths
 #define NODES_FP "/nodes.dat"
 #define DATA_FP "/data.dat"
+#define DATA_TEMP_FP "/data_temp.dat"
 
 // WiFi settings
 #define WIFI_SSID "PUT WIFI NAME HERE"
@@ -40,9 +41,13 @@
 #define MAX_MQTT_ERRORS 3       // max number of MQTT publish errors after which uploading should be aborted
 
 // Communication and sensor settings
-#define COMMUNICATION_PERIOD_LENGTH ((MAX_SENSOR_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000) // s, time reserved for communication between gateway and one node, in function of how many sensor data messages are to be sent
-#define COMMUNICATION_PERIOD_PADDING 3                                                                         // s, time between each node's communication period
-#define COMMUNICATION_INTERVAL (60 * 60 * 12)                                                                  // s, time between communication times for every nodes
+
+// s, time reserved for communication between gateway and one node, in function of how many sensor data messages are to be sent
+#define COMMUNICATION_PERIOD_LENGTH ((MAX_SENSOR_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
+// s, time between each node's communication period
+#define COMMUNICATION_PERIOD_PADDING 3
+// s, time between communication times for every nodes
+#define COMMUNICATION_INTERVAL (60 * 60 * 12)
 
 #define WAKE_BEFORE_COMM_PERIOD 5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
@@ -53,6 +58,7 @@
 #define SAMPLING_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
 #define SAMPLING_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
 
+#define IDEAL_SENSOR_MESSAGES ((COMMUNICATION_INTERVAL / SAMPLING_INTERVAL))
 #define MAX_SENSOR_MESSAGES (((3 * COMMUNICATION_INTERVAL) / (2 * SAMPLING_INTERVAL)) + 1)
 
 #define DISCOVERY_TIMEOUT 5000 // ms
@@ -63,7 +69,7 @@
 #define SENSOR_DATA_TIMEOUT 6000 // ms
 #define SENSOR_DATA_ATTEMPTS 1
 
-#define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
+#define MAX_SENSORDATA_FILESIZE 64 * 1024 // bytes
 
 #define MAX_SENSOR_NODES 20
 

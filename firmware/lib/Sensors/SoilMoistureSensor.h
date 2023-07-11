@@ -1,8 +1,8 @@
 #ifndef __SOIL_MOISTURE_SENSOR_H__
 #define __SOIL_MOISTURE_SENSOR_H__
 
-#include <Arduino.h>
 #include "Sensor.h"
+#include <Arduino.h>
 
 #define SOIL_MOISTURE_KEY 3
 
@@ -24,7 +24,7 @@ public:
     void readMeasurement() { this->measurement = analogRead(pin); };
     void stopMeasurement(){};
     SensorValue getValue() { return SensorValue(getID(), static_cast<float>(this->measurement)); };
-    const uint8_t getID() { return SOIL_MOISTURE_KEY; };
+    uint8_t getID() const { return SOIL_MOISTURE_KEY; };
 };
 
 #endif

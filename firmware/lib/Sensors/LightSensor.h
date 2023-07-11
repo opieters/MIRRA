@@ -1,8 +1,8 @@
 #ifndef __LIGHT_SENSOR_H__
 #define __LIGHT_SENSOR_H__
 
-#include <Arduino.h>
 #include "Sensor.h"
+#include <Arduino.h>
 #include <AsyncAPDS9306.h>
 
 #define LIGHT_KEY 22
@@ -20,6 +20,6 @@ public:
     void readMeasurement();
     void stopMeasurement(){};
     SensorValue getValue() { return SensorValue(getID(), this->measurement); };
-    const uint8_t getID() { return LIGHT_KEY; };
+    uint8_t getID() const { return LIGHT_KEY; };
 };
 #endif

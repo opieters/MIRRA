@@ -8,26 +8,34 @@
 class SensorNode : public MIRRAModule
 {
 public:
-        SensorNode(const MIRRAPins &pins);
+    SensorNode(const MIRRAPins& pins);
+    void wake();
 
-        void wake();
+    class Commands : public MIRRAModule::Commands<SensorNode>
+    {
+    private:
+        void printSample();
 
-        CommandCode processCommands(char *command);
-
-        void discovery();
-        void timeConfig(TimeConfigMessage &m);
-
-        void initSensors();
-        void samplePeriod();
-
-        void commPeriod();
-        uint8_t sendSensorMessage(SensorDataMessage &message, MACAddress const &dest, bool &firstMessage);
-        void pruneSensorData(File &dataFile);
-
-        void printSensorData();
+    public:
+        Commands(SensorNode* parent) : MIRRAModule::Commands<SensorNode>(parent){};
+        CommandCode processCommands(char* command);
+    };
 
 private:
-        std::vector<Sensor *> sensors;
+    void discovery();
+    void timeConfig(Message<TIME_CONFIG>& m);
+
+    void samplePeriod();
+
+    void commPeriod();
+    bool sendSensorMessage(Message<SENSOR_DATA>& message, const MACAddress& dest, bool& firstMessage);
+
+    std::array<std::unique_ptr<Sensor>, MAX_SENSORS> sensors;
+    size_t nSensors{0};
+    void addSensor(std::unique_ptr<Sensor>&& sensor);
+    void initSensors();
+    void clearSensors();
+    Message<SENSOR_DATA> sampleAll();
 };
 
 #endif

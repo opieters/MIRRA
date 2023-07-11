@@ -1,27 +1,22 @@
 #ifndef __COMM_COMM_H__
 #define __COMM_COMM_H__
 
-#include <stdint.h>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
+#include <array>
 
 #include "Sensor.h"
-
-// TODO : move from internal structs to serializing directly from/to the class object
 
 class MACAddress
 {
 private:
-    uint8_t address[6]{};
+    std::array<uint8_t, 6> address{0};
 
 public:
     MACAddress() = default;
-    MACAddress(const uint8_t *address);
-    uint8_t *getAddress() { return address; };
-    char *toString(char *string = str_buffer) const;
-    friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
-    friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
+    MACAddress(const uint8_t* address) : address{*reinterpret_cast<const std::array<uint8_t, 6>*>(address)} {};
+    uint8_t* getAddress() { return address.data(); };
+    char* toString(char* string = str_buffer) const;
+    bool operator==(const MACAddress& other) const { return this->address == other.address; }
+    bool operator!=(const MACAddress& other) const { return this->address != other.address; }
 
     static const size_t length = sizeof(address);
     static const size_t string_length = length * 3;
@@ -29,104 +24,108 @@ public:
     static char str_buffer[string_length];
 } __attribute__((packed));
 
-class Message
+enum MessageType : uint8_t
 {
-public:
-    enum Type : uint8_t
-    {
-        ERROR = 0,
-        HELLO = 1,
-        HELLO_REPLY = 2,
-        TIME_CONFIG = 3,
-        ACK_TIME = 4,
-        SENSOR_DATA = 5,
-        DATA_ACK = 6,
-        REPEAT = 7,
-        ALL = 8
-    };
+    ERROR = 0,
+    HELLO = 1,
+    HELLO_REPLY = 2,
+    TIME_CONFIG = 3,
+    ACK_TIME = 4,
+    SENSOR_DATA = 5,
+    ACK_DATA = 6,
+    REPEAT = 7,
+    ALL = 8
+};
 
-    struct HeaderStruct
-    {
-        Message::Type type;
-        MACAddress src, dest;
-    } __attribute__((packed));
-
+class MessageHeader
+{
 protected:
-    HeaderStruct header{};
+    MessageType type{MessageType::ERROR};
+    MACAddress src{}, dest{};
+    MessageHeader(MessageType type, const MACAddress& src, const MACAddress& dest) : type{static_cast<MessageType>(type << 1)}, src{src}, dest{dest} {};
 
 public:
-    Message() = default;
-    Message(HeaderStruct header) : header(header){};
-    Message(Message::Type type, MACAddress src, MACAddress dest) : header{static_cast<Message::Type>(type << 1), src, dest} {};
-    Message(uint8_t *data) : Message(*reinterpret_cast<HeaderStruct *>(data)){};
-    Message::Type getType() const { return static_cast<Message::Type>(header.type >> 1); };
-    MACAddress getSource() const { return header.src; };
-    MACAddress getDest() const { return header.dest; };
-    bool isLast() { return header.type & 0x01; }
-    void setLast() { header.type = static_cast<Message::Type>(header.type | 0x01); }
-    void setDest(MACAddress dest) { header.dest = dest; }
+    constexpr MessageType getType() const { return static_cast<MessageType>(type >> 1); };
+    constexpr bool isType(MessageType type) const { return getType() == type; };
+    constexpr bool isLast() const { return type & 0x01; }
+    const MACAddress& getSource() const { return src; };
+    const MACAddress& getDest() const { return dest; };
+    constexpr size_t getLength() const { return sizeof(*this); };
 
-    bool isType(Message::Type type) const { return getType() == type; };
+    void setType(MessageType type) { this->type = static_cast<MessageType>(type << 1); }
+    void setDest(const MACAddress& dest) { this->dest = dest; }
+    void setLast() { type = static_cast<MessageType>(type | 0x01); }
 
-    size_t getLength() const { return header_length; };
-    uint8_t *toData(uint8_t *data) const;
-    static Message from_data(uint8_t *data);
+    static const size_t headerLength{sizeof(MessageType) + 2 * sizeof(MACAddress)};
+    static const size_t maxLength{256};
+} __attribute__((packed));
 
-    static const size_t header_length = sizeof(HeaderStruct);
-    static const size_t max_length = 256;
-};
-
-class TimeConfigMessage : public Message
+template <MessageType T> class Message : public MessageHeader
 {
 public:
-    struct TimeConfigStruct
-    {
-        uint32_t cur_time, sample_time, sample_interval, comm_time, comm_interval, comm_duration;
-    } __attribute__((packed));
+    Message(const MACAddress& src, const MACAddress& dest) : MessageHeader(T, src, dest){};
+    constexpr bool isValid() const { return isType(T); }
+    constexpr static Message<T>& fromData(uint8_t* data) { return *reinterpret_cast<Message<T>*>(data); }
+    uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
+    static const MessageType desiredType{T};
+} __attribute__((packed));
 
-private:
-    TimeConfigStruct body{};
-
-public:
-    TimeConfigMessage() = default;
-    TimeConfigMessage(HeaderStruct header, TimeConfigStruct body) : Message(header), body(body){};
-    TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval, uint32_t comm_duration) : Message(Message::TIME_CONFIG, src, dest), body{cur_time, sample_time, sample_interval, comm_time, comm_interval, comm_duration} {};
-    TimeConfigMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<TimeConfigStruct *>(&data[header_length])} {};
-    uint32_t getCTime() { return body.cur_time; };
-    uint32_t getSampleTime() { return body.sample_time; };
-    uint32_t getSampleInterval() { return body.sample_interval; };
-    uint32_t getCommTime() { return body.comm_time; };
-    uint32_t getCommInterval() { return body.comm_interval; };
-    uint32_t getCommDuration() { return body.comm_duration; };
-    size_t getLength() const { return Message::getLength() + sizeof(body); };
-    uint8_t *toData(uint8_t *data) const;
-};
-
-class SensorDataMessage : public Message
+template <> class Message<TIME_CONFIG> : public MessageHeader
 {
+private:
+    uint32_t curTime, sampleTime, sampleInterval, commTime, commInterval, commDuration;
+
 public:
-    struct SensorDataStruct
-    {
-        uint32_t time;
-        uint8_t n_values;
-    } __attribute__((packed));
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleTime, uint32_t sampleInterval, uint32_t commTime,
+            uint32_t commInterval, uint32_t commDuration)
+        : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleTime{sampleTime}, sampleInterval{sampleInterval}, commTime{commTime},
+          commInterval{commInterval}, commDuration{commDuration} {};
+
+    uint32_t getCTime() const { return curTime; };
+    uint32_t getSampleTime() const { return sampleTime; };
+    uint32_t getSampleInterval() const { return sampleInterval; };
+    uint32_t getCommTime() const { return commTime; };
+    uint32_t getCommInterval() const { return commInterval; };
+    uint32_t getCommDuration() const { return commDuration; };
+
+    constexpr size_t getLength() const { return sizeof(*this); };
+    constexpr bool isValid() const { return isType(TIME_CONFIG); }
+    constexpr static Message<TIME_CONFIG>& fromData(uint8_t* data) { return *reinterpret_cast<Message<TIME_CONFIG>*>(data); }
+    uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
+    static const MessageType desiredType{TIME_CONFIG};
+} __attribute__((packed));
+
+template <> class Message<SENSOR_DATA> : public MessageHeader
+{
+private:
+    uint32_t time;
+    uint8_t nValues;
+
+public:
+    static const size_t maxNValues = (maxLength - headerLength - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue);
 
 private:
-    SensorDataStruct body{};
+    std::array<SensorValue, maxNValues> values{};
 
 public:
-    static const size_t max_n_values = (max_length - header_length - sizeof(body)) / sizeof(SensorValue);
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues, const std::array<SensorValue, maxNValues>& values);
 
-private:
-    SensorValue values[max_n_values]{};
+    uint32_t getCTime() const { return time; };
+    uint32_t getNValues() const { return nValues; };
+    std::array<SensorValue, maxNValues>& getValues() { return values; }
 
-public:
-    SensorDataMessage() = default;
-    SensorDataMessage(HeaderStruct header, SensorDataStruct body) : Message(header), body(body){};
-    SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values);
-    SensorDataMessage(uint8_t *data);
-    size_t getLength() const { return Message::getLength() + sizeof(body) + body.n_values * sizeof(SensorValue); };
-    uint8_t *toData(uint8_t *data) const;
-};
+    constexpr size_t getLength() const { return headerLength + sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue); };
+    constexpr bool isValid() const { return isType(SENSOR_DATA); }
+    static constexpr Message<SENSOR_DATA>& fromData(uint8_t* data);
+    uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
+    static const MessageType desiredType{SENSOR_DATA};
+} __attribute__((packed));
+
+constexpr Message<SENSOR_DATA>& Message<SENSOR_DATA>::fromData(uint8_t* data)
+{
+    Message<SENSOR_DATA>& m{*reinterpret_cast<Message<SENSOR_DATA>*>(data)};
+    m.nValues = std::min(m.nValues, static_cast<uint8_t>(maxNValues));
+    return m;
+}
 
 #endif

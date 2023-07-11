@@ -2,23 +2,23 @@
 ESP32-CAM
 *********/
 
-//#define __ESP32__
- 
-#include "esp_camera.h"
+// #define __ESP32__
+
 #include "Arduino.h"
-#include "FS.h"                // SD Card ESP32
-#include "SD_MMC.h"            // SD Card ESP32
-#include "soc/soc.h"           // Disable brownour problems
-#include "soc/rtc_cntl_reg.h"  // Disable brownour problems
-#include "driver/rtc_io.h"
-#include <EEPROM.h>            // read and write from flash memory
-#include <time.h>
-#include <esp_sntp.h>
-#include <HardwareSerial.h>
+#include "FS.h"     // SD Card ESP32
+#include "SD_MMC.h" // SD Card ESP32
 #include "SPI.h"
+#include "driver/rtc_io.h"
+#include "esp_camera.h"
+#include "soc/rtc_cntl_reg.h" // Disable brownour problems
+#include "soc/soc.h"          // Disable brownour problems
+#include <EEPROM.h>           // read and write from flash memory
+#include <HardwareSerial.h>
+#include <esp_sntp.h>
+#include <time.h>
 
 // for debugging purposes
-#define __DEBUG__   // comment out when not debugging
+#define __DEBUG__ // comment out when not debugging
 
 // define the number of bytes you want to access
 #define EEPROM_SIZE 1
@@ -28,57 +28,55 @@ RTC_DATA_ATTR bool firstBoot = true;
 // Variables to save date and time
 char formattedDatetime[26];
 String datetimeString;
-//String dayStamp;
-//String timeStamp;
-
+// String dayStamp;
+// String timeStamp;
 
 // one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO13 (=ow_pin)
 constexpr gpio_num_t ow_pin = GPIO_NUM_12;
-//constexpr gpio_num_t stat_pin = GPIO_NUM_13;
+// constexpr gpio_num_t stat_pin = GPIO_NUM_13;
 HardwareSerial serial2(2);
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
-#define Y9_GPIO_NUM       35
-#define Y8_GPIO_NUM       34
-#define Y7_GPIO_NUM       39
-#define Y6_GPIO_NUM       36
-#define Y5_GPIO_NUM       21
-#define Y4_GPIO_NUM       19
-#define Y3_GPIO_NUM       18
-#define Y2_GPIO_NUM        5
-#define VSYNC_GPIO_NUM    25
-#define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
- 
-int pictureNumber = 0;
+#define PWDN_GPIO_NUM 32
+#define RESET_GPIO_NUM -1
+#define XCLK_GPIO_NUM 0
+#define SIOD_GPIO_NUM 26
+#define SIOC_GPIO_NUM 27
+#define Y9_GPIO_NUM 35
+#define Y8_GPIO_NUM 34
+#define Y7_GPIO_NUM 39
+#define Y6_GPIO_NUM 36
+#define Y5_GPIO_NUM 21
+#define Y4_GPIO_NUM 19
+#define Y3_GPIO_NUM 18
+#define Y2_GPIO_NUM 5
+#define VSYNC_GPIO_NUM 25
+#define HREF_GPIO_NUM 23
+#define PCLK_GPIO_NUM 22
+
 RTC_DATA_ATTR bool pictureSuccess;
 
-class ESPCam {
-  public:
+class ESPCam
+{
+public:
     /** One-Wire Interface (OWI) Remote Arduino Device function codes. */
-      enum {
+    enum
+    {
         SET_TIME = 11,
         GET_TIME = 22,
         TAKE_PICTURE = 33,
         ENABLE_SLEEP = 44,
         GET_STATUS = 55,
-      };
+    };
 };
 
-int i = 0;
-uint8_t status = 0;
 time_t owi_time = 0;
-uint8_t sensor_n = 0;
 
 timeval owi_time_value;
 
-void takePicture(void){
-// Camera configuration
+void takePicture(void)
+{
+    // Camera configuration
     camera_config_t config;
     config.ledc_channel = LEDC_CHANNEL_0;
     config.ledc_timer = LEDC_TIMER_0;
@@ -105,50 +103,58 @@ void takePicture(void){
     pinMode(4, INPUT);
     digitalWrite(4, LOW);
     rtc_gpio_hold_dis(GPIO_NUM_4);
-    
-    if(psramFound()){
-        #ifdef __DEBUG__
+
+    if (psramFound())
+    {
+#ifdef __DEBUG__
         Serial.println("psram found");
-        #endif
+#endif
         config.frame_size = FRAMESIZE_SXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
         config.jpeg_quality = 10;
         config.fb_count = 1;
-    } else {
+    }
+    else
+    {
         config.frame_size = FRAMESIZE_VGA;
         config.jpeg_quality = 10;
         config.fb_count = 1;
     }
 
     delay(1000);
-    
+
     // Init Camera
     esp_err_t err = esp_camera_init(&config);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         Serial.printf("Camera init failed with error 0x%x", err);
         pictureSuccess = false;
         return;
-    } else {
-        #ifdef __DEBUG__
+    }
+    else
+    {
+#ifdef __DEBUG__
         Serial.println("Camera init OK.");
-        #endif
+#endif
         pictureSuccess = true;
     }
 
-    //pinMode(stat_pin, INPUT);
+    // pinMode(stat_pin, INPUT);
 
-    #ifdef __DEBUG__
+#ifdef __DEBUG__
     Serial.println("Starting SD Card");
-    #endif
+#endif
     delay(500);
-    
-    //delay(1000); 
-    if(!SD_MMC.begin("/sdcard", true, false)){ // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
+
+    // delay(1000);
+    if (!SD_MMC.begin("/sdcard", true, false))
+    { // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
         Serial.println("SD Card Mount Failed");
         delay(500);
     }
-    
+
     uint8_t cardType = SD_MMC.cardType();
-    if(cardType == CARD_NONE){
+    if (cardType == CARD_NONE)
+    {
         Serial.println("No SD Card attached");
         pictureSuccess = false;
         return;
@@ -161,92 +167,99 @@ void takePicture(void){
     timeinfo = *gmtime(&tv.tv_sec);
 
     strftime(formattedDatetime, sizeof(formattedDatetime), "%Y-%m-%d %H_%M_%S", &timeinfo);
-    datetimeString =  String(formattedDatetime);
-    #ifdef __DEBUG__
+    datetimeString = String(formattedDatetime);
+#ifdef __DEBUG__
     Serial.print("Current datetime:");
     Serial.println(datetimeString);
-    #endif
+#endif
     delay(500);
-    
-    camera_fb_t * fb = NULL;
-    
-    //set standard settings for gain and white balance (should be kept fixed -> cloudy)
-    sensor_t * s = esp_camera_sensor_get();
 
-    //Postprocessing
+    camera_fb_t* fb = NULL;
+
+    // set standard settings for gain and white balance (should be kept fixed -> cloudy)
+    sensor_t* s = esp_camera_sensor_get();
+
+    // Postprocessing
     s->set_brightness(s, 0);     // -2 to 2
     s->set_contrast(s, 0);       // -2 to 2
     s->set_saturation(s, 0);     // -2 to 2
     s->set_special_effect(s, 0); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
-    //White balance
-    s->set_whitebal(s, 0);       // 0 = disable , 1 = enable, switch off automatic white balancing, to force the fixed WB mode below?
-    s->set_awb_gain(s, 1);       // 0 = disable , 1 = enable
-    s->set_wb_mode(s, 2);        // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
-    //Exposure
-    s->set_exposure_ctrl(s, 1);  // 0 = disable , 1 = enable, if too dim the exposure will be longer
-    s->set_aec2(s, 0);           // 0 = disable , 1 = enable, ????
-    s->set_ae_level(s, 0);       // -2 to 2, too lighten/darken picture on top of automatic exposure
-    s->set_aec_value(s, 300);    // 0 to 1200, too set exposure yourself, when AEC is disabled
-    //ISO
-    s->set_gain_ctrl(s, 0);      // 0 = disable , 1 = enable #switch of automatic gain control, to ensure that a fixed gain of zero (next row) is applied
-    s->set_agc_gain(s, 0);       // 0 to 30
-    s->set_gainceiling(s, (gainceiling_t)0);  // 0 to 6 #only for automatic gain control, defines the max gain
-    //picture correction
-    s->set_bpc(s, 0);            // 0 = disable , 1 = enable
-    s->set_wpc(s, 1);            // 0 = disable , 1 = enable
-    s->set_raw_gma(s, 1);        // 0 = disable , 1 = enable
-    s->set_lenc(s, 1);           // 0 = disable , 1 = enable
-    s->set_hmirror(s, 0);        // 0 = disable , 1 = enable
-    s->set_vflip(s, 0);          // 0 = disable , 1 = enable
-    s->set_dcw(s, 1);            // 0 = disable , 1 = enable
-    s->set_colorbar(s, 0);       // 0 = disable , 1 = enable
+    // White balance
+    s->set_whitebal(s, 0); // 0 = disable , 1 = enable, switch off automatic white balancing, to force the fixed WB mode below?
+    s->set_awb_gain(s, 1); // 0 = disable , 1 = enable
+    s->set_wb_mode(s, 2);  // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
+    // Exposure
+    s->set_exposure_ctrl(s, 1); // 0 = disable , 1 = enable, if too dim the exposure will be longer
+    s->set_aec2(s, 0);          // 0 = disable , 1 = enable, ????
+    s->set_ae_level(s, 0);      // -2 to 2, too lighten/darken picture on top of automatic exposure
+    s->set_aec_value(s, 300);   // 0 to 1200, too set exposure yourself, when AEC is disabled
+    // ISO
+    s->set_gain_ctrl(s, 0); // 0 = disable , 1 = enable #switch of automatic gain control, to ensure that a fixed gain of zero (next row) is applied
+    s->set_agc_gain(s, 0);  // 0 to 30
+    s->set_gainceiling(s, (gainceiling_t)0); // 0 to 6 #only for automatic gain control, defines the max gain
+    // picture correction
+    s->set_bpc(s, 0);      // 0 = disable , 1 = enable
+    s->set_wpc(s, 1);      // 0 = disable , 1 = enable
+    s->set_raw_gma(s, 1);  // 0 = disable , 1 = enable
+    s->set_lenc(s, 1);     // 0 = disable , 1 = enable
+    s->set_hmirror(s, 0);  // 0 = disable , 1 = enable
+    s->set_vflip(s, 0);    // 0 = disable , 1 = enable
+    s->set_dcw(s, 1);      // 0 = disable , 1 = enable
+    s->set_colorbar(s, 0); // 0 = disable , 1 = enable
 
-    //set brightness
-    for (int b = -2; b <= 2; b = b + 2) {
+    // set brightness
+    for (int b = -2; b <= 2; b = b + 2)
+    {
         s->set_brightness(s, b);
         char b_s = String(b).charAt(0);
-        if (b == 2) {
+        if (b == 2)
+        {
             b_s = '+';
         }
-        
+
         // set gamma correction and exposure control
         s->set_raw_gma(s, 1);
         s->set_exposure_ctrl(s, 1);
 
-        //set automatic exposure level
-        for (int ae = -2; ae <= 2; ae = ae + 2) {
+        // set automatic exposure level
+        for (int ae = -2; ae <= 2; ae = ae + 2)
+        {
             s->set_ae_level(s, ae);
             char ae_s = String(ae).charAt(0);
-            if (ae == 2) {
+            if (ae == 2)
+            {
                 ae_s = '+';
             }
             // take picture
             fb = esp_camera_fb_get();
-            if (!fb) {
+            if (!fb)
+            {
                 Serial.println("Camera capture failed");
                 pictureSuccess = false;
                 return;
             }
 
             // save picture
-            String path2 = "/" + datetimeString + "_" + b_s + String (1) + String (1) + "_" + ae_s + ".jpg";
+            String path2 = "/" + datetimeString + "_" + b_s + String(1) + String(1) + "_" + ae_s + ".jpg";
 
-            fs::FS &fs = SD_MMC;
-            #ifdef __DEBUG__
+            fs::FS& fs = SD_MMC;
+#ifdef __DEBUG__
             Serial.printf("Picture file name: %s\n", path2.c_str());
-            #endif
+#endif
 
             File file2 = fs.open(path2.c_str(), FILE_WRITE);
-            if (!file2) {
+            if (!file2)
+            {
                 Serial.println("Failed to open file in writing mode");
                 pictureSuccess = false;
                 return;
             }
-            else {
+            else
+            {
                 file2.write(fb->buf, fb->len); // payload (image), payload length
-                #ifdef __DEBUG__
+#ifdef __DEBUG__
                 Serial.printf("Saved file to path: %s\n", path2.c_str());
-                #endif
+#endif
             }
 
             file2.close();
@@ -257,7 +270,7 @@ void takePicture(void){
     }
 
     delay(1000);
-    
+
     // Turns off the ESP32-CAM white on-board LED (flash) connected to GPIO 4
     pinMode(4, OUTPUT);
     digitalWrite(4, LOW);
@@ -268,114 +281,118 @@ void takePicture(void){
     return;
 }
 
-
-  
-void setup() {
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+void setup()
+{
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detector
     Serial.begin(115200);
-    
+
     Serial.setDebugOutput(true);
 
     serial2.begin(9600, SERIAL_8N1, ow_pin, -1, true);
 
-    if (firstBoot){
-        pictureSuccess =  true;
+    if (firstBoot)
+    {
+        pictureSuccess = true;
         firstBoot = false;
     }
 
-    //pinMode(stat_pin, OUTPUT);
-    //digitalWrite(stat_pin, LOW);
+    // pinMode(stat_pin, OUTPUT);
+    // digitalWrite(stat_pin, LOW);
 
     sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
 
-    #ifdef __DEBUG__
+#ifdef __DEBUG__
     Serial.println("Setup done.");
-    #endif
+#endif
 
     serial2.flush();
 
     // Go to sleep after boot (enable external wake up on IO12)
-    if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0){
+    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0)
+    {
         esp_sleep_enable_ext0_wakeup(ow_pin, 1);
         Serial.println("Going to sleep now");
         Serial.flush();
         esp_deep_sleep_start();
     }
-    
-} 
+}
 
 uint8_t cmd;
- 
-void loop() {
 
-    // Additional sketch code could be placed here before
-    // polling one-wire bus for commands
-    //if (!owi.rom_command()) { return; }
-    #ifdef __DEBUG__
+void loop()
+{
+
+// Additional sketch code could be placed here before
+// polling one-wire bus for commands
+// if (!owi.rom_command()) { return; }
+#ifdef __DEBUG__
     Serial.println("");
     Serial.println("Cycle started");
-    #endif
+#endif
 
-    while(!serial2.available());
-    
+    while (!serial2.available())
+        ;
+
     cmd = serial2.read();
 
-    #ifdef __DEBUG__
+#ifdef __DEBUG__
     Serial.print("Received command ");
-    #endif
+#endif
 
     // Read and dispatch remote arduino commands
-    switch (cmd) {
-        case ESPCam::SET_TIME:
-            #ifdef __DEBUG__
-            Serial.println("ESPCam::SET_TIME");
-            #endif
-            serial2.readBytes((uint8_t*) &owi_time, sizeof(owi_time));
-            #ifdef __DEBUG__
-            Serial.println(owi_time);
-            #endif
-            owi_time_value = {owi_time, 0};
-            sntp_sync_time(&owi_time_value);
-            delay(100);
-            sntp_sync_time(&owi_time_value);
-            break;
-        case ESPCam::GET_TIME:
-            #ifdef __DEBUG__
-            Serial.println("ESPCam::GET_TIME");
-            #endif
-            break;
-        case ESPCam::GET_STATUS:
-            #ifdef __DEBUG__
-            Serial.println("ESPCam::GET_STATUS");
-            #endif
-            if(pictureSuccess){
-                Serial.println("SUCCESS PRINT");
-                //digitalWrite(stat_pin, HIGH);
-            } else {
-                Serial.println("FAIL PRINT");
-                //digitalWrite(stat_pin, LOW);
-            }
-            break;
-        case ESPCam::TAKE_PICTURE:
-            //delay(500);
-            #ifdef __DEBUG__
-            Serial.println("ESPCam::TAKE_PICTURE");
-            #endif
-            takePicture();
-        case ESPCam::ENABLE_SLEEP:
-            #ifdef __DEBUG__
-            Serial.println("ESPCam::ENABLE_SLEEP");
-            #endif
-            // always sleep in the loop-state
-            // swSer.end();
-            serial2.end();
-            esp_sleep_enable_ext0_wakeup(ow_pin, 1);
-            Serial.flush();
-            esp_deep_sleep_start();
-            break;
-        default:
-            break;
+    switch (cmd)
+    {
+    case ESPCam::SET_TIME:
+#ifdef __DEBUG__
+        Serial.println("ESPCam::SET_TIME");
+#endif
+        serial2.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
+#ifdef __DEBUG__
+        Serial.println(owi_time);
+#endif
+        owi_time_value = {owi_time, 0};
+        sntp_sync_time(&owi_time_value);
+        delay(100);
+        sntp_sync_time(&owi_time_value);
+        break;
+    case ESPCam::GET_TIME:
+#ifdef __DEBUG__
+        Serial.println("ESPCam::GET_TIME");
+#endif
+        break;
+    case ESPCam::GET_STATUS:
+#ifdef __DEBUG__
+        Serial.println("ESPCam::GET_STATUS");
+#endif
+        if (pictureSuccess)
+        {
+            Serial.println("SUCCESS PRINT");
+            // digitalWrite(stat_pin, HIGH);
+        }
+        else
+        {
+            Serial.println("FAIL PRINT");
+            // digitalWrite(stat_pin, LOW);
+        }
+        break;
+    case ESPCam::TAKE_PICTURE:
+// delay(500);
+#ifdef __DEBUG__
+        Serial.println("ESPCam::TAKE_PICTURE");
+#endif
+        takePicture();
+    case ESPCam::ENABLE_SLEEP:
+#ifdef __DEBUG__
+        Serial.println("ESPCam::ENABLE_SLEEP");
+#endif
+        // always sleep in the loop-state
+        // swSer.end();
+        serial2.end();
+        esp_sleep_enable_ext0_wakeup(ow_pin, 1);
+        Serial.flush();
+        esp_deep_sleep_start();
+        break;
+    default:
+        break;
     }
-
-
 }

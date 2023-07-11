@@ -34,7 +34,7 @@ public:
     void readMeasurement();
     void stopMeasurement(){};
     SensorValue getValue() { return SensorValue(getID(), this->measurement); };
-    const uint8_t getID() { return SOIL_TEMPERATURE_KEY; };
+    uint8_t getID() const { return SOIL_TEMPERATURE_KEY; };
 };
 
 #endif

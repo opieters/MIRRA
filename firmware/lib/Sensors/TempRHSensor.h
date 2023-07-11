@@ -1,8 +1,8 @@
 #ifndef __TEMP_RH_SENSOR_H__
 #define __TEMP_RH_SENSOR_H__
 
-#include <Arduino.h>
 #include "Sensor.h"
+#include <Arduino.h>
 #include <SHTSensor.h>
 
 #define TEMP_RH_KEY 12
@@ -20,6 +20,6 @@ public:
     void readMeasurement();
     void stopMeasurement(){};
     SensorValue getValue() { return SensorValue(getID(), static_cast<float>(this->measurement[0])); };
-    const uint8_t getID() { return TEMP_RH_KEY; };
+    uint8_t getID() const { return TEMP_RH_KEY; };
 };
 #endif

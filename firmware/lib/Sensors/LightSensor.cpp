@@ -10,6 +10,5 @@ void LightSensor::readMeasurement()
 {
     while (!baseSensor.isMeasurementReady())
         ;
-    AsyncAPDS9306Data sensorData = baseSensor.getLuminosityMeasurement();
-    this->measurement = sensorData.raw;
+    this->measurement = static_cast<float>(baseSensor.getLuminosityMeasurement().raw);
 }

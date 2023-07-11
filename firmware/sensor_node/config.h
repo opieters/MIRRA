@@ -21,6 +21,7 @@
 // Filepaths
 #define LOG_FP "/"
 #define DATA_FP "/data.dat"
+#define DATA_TEMP_FP "/data_temp.dat"
 
 // Communication and sensor settings
 #define WAKE_BEFORE_COMM_PERIOD 3 // s, time before comm period when node should wake from deep sleep
@@ -38,5 +39,6 @@
 #define SENSOR_DATA_ATTEMPTS 1
 
 #define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
+#define MAX_SENSORS 20
 
 #endif

@@ -1,80 +1,88 @@
 #include "logging.h"
 
-Logger::Logger(Level level, const char *logfile_base_path, PCF2129_RTC *rtc) : level{level}, rtc{rtc}, logfile_time{rtc->read_time()}
+Logger::Logger(Level level, const char* logfileBasePath, PCF2129_RTC* rtc)
+    : rtc{rtc}, level{level}, logfileEnabled{logfileBasePath != nullptr}, logfileTime{rtc->read_time()}
 {
-    if (logfile_base_path == nullptr)
-    {
-        this->logfile_enabled = false;
-    }
-    else
-    {
-        strncpy(this->logfile_base_path, logfile_base_path, 18);
-    }
+    if (logfileBasePath != nullptr)
+        strncpy(this->logfileBasePath, logfileBasePath, 18);
     this->print(Logger::debug, "Logger initialised.");
 }
-void Logger::open_logfile(char *logfile_path)
+
+void Logger::generateLogfilePath(char* buffer, const struct tm& time)
 {
-    if (SPIFFS.exists(logfile_path))
+    char timeString[11];
+    strftime(timeString, 11, "%Y-%m-%d", &time);
+    snprintf(buffer, 32, "%s%s.log", this->logfileBasePath, timeString);
+}
+
+void Logger::removeOldLogfiles(struct tm& time)
+{
+    uint32_t deleteEpoch{mktime(&time) - daysToKeep * 24 * 60 * 60};
+    struct tm deleteTime = *localtime(reinterpret_cast<time_t*>(&deleteEpoch));
+    struct tm fileTime
     {
-        this->logfile = SPIFFS.open(logfile_path, FILE_APPEND);
+    };
+    File root = LittleFS.open("/");
+    File file = root.openNextFile();
+    while (file)
+    {
+        const char* fileName = file.name();
+        if (strcmp(strrchr(fileName, '.'), ".log") == 0)
+        {
+            strptime(fileName, "%Y-%m-%d.log", &fileTime);
+            if ((fileTime.tm_year < deleteTime.tm_year) || (fileTime.tm_year == deleteTime.tm_year && fileTime.tm_mon < deleteTime.tm_mon) ||
+                (fileTime.tm_year == deleteTime.tm_year && fileTime.tm_mon == deleteTime.tm_mon && fileTime.tm_mday <= deleteTime.tm_mday))
+            {
+                if (!LittleFS.remove(file.path()))
+                {
+                    this->logfileEnabled = false;
+                    this->print(Logger::error, "Could not remove logfile. Logger will disable logging to file.");
+                }
+            }
+        }
+        file.close();
+        file = root.openNextFile();
+    }
+}
+
+void Logger::openLogfile(const struct tm& time)
+{
+    char logfilePath[32];
+    generateLogfilePath(logfilePath, time);
+    if (LittleFS.exists(logfilePath))
+    {
+        this->logfile = LittleFS.open(logfilePath, "a");
     }
     else
     {
-        this->logfile = SPIFFS.open(logfile_path, FILE_WRITE);
+        this->logfile = LittleFS.open(logfilePath, "w", true);
     }
-
+    this->logfileTime = time;
     if (!this->logfile)
     {
-        this->logfile_enabled = false;
+        this->logfileEnabled = false;
         this->print(Level::error, "Unable to open/create logfile! Logger will disable logging to file.");
     }
 }
 
-void Logger::generate_logfile_path(char *buffer, struct tm &time)
+void Logger::logfilePrint(const char* string, struct tm& time)
 {
-    char time_string[11];
-    strftime(time_string, 11, "%F", &time);
-    snprintf(buffer, 32, "%s%s.log", this->logfile_base_path, time_string);
-}
-
-void Logger::delete_oldest_logfile(struct tm &time)
-{
-    uint32_t epoch = mktime(&time);
-    epoch -= days_to_keep * 24 * 60 * 60;
-    struct tm delete_time = *localtime((time_t *)&epoch);
-    char logfile_path[32];
-    generate_logfile_path(logfile_path, delete_time);
-    if (SPIFFS.exists(logfile_path))
-    {
-        if (!SPIFFS.remove(logfile_path))
-        {
-            this->logfile_enabled = false;
-            this->print(Logger::error, "Could not remove logfile. Logger will disable logging to file.");
-        }
-    }
-}
-
-void Logger::logfile_print(const char *string, struct tm &time)
-{
-    if (!this->logfile_enabled)
+    if (!this->logfileEnabled)
         return;
-    if ((!this->logfile) || (this->logfile_time.tm_mday != time.tm_mday) || (this->logfile_time.tm_mon != time.tm_mon) || (this->logfile_time.tm_year != time.tm_year))
+    if ((!this->logfile) || (this->logfileTime.tm_mday != time.tm_mday) || (this->logfileTime.tm_mon != time.tm_mon) ||
+        (this->logfileTime.tm_year != time.tm_year))
     {
-        delete_oldest_logfile(time);
+        removeOldLogfiles(time);
         if (this->logfile)
             this->logfile.close();
-        char logfile_path[32];
-        generate_logfile_path(logfile_path, time);
-        open_logfile(logfile_path);
-        this->logfile_time = time;
+        openLogfile(time);
         if (!this->logfile)
             return;
     }
     logfile.println(string);
-    logfile.flush();
 }
 
-void Logger::printf(Level level, const char *fmt, ...)
+void Logger::printf(Level level, const char* fmt, ...)
 {
     if (level < this->level)
         return;
@@ -85,7 +93,7 @@ void Logger::printf(Level level, const char *fmt, ...)
     this->print(level, buffer);
 }
 
-void Logger::print(Level level, const char *string)
+void Logger::print(Level level, const char* string)
 {
     if (level < this->level)
         return;
@@ -94,16 +102,15 @@ void Logger::print(Level level, const char *string)
     size_t len_buffer = time_length + 1 + level_length + 2 + strlen(string) + 1;
     char string_buffer[len_buffer];
     char time_string[time_length + 1];
-    char level_string[level_length + 1];
+    const char* levelString{levelToString(level)};
 
     struct tm time = this->rtc->read_time();
 
     strftime(time_string, sizeof(time_string), "[%F %T]", &time);
-    level_to_string(level, level_string, sizeof(level_string));
-    snprintf(string_buffer, len_buffer, "%s %s: %s", time_string, level_string, string);
+    snprintf(string_buffer, len_buffer, "%s %s: %s", time_string, levelString, string);
 
     Serial.println(string_buffer);
-    logfile_print(string_buffer, time);
+    logfilePrint(string_buffer, time);
 }
 
 void Logger::print(Level level, const unsigned int u)
@@ -120,25 +127,22 @@ void Logger::print(Level level, const signed int i)
     print(level, int_string);
 }
 
-void Logger::closeLogfile()
+void Logger::close()
 {
     this->logfile.close();
-    this->logfile_enabled = false;
+    this->logfileEnabled = false;
 }
 
-char *Logger::level_to_string(Level level, char *buffer, size_t buffer_length)
+const char* Logger::levelToString(Level level) const
 {
     switch (level)
     {
     case Level::error:
-        strncpy(buffer, "ERROR", buffer_length);
-        break;
+        return "ERROR";
     case Level::info:
-        strncpy(buffer, "INFO", buffer_length);
-        break;
+        return "INFO";
     case Level::debug:
-        strncpy(buffer, "DEBUG", buffer_length);
-        break;
+        return "DEBUG";
     }
-    return buffer;
+    return "NONE";
 }
