@@ -70,10 +70,6 @@ public:
     };
 };
 
-time_t owi_time = 0;
-
-timeval owi_time_value;
-
 void takePicture(void)
 {
     // Camera configuration
@@ -317,8 +313,6 @@ void setup()
     }
 }
 
-uint8_t cmd;
-
 void loop()
 {
 
@@ -333,7 +327,7 @@ void loop()
     while (!serial2.available())
         ;
 
-    cmd = serial2.read();
+    uint8_t cmd = serial2.read();
 
 #ifdef __DEBUG__
     Serial.print("Received command ");
@@ -346,11 +340,12 @@ void loop()
 #ifdef __DEBUG__
         Serial.println("ESPCam::SET_TIME");
 #endif
+        time_t owi_time{0};
         serial2.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
 #ifdef __DEBUG__
         Serial.println(owi_time);
 #endif
-        owi_time_value = {owi_time, 0};
+        timeval owi_time_value{owi_time, 0};
         sntp_sync_time(&owi_time_value);
         delay(100);
         sntp_sync_time(&owi_time_value);
