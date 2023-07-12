@@ -6,7 +6,6 @@
 #include <AsyncAPDS9306.h>
 #include <ESPCamCodes.h>
 #include <HardwareSerial.h>
-#include <Software/OWI.h>
 
 class ESPCamUART : public Sensor
 {
