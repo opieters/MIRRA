@@ -13,6 +13,7 @@ ESP32-CAM
 #include "soc/rtc_cntl_reg.h" // Disable brownour problems
 #include "soc/soc.h"          // Disable brownour problems
 #include <EEPROM.h>           // read and write from flash memory
+#include <ESPCamCodes.h>
 #include <HardwareSerial.h>
 #include <esp_sntp.h>
 #include <time.h>
@@ -55,20 +56,6 @@ HardwareSerial serial2(2);
 #define PCLK_GPIO_NUM 22
 
 RTC_DATA_ATTR bool pictureSuccess;
-
-class ESPCam
-{
-public:
-    /** One-Wire Interface (OWI) Remote Arduino Device function codes. */
-    enum
-    {
-        SET_TIME = 11,
-        GET_TIME = 22,
-        TAKE_PICTURE = 33,
-        ENABLE_SLEEP = 44,
-        GET_STATUS = 55,
-    };
-};
 
 time_t owi_time = 0;
 
@@ -317,8 +304,6 @@ void setup()
     }
 }
 
-uint8_t cmd;
-
 void loop()
 {
 
@@ -333,7 +318,7 @@ void loop()
     while (!serial2.available())
         ;
 
-    cmd = serial2.read();
+    uint8_t cmd = serial2.read();
 
 #ifdef __DEBUG__
     Serial.print("Received command ");
@@ -342,7 +327,7 @@ void loop()
     // Read and dispatch remote arduino commands
     switch (cmd)
     {
-    case ESPCam::SET_TIME:
+    case ESPCamCodes::SET_TIME:
 #ifdef __DEBUG__
         Serial.println("ESPCam::SET_TIME");
 #endif
@@ -355,12 +340,12 @@ void loop()
         delay(100);
         sntp_sync_time(&owi_time_value);
         break;
-    case ESPCam::GET_TIME:
+    case ESPCamCodes::GET_TIME:
 #ifdef __DEBUG__
         Serial.println("ESPCam::GET_TIME");
 #endif
         break;
-    case ESPCam::GET_STATUS:
+    case ESPCamCodes::GET_STATUS:
 #ifdef __DEBUG__
         Serial.println("ESPCam::GET_STATUS");
 #endif
@@ -375,13 +360,13 @@ void loop()
             // digitalWrite(stat_pin, LOW);
         }
         break;
-    case ESPCam::TAKE_PICTURE:
+    case ESPCamCodes::TAKE_PICTURE:
 // delay(500);
 #ifdef __DEBUG__
         Serial.println("ESPCam::TAKE_PICTURE");
 #endif
         takePicture();
-    case ESPCam::ENABLE_SLEEP:
+    case ESPCamCodes::ENABLE_SLEEP:
 #ifdef __DEBUG__
         Serial.println("ESPCam::ENABLE_SLEEP");
 #endif
