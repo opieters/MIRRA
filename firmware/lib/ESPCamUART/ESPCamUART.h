@@ -7,27 +7,21 @@
 #include <ESPCamCodes.h>
 #include <HardwareSerial.h>
 
-class ESPCamUART : public Sensor
+#define CAM_KEY 64
+
+class ESPCamUART final : public Sensor
 {
-public:
-    ESPCamUART(HardwareSerial* serial, gpio_num_t pin);
-
-    void setup(void);
-
-    void start_measurement(void);
-
-    uint8_t read_measurement(float* meas, uint8_t n_meas);
-
-    void stop_measurement(void){};
-
-    ~ESPCamUART();
-
-    const uint8_t getID() { return 64; };
-
-    uint32_t adaptive_sample_interval_update(time_t ctime);
-
 private:
-    HardwareSerial* serial;
+    HardwareSerial* camSerial;
     const gpio_num_t pin;
+
+public:
+    ESPCamUART(HardwareSerial* camSerial, gpio_num_t pin) : camSerial{camSerial}, pin{pin} {};
+    void setup();
+    void startMeasurement();
+    SensorValue getMeasurement();
+    uint8_t getID() const { return CAM_KEY; };
+
+    uint32_t adaptive_sample_interval_update(uint32_t ctime);
 };
 #endif

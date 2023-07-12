@@ -7,19 +7,16 @@
 
 #define LIGHT_KEY 22
 
-class LightSensor : public Sensor
+class LightSensor final : public Sensor
 {
 private:
-    AsyncAPDS9306 baseSensor;
-    float measurement;
+    AsyncAPDS9306 baseSensor{};
 
 public:
-    LightSensor() : baseSensor{AsyncAPDS9306()} {}
+    LightSensor() = default;
     void setup(){};
-    void startMeasurement(void);
-    void readMeasurement();
-    void stopMeasurement(){};
-    SensorValue getValue() { return SensorValue(getID(), this->measurement); };
+    void startMeasurement();
+    SensorValue getMeasurement();
     uint8_t getID() const { return LIGHT_KEY; };
 };
 #endif
