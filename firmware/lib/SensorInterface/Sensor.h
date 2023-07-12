@@ -33,7 +33,7 @@ public:
     virtual uint8_t getID() const = 0;
     virtual uint32_t adaptive_sample_interval_update(time_t ctime);
     virtual void set_sample_interval(uint32_t sample_interval) { this->sample_interval = sample_interval; };
-    virtual ~Sensor();
+    virtual ~Sensor() = default;
 
 private:
     uint32_t sample_interval = 5 * 60; // sample every hour by default
