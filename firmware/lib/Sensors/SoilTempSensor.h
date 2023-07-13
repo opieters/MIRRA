@@ -7,18 +7,13 @@
 #include "Sensor.h"
 
 #define SOIL_TEMPERATURE_KEY 4;
-class SoilTemperatureSensor : public Sensor
+class SoilTemperatureSensor final : public Sensor
 {
 private:
     uint8_t busIndex; // The bus index of the sensor
     uint8_t pin;      // pin number of 1W interface
-    DeviceAddress longWireThermometer, shortWireThermometer;
     OneWire wire;
     DallasTemperature dallas;
-
-    void printAddress(DeviceAddress deviceAddress);
-
-    float measurement;
 
 public:
     /**
@@ -31,9 +26,7 @@ public:
     SoilTemperatureSensor(uint8_t pin, uint8_t busIndex) : pin{pin}, busIndex{busIndex}, wire{OneWire(pin)}, dallas{&wire} {}
     void setup(){};
     void startMeasurement();
-    void readMeasurement();
-    void stopMeasurement(){};
-    SensorValue getValue() { return SensorValue(getID(), this->measurement); };
+    SensorValue getMeasurement();
     uint8_t getID() const { return SOIL_TEMPERATURE_KEY; };
 };
 

@@ -6,9 +6,9 @@ void LightSensor::startMeasurement()
     baseSensor.startLuminosityMeasurement();
 }
 
-void LightSensor::readMeasurement()
+SensorValue LightSensor::getMeasurement()
 {
     while (!baseSensor.isMeasurementReady())
         ;
-    this->measurement = static_cast<float>(baseSensor.getLuminosityMeasurement().raw);
+    return SensorValue(getID(), static_cast<float>(baseSensor.getLuminosityMeasurement().raw));
 }

@@ -1,42 +1,27 @@
 #ifndef __ESP_CAM_UART_H__
 #define __ESP_CAM_UART_H__
 
-#include <Arduino.h>
 #include "Sensor.h"
+#include <Arduino.h>
 #include <AsyncAPDS9306.h>
-#include <Software/OWI.h>
+#include <ESPCamCodes.h>
 #include <HardwareSerial.h>
 
+#define CAM_KEY 64
 
-class ESPCamUART : public Sensor {
-    public:
-        ESPCamUART(HardwareSerial* serial, gpio_num_t pin);
+class ESPCamUART final : public Sensor
+{
+private:
+    HardwareSerial* camSerial;
+    const gpio_num_t pin;
 
-        void setup(void);
+public:
+    ESPCamUART(HardwareSerial* camSerial, gpio_num_t pin) : camSerial{camSerial}, pin{pin} {};
+    void setup();
+    void startMeasurement();
+    SensorValue getMeasurement();
+    uint8_t getID() const { return CAM_KEY; };
 
-        void start_measurement(void);
-
-        uint8_t read_measurement(float* meas, uint8_t n_meas);
-
-        void stop_measurement(void) {};
-
-        ~ESPCamUART();
-
-        const uint8_t getID() { return 64; };
-
-        uint32_t adaptive_sample_interval_update(time_t ctime);
-
-        enum ESPCamUARTCommand {
-            SET_TIME = 11,
-            GET_TIME = 22,
-            TAKE_PICTURE = 33,
-            GET_STATUS = 55,
-            ENABLE_SLEEP = 44,
-        };
-
-    private:
-        HardwareSerial* serial;
-        const gpio_num_t pin;
-
+    uint32_t adaptive_sample_interval_update(uint32_t ctime);
 };
 #endif

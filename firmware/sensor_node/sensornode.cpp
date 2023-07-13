@@ -123,8 +123,7 @@ Message<SENSOR_DATA> SensorNode::sampleAll()
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
     for (size_t i = 0; i < nSensors; i++)
     {
-        sensors[i]->readMeasurement();
-        values[i] = sensors[i]->getValue();
+        values[i] = sensors[i]->getMeasurement();
     }
     return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, ctime, static_cast<uint8_t>(nSensors), values);
 }

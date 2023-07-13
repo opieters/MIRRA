@@ -1,7 +1,7 @@
 #include "Sensor.h"
 #include "Arduino.h"
 
-uint32_t Sensor::adaptive_sample_interval_update(time_t current_sample_timepoint)
+uint32_t Sensor::adaptive_sample_interval_update(uint32_t current_sample_timepoint)
 {
     Serial.println("General adaptive interval called.");
     // round to days

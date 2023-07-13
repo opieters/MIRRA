@@ -15,6 +15,8 @@ struct SensorValue
     SensorValue(uint16_t tag, float value) : tag{tag}, value{value} {};
 } __attribute__((packed));
 
+// TODO: Find a way to avoid virtual functions, possibly using CRTP? -> Will make iterating over polymorphic container difficult
+
 /**
  * Sensor interface, this interface has to be overriden by all the sensor classes. This class allows to
  * have a generic way of reading the sensors.
@@ -27,13 +29,11 @@ public:
      */
     virtual void setup() = 0;
     virtual void startMeasurement() = 0;
-    virtual void readMeasurement() = 0;
-    virtual void stopMeasurement() = 0;
-    virtual SensorValue getValue() = 0;
+    virtual SensorValue getMeasurement() = 0;
     virtual uint8_t getID() const = 0;
-    virtual uint32_t adaptive_sample_interval_update(time_t ctime);
+    virtual uint32_t adaptive_sample_interval_update(uint32_t ctime);
     virtual void set_sample_interval(uint32_t sample_interval) { this->sample_interval = sample_interval; };
-    virtual ~Sensor();
+    virtual ~Sensor() = default;
 
 private:
     uint32_t sample_interval = 5 * 60; // sample every hour by default
