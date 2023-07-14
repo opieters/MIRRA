@@ -3,7 +3,6 @@
 
 #include "Sensor.h"
 #include <Arduino.h>
-#include <AsyncAPDS9306.h>
 #include <ESPCamCodes.h>
 #include <HardwareSerial.h>
 
