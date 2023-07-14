@@ -27,7 +27,6 @@ class LoRaModule : public SX1272
 {
 private:
     Module module;
-    Logger* log;
 
     MACAddress mac{};
 
@@ -38,7 +37,7 @@ private:
     MACAddress lastDest{};
 
 public:
-    LoRaModule(Logger* log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIOPin, const uint8_t rxPin, const uint8_t txPin);
+    LoRaModule(const uint8_t csPin, const uint8_t rstPin, const uint8_t DIOPin, const uint8_t rxPin, const uint8_t txPin);
 
     const MACAddress& getMACAddress(void) { return mac; };
 

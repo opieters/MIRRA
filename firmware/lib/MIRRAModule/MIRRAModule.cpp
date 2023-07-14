@@ -4,12 +4,6 @@ volatile bool commandPhaseFlag{false};
 
 void IRAM_ATTR commandPhaseInterrupt() { commandPhaseFlag = true; }
 
-MIRRAModule MIRRAModule::start(const MIRRAPins& pins)
-{
-    prepare(pins);
-    return MIRRAModule(pins);
-}
-
 void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
@@ -29,9 +23,14 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 }
 
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, log{LOG_LEVEL, LOG_FP, &rtc},
-      lora{&log, pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
+    : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, lora{pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
 {
+    timeval ctime{static_cast<time_t>(rtc.read_time_epoch()), 0};
+    settimeofday(&ctime, nullptr);
+    Log::log.setSerial(&Serial);
+    Log::log.setRTC(&rtc);
+    Log::log.setLogfile(true);
+    Log::log.setLogLevel(LOG_LEVEL);
 }
 
 void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)
@@ -71,7 +70,7 @@ void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
     LittleFS.remove(fileName);
     dataFile.close();
     dataFileTemp.flush();
-    log.printf(Logger::info, "Sensor data pruned from %u KB to %u KB.", fileSize / 1000, dataFileTemp.size() / 1000);
+    Log::info("Sensor data pruned from ", fileSize / 1000, " KB to ", dataFileTemp.size() / 1000, " KB.");
     dataFileTemp.close();
 
     LittleFS.rename(tempFileName, fileName);
@@ -81,7 +80,7 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
 {
     if (sleep_time <= 0)
     {
-        log.print(Logger::error, "Sleep time was zero or negative! Sleeping one second to avert crisis.");
+        Log::error("Sleep time was zero or negative! Sleeping one second to avert crisis.");
         return deepSleep(1);
     }
 
@@ -95,12 +94,12 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     // sleep
     if (sleep_time <= 30)
     {
-        log.print(Logger::debug, "Using internal timer for deep sleep.");
+        Log::debug("Using internal timer for deep sleep.");
         esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
     }
     else
     {
-        log.print(Logger::debug, "Using RTC for deep sleep.");
+        Log::debug("Using RTC for deep sleep.");
         // We use the external RTC
         rtc.write_alarm_epoch(rtc.read_time_epoch() + sleep_time);
         rtc.enable_alarm();
@@ -108,9 +107,9 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     }
     digitalWrite(16, LOW);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
-    log.print(Logger::info, "Good night.");
+    Log::info("Good night.");
     lora.sleep();
-    log.close();
+    Log::log.close();
     LittleFS.end();
     esp_deep_sleep_start();
 }
@@ -132,7 +131,7 @@ void MIRRAModule::lightSleep(float sleep_time)
 {
     if (sleep_time <= 0)
     {
-        log.print(Logger::error, "Sleep time was zero or negative! Skipping to avert crisis. ");
+        Log::error("Sleep time was zero or negative! Skipping to avert crisis.");
         return;
     }
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);

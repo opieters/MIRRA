@@ -4,7 +4,6 @@
 #include "MIRRAModule.h"
 #include "WiFi.h"
 #include "config.h"
-#include <NTPClient.h>
 #include <PubSubClient.h>
 #include <vector>
 
@@ -60,7 +59,6 @@ private:
 
     void wifiConnect(const char* SSID, const char* password);
     void wifiConnect();
-    uint32_t getWiFiTime();
     void rtcUpdateTime();
 
     WiFiClient mqttClient;

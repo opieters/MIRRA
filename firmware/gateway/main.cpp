@@ -13,10 +13,9 @@ void setup(void)
                                          .rx_pin = RX_PIN,
                                          .rtc_int_pin = RTC_INT_PIN,
                                          .rtc_address = RTC_ADDRESS};
-    Gateway gateway = Gateway(pins);
+    MIRRAModule::prepare(pins);
+    Gateway gateway{pins};
     gateway.wake();
 }
 
-void loop(void)
-{
-}
+void loop(void) {}

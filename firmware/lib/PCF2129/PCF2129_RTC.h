@@ -40,8 +40,8 @@ public:
     PCF2129_RTC(uint8_t int_pin, uint8_t address);
     void enable_alarm();
     struct tm read_time();
-    void write_time(struct tm datetime);
-    void write_alarm(struct tm alarm_datetime);
+    void write_time(const tm& datetime);
+    void write_alarm(const tm& alarm_datetime);
 
     /**
      * Reads the time from the rtc and returns an epoch

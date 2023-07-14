@@ -1,7 +1,7 @@
 #include "LoRaModule.h"
 
-LoRaModule::LoRaModule(Logger* log, const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
-    : module{csPin, DIO0Pin, rstPin}, log{log}, DIO0Pin{DIO0Pin}, SX1272(&module)
+LoRaModule::LoRaModule(const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
+    : module{csPin, DIO0Pin, rstPin}, DIO0Pin{DIO0Pin}, SX1272(&module)
 {
     this->module.setRfSwitchPins(rxPin, txPin);
     esp_efuse_mac_get_default(this->mac.getAddress());

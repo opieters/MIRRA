@@ -10,7 +10,7 @@
 #include <logging.h>
 
 #define LOG_FP "/"
-#define LOG_LEVEL Logger::debug
+#define LOG_LEVEL Log::DEBUG
 
 #define UART_PHASE_ENTRY_PERIOD 5   // s, length of time after wakeup and comm period in which command phase can be entered
 #define UART_PHASE_TIMEOUT (1 * 60) // s, length of UART inactivity required to automatically exit command phase
@@ -33,10 +33,9 @@ public:
         uint8_t rtc_int_pin;
         uint8_t rtc_address;
     };
+    static void prepare(const MIRRAPins& pins);
 
 protected:
-    static MIRRAModule start(const MIRRAPins& pins);
-
     void storeSensorData(Message<SENSOR_DATA>& m, File& dataFile);
     void pruneSensorData(File&& dataFile, uint32_t maxSize);
 
@@ -47,7 +46,6 @@ protected:
 
     const MIRRAPins pins;
     PCF2129_RTC rtc;
-    Logger log;
     LoRaModule lora;
 
     template <class T> class Commands
@@ -79,7 +77,6 @@ protected:
     };
 
 private:
-    static void prepare(const MIRRAPins& pins);
     MIRRAModule(const MIRRAPins& pins);
 };
 

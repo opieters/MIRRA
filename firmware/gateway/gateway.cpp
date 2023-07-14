@@ -19,8 +19,7 @@ RTC_DATA_ATTR int commPeriods{0};
 RTC_DATA_ATTR char ssid[32]{WIFI_SSID};
 RTC_DATA_ATTR char pass[32]{WIFI_PASS};
 
-Gateway::Gateway(const MIRRAPins& pins)
-    : MIRRAModule(MIRRAModule::start(pins)), mqttClient{WiFiClient()}, mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, mqttClient)}
+Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClient()}, mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, mqttClient)}
 {
     if (initialBoot)
     {
@@ -228,29 +227,15 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
 
 void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
 
-uint32_t Gateway::getWiFiTime()
-{
-    WiFiUDP ntpUDP;
-    NTPClient timeClient{ntpUDP, NTP_URL, 3600, 60000};
-    timeClient.begin();
-
-    log.print(Logger::info, "Fetching NTP time");
-    while (!timeClient.update())
-    {
-        delay(500);
-    }
-    timeClient.end();
-    return timeClient.getEpochTime();
-}
-
 void Gateway::rtcUpdateTime()
 {
     wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
+        configTime(3600, 0, NTP_URL))
         log.print(Logger::debug, "Writing time to RTC...");
-        rtc.write_time_epoch(getWiFiTime());
-        log.print(Logger::info, "RTC time updated.");
+        rtc.write_time_epoch(static_cast<uint32_t>(time(nullptr)));
+        log.print(Logger::info, "RTC and system time updated.");
     }
     WiFi.disconnect();
 }

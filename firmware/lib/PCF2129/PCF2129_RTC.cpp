@@ -1,10 +1,7 @@
 #include "PCF2129_RTC.h"
 #include "Arduino.h"
 
-PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t address) : address{address}, int_pin{int_pin}
-{
-    pinMode(int_pin, INPUT_PULLUP);
-}
+PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t address) : address{address}, int_pin{int_pin} { pinMode(int_pin, INPUT_PULLUP); }
 
 void PCF2129_RTC::enable_alarm()
 {
@@ -22,26 +19,18 @@ struct tm PCF2129_RTC::read_time()
     Wire.requestFrom(address, (uint8_t)7);
     while (!Wire.available())
         ;
-    uint8_t seconds = bcd_to_dec(Wire.read());
-    uint8_t minutes = bcd_to_dec(Wire.read());
-    uint8_t hours = bcd_to_dec(Wire.read());
-    uint8_t days = bcd_to_dec(Wire.read());
-    uint8_t week_day = bcd_to_dec(Wire.read());
-    uint8_t months = bcd_to_dec(Wire.read());
-    uint16_t years = bcd_to_dec(Wire.read());
-
-    struct tm now;
-    now.tm_sec = seconds;
-    now.tm_min = minutes;
-    now.tm_hour = hours;
-    now.tm_mday = days;
-    now.tm_wday = week_day;
-    now.tm_mon = months - 1;   // (RTC uses 1-12 as months but C time structs use 0-11 as months)
-    now.tm_year = years + 100; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
-    return now;
+    return tm{
+        .tm_sec{bcd_to_dec(Wire.read())},
+        .tm_min{bcd_to_dec(Wire.read())},
+        .tm_hour{bcd_to_dec(Wire.read())},
+        .tm_mday{bcd_to_dec(Wire.read())},
+        .tm_wday{bcd_to_dec(Wire.read())},
+        .tm_mon{bcd_to_dec(Wire.read()) - 1},   // (RTC uses 1-12 as months but C time structs use 0-11 as months)
+        .tm_year{bcd_to_dec(Wire.read()) + 100} // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
+    };
 }
 
-void PCF2129_RTC::write_time(struct tm datetime)
+void PCF2129_RTC::write_time(const tm& datetime)
 {
     Wire.beginTransmission(address);
     Wire.write(PCF2129_SECONDS);
@@ -55,7 +44,7 @@ void PCF2129_RTC::write_time(struct tm datetime)
     Wire.endTransmission();
 }
 
-void PCF2129_RTC::write_alarm(struct tm datetime)
+void PCF2129_RTC::write_alarm(const tm& datetime)
 {
     Wire.beginTransmission(address);
     Wire.write(PCF2129_ALARM_SECONDS);
@@ -66,15 +55,9 @@ void PCF2129_RTC::write_alarm(struct tm datetime)
     Wire.endTransmission();
 }
 
-uint8_t PCF2129_RTC::bcd_to_dec(uint8_t value)
-{
-    return (uint8_t)(((value >> 4) * 10) + (value & 0x0F));
-}
+uint8_t PCF2129_RTC::bcd_to_dec(uint8_t value) { return (uint8_t)(((value >> 4) * 10) + (value & 0x0F)); }
 
-uint8_t PCF2129_RTC::dec_to_bcd(uint8_t value)
-{
-    return (uint8_t)((value / 10 * 16) + (value % 10));
-}
+uint8_t PCF2129_RTC::dec_to_bcd(uint8_t value) { return (uint8_t)((value / 10 * 16) + (value % 10)); }
 
 uint32_t PCF2129_RTC::read_time_epoch()
 {
@@ -84,12 +67,12 @@ uint32_t PCF2129_RTC::read_time_epoch()
 
 void PCF2129_RTC::write_time_epoch(uint32_t epoch)
 {
-    struct tm t = *localtime((time_t *)&epoch);
+    struct tm t = *localtime((time_t*)&epoch);
     write_time(t);
 }
 
 void PCF2129_RTC::write_alarm_epoch(uint32_t alarm_epoch)
 {
-    struct tm t = *localtime((time_t *)&alarm_epoch);
+    struct tm t = *localtime((time_t*)&alarm_epoch);
     write_alarm(t);
 }
