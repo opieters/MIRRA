@@ -36,6 +36,7 @@ public:
     static void prepare(const MIRRAPins& pins);
 
 protected:
+    MIRRAModule(const MIRRAPins& pins);
     void storeSensorData(Message<SENSOR_DATA>& m, File& dataFile);
     void pruneSensorData(File&& dataFile, uint32_t maxSize);
 
@@ -75,9 +76,6 @@ protected:
     public:
         void prompt();
     };
-
-private:
-    MIRRAModule(const MIRRAPins& pins);
 };
 
 #include <MIRRAModule.tpp>

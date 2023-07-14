@@ -4,7 +4,6 @@
 #include <FS.h>
 #include <HardwareSerial.h>
 #include <LittleFS.h>
-#include <PCF2129_RTC.h>
 #include <type_traits>
 
 class Log
@@ -20,7 +19,6 @@ public:
 private:
     Log() = default;
 
-    PCF2129_RTC* rtc{nullptr};
     HardwareSerial* logSerial{nullptr};
     Level level{static_cast<uint8_t>(-1)};
 
@@ -37,9 +35,9 @@ private:
     template <Level level> size_t printPreamble(const tm& time);
     static constexpr std::string_view levelToString(Level level);
     template <class T> static constexpr std::string_view typeToFormatSpecifier();
+    template <class T> static constexpr std::string_view rawTypeToFormatSpecifier();
 
 public:
-    void setRTC(PCF2129_RTC* rtc) { this->rtc = rtc; }
     void setSerial(HardwareSerial* logSerial) { this->logSerial = logSerial; }
     void setLogLevel(Log::Level level) { this->level = level; }
     void setLogfile(bool enable) { this->logfileEnabled = enable; }
@@ -67,11 +65,58 @@ template <Log::Level level> size_t Log::printPreamble(const tm& time)
     return timeLength + levelString.size() + 1;
 }
 
-template <> constexpr std::string_view Log::typeToFormatSpecifier<char*>() { return "%s"; };
-template <> constexpr std::string_view Log::typeToFormatSpecifier<const char*>() { return "%s"; };
-template <> constexpr std::string_view Log::typeToFormatSpecifier<signed int>() { return "%i"; };
-template <> constexpr std::string_view Log::typeToFormatSpecifier<unsigned int>() { return "%u"; };
-template <> constexpr std::string_view Log::typeToFormatSpecifier<float>() { return "%f"; };
+constexpr std::string_view Log::levelToString(Level level)
+{
+    switch (level)
+    {
+    case Level::ERROR:
+        return "ERROR: ";
+    case Level::INFO:
+        return "INFO: ";
+    case Level::DEBUG:
+        return "DEBUG: ";
+    }
+    return "NONE: ";
+}
+
+// TODO: Clean up the type to format specifier compile-time functionality with proper SFINAE. This here works, but it's messy, requires two functions, and is
+// unruly to extend.
+
+template <class T> constexpr std::string_view Log::typeToFormatSpecifier()
+{
+    using rawType = std::remove_cv_t<std::remove_reference_t<T>>;
+    if constexpr (std::is_enum_v<rawType>)
+    {
+        using underlyingType = std::underlying_type_t<rawType>;
+        if constexpr (std::is_same_v<std::make_unsigned_t<underlyingType>, unsigned char>)
+        {
+            if constexpr (std::is_signed_v<underlyingType>)
+            {
+                return rawTypeToFormatSpecifier<signed int>();
+            }
+            else
+            {
+                return rawTypeToFormatSpecifier<unsigned int>();
+            }
+        }
+        else
+        {
+            return rawTypeToFormatSpecifier<underlyingType>();
+        }
+    }
+    else
+    {
+        return rawTypeToFormatSpecifier<rawType>();
+    }
+}
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*>() { return "%s"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned int>() { return "%u"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed char>() { return "%i"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned char>() { return "%u"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char>() { return "%c"; };
 
 template <Log::Level level, class... Ts> void Log::printv(Ts... args)
 {
@@ -81,10 +126,10 @@ template <Log::Level level, class... Ts> void Log::printv(Ts... args)
     tm* time{gmtime(&ctime)};
     size_t cur = printPreamble<level>(*time);
     size_t left = sizeof(buffer) - cur;
-    std::array<char, (typeToFormatSpecifier<typename std::remove_cv<typename std::remove_reference<decltype(args)>::type>::type>().size() + ... + 1)> fmt{0};
+    std::array<char, (typeToFormatSpecifier<decltype(args)>().size() + ... + 1)> fmt{0};
     auto join = [&fmt, i = 0](const auto& s) mutable
     {
-        for (auto c : typeToFormatSpecifier<typename std::remove_cv<typename std::remove_reference<decltype(s)>::type>::type>())
+        for (auto c : typeToFormatSpecifier<decltype(s)>())
             fmt[i++] = c;
     };
     (join(args), ...);

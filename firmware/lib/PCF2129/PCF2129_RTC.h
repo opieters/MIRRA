@@ -42,7 +42,6 @@ public:
     struct tm read_time();
     void write_time(const tm& datetime);
     void write_alarm(const tm& alarm_datetime);
-
     /**
      * Reads the time from the rtc and returns an epoch
      */
@@ -61,7 +60,7 @@ public:
      * @param alarm_epoch The epoch time at which the alarm has to be triggered
      */
     void write_alarm_epoch(uint32_t alarm_epoch);
-
+    void setSysTime();
     uint8_t getIntPin() { return int_pin; };
 };
 #endif

@@ -25,10 +25,7 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, lora{pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
 {
-    timeval ctime{static_cast<time_t>(rtc.read_time_epoch()), 0};
-    settimeofday(&ctime, nullptr);
     Log::log.setSerial(&Serial);
-    Log::log.setRTC(&rtc);
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
 }

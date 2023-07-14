@@ -1,7 +1,11 @@
 #include "PCF2129_RTC.h"
 #include "Arduino.h"
 
-PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t address) : address{address}, int_pin{int_pin} { pinMode(int_pin, INPUT_PULLUP); }
+PCF2129_RTC::PCF2129_RTC(uint8_t int_pin, uint8_t address) : address{address}, int_pin{int_pin}
+{
+    pinMode(int_pin, INPUT_PULLUP);
+    setSysTime();
+}
 
 void PCF2129_RTC::enable_alarm()
 {
@@ -19,15 +23,15 @@ struct tm PCF2129_RTC::read_time()
     Wire.requestFrom(address, (uint8_t)7);
     while (!Wire.available())
         ;
-    return tm{
-        .tm_sec{bcd_to_dec(Wire.read())},
-        .tm_min{bcd_to_dec(Wire.read())},
-        .tm_hour{bcd_to_dec(Wire.read())},
-        .tm_mday{bcd_to_dec(Wire.read())},
-        .tm_wday{bcd_to_dec(Wire.read())},
-        .tm_mon{bcd_to_dec(Wire.read()) - 1},   // (RTC uses 1-12 as months but C time structs use 0-11 as months)
-        .tm_year{bcd_to_dec(Wire.read()) + 100} // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
-    };
+    int sec{bcd_to_dec(Wire.read())};
+    int min{bcd_to_dec(Wire.read())};
+    int hour{bcd_to_dec(Wire.read())};
+    int mday{bcd_to_dec(Wire.read())};
+    int wday{bcd_to_dec(Wire.read())};
+    int mon{bcd_to_dec(Wire.read()) - 1};    // (RTC uses 1-12 as months but C time structs use 0-11 as months)
+    int year{bcd_to_dec(Wire.read()) + 100}; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
+
+    return tm{sec, min, hour, mday, mon, year, wday};
 }
 
 void PCF2129_RTC::write_time(const tm& datetime)
@@ -75,4 +79,10 @@ void PCF2129_RTC::write_alarm_epoch(uint32_t alarm_epoch)
 {
     struct tm t = *localtime((time_t*)&alarm_epoch);
     write_alarm(t);
+}
+
+void PCF2129_RTC::setSysTime()
+{
+    timeval ctime{static_cast<time_t>(read_time_epoch()), 0};
+    settimeofday(&ctime, nullptr);
 }

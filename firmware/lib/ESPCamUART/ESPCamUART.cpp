@@ -71,7 +71,7 @@ uint32_t ESPCamUART::adaptive_sample_interval_update(uint32_t ctime)
     Serial.println("[ESPCAM] ADAPTIVE adaptive interval called.");
     // extract month and day from current time
     struct tm result;
-    gmtime_r(&ctime, &result);
+    gmtime_r(reinterpret_cast<time_t*>(&ctime), &result);
 
     // interpolate sunrise time
     uint32_t pointA = sunRiseTable[result.tm_mon];

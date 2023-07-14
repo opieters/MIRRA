@@ -9,7 +9,7 @@ template <class T> void MIRRAModule::Commands<T>::prompt()
     {
         if (commandPhaseFlag)
         {
-            log.print(Logger::info, "Entering command phase...");
+            Log::info("Entering command phase...");
             start();
             return;
         }

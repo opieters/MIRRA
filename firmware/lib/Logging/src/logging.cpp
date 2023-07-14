@@ -1,5 +1,7 @@
 #include "logging.h"
 
+Log Log::log{};
+
 void Log::generateLogfilePath(char* buffer, const struct tm& time) { strftime(buffer, 12, "/%Y-%m-%d", &time); }
 
 void Log::removeOldLogfiles(struct tm& time)
@@ -72,18 +74,4 @@ void Log::close()
 {
     this->logfile.close();
     this->logfileEnabled = false;
-}
-
-constexpr std::string_view Log::levelToString(Level level)
-{
-    switch (level)
-    {
-    case Level::ERROR:
-        return "ERROR: ";
-    case Level::INFO:
-        return "INFO: ";
-    case Level::DEBUG:
-        return "DEBUG: ";
-    }
-    return "NONE: ";
 }
