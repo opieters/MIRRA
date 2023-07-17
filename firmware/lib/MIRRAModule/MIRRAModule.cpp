@@ -28,6 +28,7 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::log.setSerial(&Serial);
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
+    Serial.println("Logger initialised.");
 }
 
 void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)

@@ -70,6 +70,7 @@ protected:
         void listFiles();
         void printFile(const char* filename, bool hex = false);
         void removeFile(const char* filename);
+        void touchFile(const char* filename);
 
         Commands(T* parent) : parent{parent} {};
 

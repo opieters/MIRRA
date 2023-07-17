@@ -100,6 +100,10 @@ template <class T> typename MIRRAModule::Commands<T>::CommandCode MIRRAModule::C
     {
         removeFile(&command[3]);
     }
+    else if (strncmp(command, "touch ", 6) == 0)
+    {
+        touchFile(&command[6]);
+    }
     else if (strcmp(command, "format") == 0)
     {
         Serial.println("Formatting flash memory (this can take some time)...");
@@ -167,6 +171,14 @@ template <class T> void MIRRAModule::Commands<T>::printFile(const char* filename
 template <class T> void MIRRAModule::Commands<T>::removeFile(const char* filename)
 {
     if (!LittleFS.remove(filename))
-        Serial.printf("Could not delete the file '%s' because it does not exist.", filename);
+        Serial.printf("Could not delete the file '%s' because it does not exist.\n", filename);
+}
+
+template <class T> void MIRRAModule::Commands<T>::touchFile(const char* filename)
+{
+    File touch{LittleFS.open(filename, "w", true)};
+    if (!touch)
+        Serial.printf("Could not create file '%s'.\n", filename);
+    touch.close();
 }
 #endif
