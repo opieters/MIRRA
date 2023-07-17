@@ -1,4 +1,6 @@
 #include "gateway.h"
+#include "esp_netif.h"
+#include "esp_sntp.h"
 #include <cstring>
 
 void Node::timeConfig(Message<TIME_CONFIG>& m)
@@ -24,7 +26,6 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
     if (initialBoot)
     {
         Log::info("First boot.");
-
         // manage filesystem
         if (LittleFS.exists(NODES_FP))
             LittleFS.remove(NODES_FP);
@@ -44,7 +45,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
 void Gateway::wake()
 {
     Log::debug("Running wake()...");
-    if (!nodes.empty() && rtc.read_time_epoch() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
+    if (!nodes.empty() && time(nullptr) >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
         commPeriod();
     // send data to server only every UPLOAD_EVERY comm periods
     if (commPeriods >= UPLOAD_EVERY)
@@ -78,7 +79,7 @@ void Gateway::discovery()
     }
     Log::info("Node found at ", helloReply->getSource().toString());
 
-    uint32_t cTime{rtc.read_time_epoch()};
+    uint32_t cTime{time(nullptr)};
     uint32_t sampleTime{((cTime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING};
     uint32_t commTime{nodes.empty() ? cTime + COMMUNICATION_INTERVAL
                                     : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING};
@@ -112,7 +113,7 @@ void Gateway::nodesFromFile()
 
 void Gateway::updateNodesFile()
 {
-    File nodesFile = LittleFS.open(NODES_FP, "w");
+    File nodesFile = LittleFS.open(NODES_FP, "w", true);
     nodesFile.write(nodes.size());
     nodesFile.write((uint8_t*)nodes.data(), nodes.size() * sizeof(Node));
     nodesFile.close();
@@ -131,8 +132,9 @@ void Gateway::commPeriod()
     Log::info("Starting comm period...");
     std::vector<Message<SENSOR_DATA>> data;
     data.reserve(MAX_SENSOR_MESSAGES * nodes.size());
-    for (Node& n : nodes) // naively assume that every node's comm time is properly ordered : this would change the moment the comm interval is changed AND a
-                          // node misses its new time config
+    std::sort(nodes.begin(), nodes.end(), [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); });
+    // todo : filter out nodes that are scheduled unrealistically far in the future
+    for (Node& n : nodes)
     {
         if (!nodeCommPeriod(n, data))
             n.naiveTimeConfig();
@@ -156,7 +158,7 @@ void Gateway::commPeriod()
 
 bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
 {
-    uint32_t ctime = rtc.read_time_epoch();
+    uint32_t ctime = time(nullptr);
     if (ctime > n.getNextCommTime())
     {
         Log::error("Node ", n.getMACAddress().toString(),
@@ -187,7 +189,7 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
         Log::debug("Sending data ACK to ", n.getMACAddress().toString(), " ...");
         lora.sendMessage(Message<ACK_DATA>(lora.getMACAddress(), n.getMACAddress()));
     }
-    ctime = rtc.read_time_epoch();
+    ctime = time(nullptr);
     uint32_t commTime = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
     auto timeConfig{Message<TIME_CONFIG>(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, commTime, COMMUNICATION_INTERVAL,
@@ -232,6 +234,17 @@ void Gateway::rtcUpdateTime()
     if (WiFi.status() == WL_CONNECTED)
     {
         configTime(3600, 0, NTP_URL);
+        uint64_t timeout{millis() + 10 * 1000};
+        while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
+        {
+            if (millis() > timeout)
+            {
+                Log::error("Failed to update system time within 10s timeout");
+                WiFi.disconnect();
+                return;
+            }
+        }
+        sntp_stop();
         Log::debug("Writing time to RTC...");
         rtc.write_time_epoch(static_cast<uint32_t>(time(nullptr)));
         Log::info("RTC and system time updated.");
