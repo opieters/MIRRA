@@ -62,7 +62,7 @@ template <Log::Level level> size_t Log::printPreamble(const tm& time)
     strftime(buffer, timeLength, "[%F %T]", &time);
     constexpr std::string_view levelString{levelToString(level)};
     strcpy(&buffer[timeLength - 1], levelString.cbegin());
-    return timeLength + levelString.size() + 1;
+    return timeLength + levelString.size() - 1;
 }
 
 constexpr std::string_view Log::levelToString(Level level)
@@ -124,8 +124,8 @@ template <Log::Level level, class... Ts> void Log::printv(Ts... args)
         return;
     time_t ctime{time(nullptr)};
     tm* time{gmtime(&ctime)};
-    size_t cur = printPreamble<level>(*time);
-    size_t left = sizeof(buffer) - cur;
+    size_t cur{printPreamble<level>(*time)};
+    size_t left{sizeof(buffer) - cur};
     std::array<char, (typeToFormatSpecifier<decltype(args)>().size() + ... + 1)> fmt{0};
     auto join = [&fmt, i = 0](const auto& s) mutable
     {
@@ -133,7 +133,7 @@ template <Log::Level level, class... Ts> void Log::printv(Ts... args)
             fmt[i++] = c;
     };
     (join(args), ...);
-    snprintf(&buffer[left], left, fmt.cbegin(), args...);
+    snprintf(&buffer[cur], left, fmt.data(), args...);
     logfilePrint(*time);
     logSerial->println(buffer);
 }

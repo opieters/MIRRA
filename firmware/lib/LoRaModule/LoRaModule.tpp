@@ -8,7 +8,7 @@ template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
     // this interrupt is used as wakeup source for the esp_light_sleep.
     char mac_src_buffer[MACAddress::string_length];
     size_t length = message.getLength();
-    Log::debug("Sending message of type ", message.getType(), " and length ", length, "from ", message.getSource().toString(mac_src_buffer), " to ",
+    Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ", message.getSource().toString(mac_src_buffer), " to ",
                message.getDest().toString());
     this->sendLength = length;
     message.fromData(this->sendBuffer) = std::forward<T>(message);
