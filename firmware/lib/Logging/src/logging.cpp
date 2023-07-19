@@ -67,9 +67,9 @@ void Log::logfilePrint(struct tm& time)
     if ((this->logfileTime.tm_mday != time.tm_mday) || (this->logfileTime.tm_mon != time.tm_mon) || (this->logfileTime.tm_year != time.tm_year) ||
         (!this->logfile))
     {
-        removeOldLogfiles(time);
         if (this->logfile)
             this->logfile.close();
+        removeOldLogfiles(time);
         openLogfile(time);
         if (!this->logfile)
             return;

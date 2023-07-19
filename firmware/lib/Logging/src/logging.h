@@ -36,6 +36,7 @@ private:
     static constexpr std::string_view levelToString(Level level);
     template <class T> static constexpr std::string_view typeToFormatSpecifier();
     template <class T> static constexpr std::string_view rawTypeToFormatSpecifier();
+    template <class... Ts> static constexpr auto createFormatString();
 
 public:
     void setSerial(HardwareSerial* logSerial) { this->logSerial = logSerial; }
@@ -109,6 +110,7 @@ template <class T> constexpr std::string_view Log::typeToFormatSpecifier()
         return rawTypeToFormatSpecifier<rawType>();
     }
 }
+
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*>() { return "%s"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; };
@@ -118,6 +120,18 @@ template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned ch
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char>() { return "%c"; };
 
+template <class... Ts> constexpr auto Log::createFormatString()
+{
+    std::array<char, (typeToFormatSpecifier<Ts>().size() + ... + 1)> fmt{0};
+    size_t i{0};
+    for (const auto& s : std::array{typeToFormatSpecifier<Ts>()...})
+    {
+        for (auto c : s)
+            fmt[i++] = c;
+    }
+    return fmt;
+}
+
 template <Log::Level level, class... Ts> void Log::printv(Ts... args)
 {
     if (level < this->level)
@@ -126,13 +140,7 @@ template <Log::Level level, class... Ts> void Log::printv(Ts... args)
     tm* time{gmtime(&ctime)};
     size_t cur{printPreamble<level>(*time)};
     size_t left{sizeof(buffer) - cur};
-    std::array<char, (typeToFormatSpecifier<decltype(args)>().size() + ... + 1)> fmt{0};
-    auto join = [&fmt, i = 0](const auto& s) mutable
-    {
-        for (auto c : typeToFormatSpecifier<decltype(s)>())
-            fmt[i++] = c;
-    };
-    (join(args), ...);
+    constexpr auto fmt{createFormatString<decltype(args)...>()};
     snprintf(&buffer[cur], left, fmt.data(), args...);
     logfilePrint(*time);
     logSerial->println(buffer);
