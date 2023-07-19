@@ -1,9 +1,8 @@
 #ifndef __COMM_COMM_H__
 #define __COMM_COMM_H__
 
-#include <array>
-
 #include "Sensor.h"
+#include <array>
 
 class MACAddress
 {

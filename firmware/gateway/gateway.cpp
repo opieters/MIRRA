@@ -5,9 +5,9 @@
 
 void Node::timeConfig(Message<TIME_CONFIG>& m)
 {
-    this->lastCommTime = m.getCTime();
     this->nextSampleTime = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
     this->sampleInterval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
+    this->lastCommTime = m.getCTime();
     this->nextCommTime = m.getCommTime();
     this->commInterval = m.getCommInterval();
     this->commDuration = m.getCommDuration();
@@ -85,8 +85,8 @@ void Gateway::discovery()
                                     : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING};
 
     Log::debug("Sending time config message to ", helloReply->getSource().toString());
-    auto timeConfig{Message<TIME_CONFIG>(lora.getMACAddress(), helloReply->getSource(), cTime, sampleTime, SAMPLING_INTERVAL, commTime, COMMUNICATION_INTERVAL,
-                                         COMMUNICATION_PERIOD_LENGTH)};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),   helloReply->getSource(),    cTime, sampleTime, SAMPLING_INTERVAL, commTime,
+                                    COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH};
     lora.sendMessage(timeConfig);
     auto time_ack{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, helloReply->getSource())};
     if (!time_ack)
@@ -134,8 +134,12 @@ void Gateway::commPeriod()
     data.reserve(MAX_SENSOR_MESSAGES * nodes.size());
     std::sort(nodes.begin(), nodes.end(), [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); });
     // todo : filter out nodes that are scheduled unrealistically far in the future
+    uint32_t lastCommTime{nodes.empty() ? 0 : nodes[0].getNextCommTime()};
     for (Node& n : nodes)
     {
+        if (n.getNextCommTime() > (2 * (COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING)) + lastCommTime)
+            break;
+        lastCommTime = n.getNextCommTime();
         if (!nodeCommPeriod(n, data))
             n.naiveTimeConfig();
     }
@@ -158,16 +162,16 @@ void Gateway::commPeriod()
 
 bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
 {
-    uint32_t ctime = time(nullptr);
-    if (ctime > n.getNextCommTime())
+    uint32_t cTime{time(nullptr)};
+    if (cTime > n.getNextCommTime())
     {
         Log::error("Node ", n.getMACAddress().toString(),
                    "'s comm time was faultily scheduled before this gateway's comm period. Skipping communication with this node.");
         return false;
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
-    uint32_t listen_ms = COMMUNICATION_PERIOD_PADDING * 1000; // pre-listen in anticipation of message
-    size_t messagesReceived = 0;
+    uint32_t listen_ms{COMMUNICATION_PERIOD_PADDING * 1000};  // pre-listen in anticipation of message
+    size_t messagesReceived{0};
     while (true)
     {
         Log::debug("Awaiting data from ", n.getMACAddress().toString(), " ...");
@@ -189,11 +193,12 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
         Log::debug("Sending data ACK to ", n.getMACAddress().toString(), " ...");
         lora.sendMessage(Message<ACK_DATA>(lora.getMACAddress(), n.getMACAddress()));
     }
-    ctime = time(nullptr);
     uint32_t commTime = n.getNextCommTime() + COMMUNICATION_INTERVAL;
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
-    auto timeConfig{Message<TIME_CONFIG>(lora.getMACAddress(), n.getMACAddress(), ctime, 0, SAMPLING_INTERVAL, commTime, COMMUNICATION_INTERVAL,
-                                         COMMUNICATION_PERIOD_LENGTH)};
+    cTime = time(nullptr);
+    uint32_t sampleTime{SAMPLING_INTERVAL == n.getSampleInterval() ? 0 : ((cTime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),   n.getMACAddress(),          cTime, 0, SAMPLING_INTERVAL, commTime,
+                                    COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH};
     lora.sendMessage(timeConfig);
     auto timeAck = lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (!timeAck)
@@ -303,7 +308,7 @@ void Gateway::uploadPeriod()
         data.read(buffer, size);
         if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
         {
-            auto& message = Message<SENSOR_DATA>::fromData(buffer);
+            auto& message{Message<SENSOR_DATA>::fromData(buffer)};
             char topic[topic_size];
             createTopic(topic, message.getSource());
 
