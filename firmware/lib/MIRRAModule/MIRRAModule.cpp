@@ -40,8 +40,8 @@ void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)
 
 void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
 {
-    char fileName[strlen(dataFile.path()) + 1];
-    strcpy(fileName, dataFile.path());
+    char fileName[strlen(dataFile.name()) + 2];
+    snprintf(fileName, strlen(dataFile.name()) + 2, "/%s", dataFile.name());
     char tempFileName[strlen(fileName) - strlen(strrchr(fileName, '.')) + 4 + 1];
     strcpy(tempFileName, fileName);
     strcpy(strrchr(tempFileName, '.'), ".tmp");
