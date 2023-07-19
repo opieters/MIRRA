@@ -37,6 +37,8 @@ private:
     template <class T> static constexpr std::string_view typeToFormatSpecifier();
     template <class T> static constexpr std::string_view rawTypeToFormatSpecifier();
     template <class... Ts> static constexpr auto createFormatString();
+    template <class... Ts> void printv(char* buffer, size_t max, Ts... args);
+    template <Level level, class... Ts> void print(Ts... args);
 
 public:
     void setSerial(HardwareSerial* logSerial) { this->logSerial = logSerial; }
@@ -45,10 +47,9 @@ public:
 
     static Log log;
 
-    template <Level level, class... Ts> void printv(Ts... args);
-    template <class... Ts> static void debug(Ts... args) { log.printv<DEBUG>(args...); }
-    template <class... Ts> static void info(Ts... args) { log.printv<INFO>(args...); }
-    template <class... Ts> static void error(Ts... args) { log.printv<ERROR>(args...); }
+    template <class... Ts> static void debug(Ts... args) { log.print<DEBUG>(args...); }
+    template <class... Ts> static void info(Ts... args) { log.print<INFO>(args...); }
+    template <class... Ts> static void error(Ts... args) { log.print<ERROR>(args...); }
 
     void close();
 
@@ -132,7 +133,12 @@ template <class... Ts> constexpr auto Log::createFormatString()
     return fmt;
 }
 
-template <Log::Level level, class... Ts> void Log::printv(Ts... args)
+template <class... Ts> void Log::printv(char* buffer, size_t max, Ts... args)
+{
+    constexpr auto fmt{createFormatString<Ts...>()};
+    snprintf(buffer, max, fmt.data(), args...);
+}
+template <Log::Level level, class... Ts> void Log::print(Ts... args)
 {
     if (level < this->level)
         return;
@@ -140,8 +146,7 @@ template <Log::Level level, class... Ts> void Log::printv(Ts... args)
     tm* time{gmtime(&ctime)};
     size_t cur{printPreamble<level>(*time)};
     size_t left{sizeof(buffer) - cur};
-    constexpr auto fmt{createFormatString<decltype(args)...>()};
-    snprintf(&buffer[cur], left, fmt.data(), args...);
+    printv(&buffer[cur], left, args...);
     logfilePrint(*time);
     logSerial->println(buffer);
 }
