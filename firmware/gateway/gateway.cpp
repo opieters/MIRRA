@@ -5,11 +5,12 @@
 
 void Node::timeConfig(Message<TIME_CONFIG>& m)
 {
-    this->nextSampleTime = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
-    this->sampleInterval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
+    this->sampleInterval = m.getSampleInterval();
+    this->sampleRounding = m.getSampleRounding();
+    this->sampleOffset = m.getSampleOffset();
     this->lastCommTime = m.getCTime();
-    this->nextCommTime = m.getCommTime();
     this->commInterval = m.getCommInterval();
+    this->nextCommTime = m.getCommTime();
     this->commDuration = m.getCommDuration();
 }
 
@@ -85,8 +86,8 @@ void Gateway::discovery()
                                     : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING};
 
     Log::debug("Sending time config message to ", helloReply->getSource().toString());
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),   helloReply->getSource(),    cTime, sampleTime, SAMPLING_INTERVAL, commTime,
-                                    COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), helloReply->getSource(), cTime,    SAMPLING_INTERVAL,          SAMPLING_ROUNDING,
+                                    SAMPLING_OFFSET,      COMMUNICATION_INTERVAL,  commTime, COMMUNICATION_PERIOD_LENGTH};
     lora.sendMessage(timeConfig);
     auto time_ack{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, helloReply->getSource())};
     if (!time_ack)
@@ -132,8 +133,8 @@ void Gateway::commPeriod()
     Log::info("Starting comm period...");
     std::vector<Message<SENSOR_DATA>> data;
     data.reserve(MAX_SENSOR_MESSAGES * nodes.size());
-    std::sort(nodes.begin(), nodes.end(), [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); });
-    // todo : filter out nodes that are scheduled unrealistically far in the future
+    auto lambdaByNextCommTime = [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); };
+    std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
     uint32_t lastCommTime{nodes.empty() ? 0 : nodes[0].getNextCommTime()};
     for (Node& n : nodes)
     {
@@ -143,6 +144,7 @@ void Gateway::commPeriod()
         if (!nodeCommPeriod(n, data))
             n.naiveTimeConfig();
     }
+    std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
     if (nodes.empty())
     {
         Log::info("No comm periods performed because no nodes have been registered.");
@@ -197,8 +199,8 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
     cTime = time(nullptr);
     uint32_t sampleTime{SAMPLING_INTERVAL == n.getSampleInterval() ? 0 : ((cTime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING};
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),   n.getMACAddress(),          cTime, 0, SAMPLING_INTERVAL, commTime,
-                                    COMMUNICATION_INTERVAL, COMMUNICATION_PERIOD_LENGTH};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), n.getMACAddress(),      cTime,    SAMPLING_INTERVAL,          SAMPLING_ROUNDING,
+                                    SAMPLING_OFFSET,      COMMUNICATION_INTERVAL, commTime, COMMUNICATION_PERIOD_LENGTH};
     lora.sendMessage(timeConfig);
     auto timeAck = lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (!timeAck)
@@ -238,7 +240,7 @@ void Gateway::rtcUpdateTime()
     wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
-        configTime(3600, 0, NTP_URL);
+        configTime(0, 0, NTP_URL);
         uint64_t timeout{millis() + 10 * 1000};
         while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
         {

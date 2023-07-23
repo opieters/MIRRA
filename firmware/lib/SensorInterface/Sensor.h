@@ -31,12 +31,13 @@ public:
     virtual void startMeasurement() = 0;
     virtual SensorValue getMeasurement() = 0;
     virtual uint8_t getID() const = 0;
-    virtual uint32_t adaptive_sample_interval_update(uint32_t ctime);
-    virtual void set_sample_interval(uint32_t sample_interval) { this->sample_interval = sample_interval; };
+    virtual void updateNextSampleTime(uint32_t sampleInterval) { this->nextSampleTime += sampleInterval; };
+    void setNextSampleTime(uint32_t nextSampleTime) { this->nextSampleTime = nextSampleTime; };
+    uint32_t getNextSampleTime() const { return nextSampleTime; };
     virtual ~Sensor() = default;
 
 private:
-    uint32_t sample_interval = 5 * 60; // sample every hour by default
+    uint32_t nextSampleTime = -1;
 };
 
 #endif

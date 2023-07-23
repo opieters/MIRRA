@@ -72,19 +72,20 @@ public:
 template <> class Message<TIME_CONFIG> : public MessageHeader
 {
 private:
-    uint32_t curTime, sampleTime, sampleInterval, commTime, commInterval, commDuration;
+    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, commTime, commDuration;
 
 public:
-    Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleTime, uint32_t sampleInterval, uint32_t commTime,
-            uint32_t commInterval, uint32_t commDuration)
-        : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleTime{sampleTime}, sampleInterval{sampleInterval}, commTime{commTime},
-          commInterval{commInterval}, commDuration{commDuration} {};
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
+            uint32_t commInterval, uint32_t commTime, uint32_t commDuration)
+        : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
+          commInterval{commInterval}, commTime{commTime}, commDuration{commDuration} {};
 
     uint32_t getCTime() const { return curTime; };
-    uint32_t getSampleTime() const { return sampleTime; };
     uint32_t getSampleInterval() const { return sampleInterval; };
-    uint32_t getCommTime() const { return commTime; };
+    uint32_t getSampleRounding() const { return sampleRounding; };
+    uint32_t getSampleOffset() const { return sampleOffset; };
     uint32_t getCommInterval() const { return commInterval; };
+    uint32_t getCommTime() const { return commTime; };
     uint32_t getCommDuration() const { return commDuration; };
 
     constexpr size_t getLength() const { return sizeof(*this); };

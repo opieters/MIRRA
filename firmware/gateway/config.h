@@ -57,6 +57,7 @@
 
 #define SAMPLING_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
 #define SAMPLING_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
+#define SAMPLING_OFFSET (0)
 
 #define IDEAL_SENSOR_MESSAGES ((COMMUNICATION_INTERVAL / SAMPLING_INTERVAL))
 #define MAX_SENSOR_MESSAGES (((3 * COMMUNICATION_INTERVAL) / (2 * SAMPLING_INTERVAL)) + 1)

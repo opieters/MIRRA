@@ -28,7 +28,8 @@
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
 
 #define DEFAULT_SAMPLING_INTERVAL (60 * 60) // s, default sensor sampling interval to resort to when no communication with gateway is established
-#define SAMPLING_ROUNDING (60 * 60)         // s, round sampling time to nearest... (only used in case of DEFAULT_SAMPLING_INTERVAL)
+#define DEFAULT_SAMPLING_ROUNDING (60)      // s, round sampling time to nearest... (only used in case of DEFAULT_SAMPLING_INTERVAL)
+#define DEFAULT_SAMPLING_OFFSET (0)
 
 #define DISCOVERY_TIMEOUT (5 * 60 * 1000) // ms, time to wait for a discovery message from gateway
 
@@ -40,5 +41,10 @@
 
 #define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
 #define MAX_SENSORS 20
+
+// Sensor pins
+
+#define BATT_PIN 35
+#define BATT_EN_PIN 33
 
 #endif

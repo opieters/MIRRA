@@ -11,11 +11,12 @@ class Node
 {
 private:
     MACAddress mac{};
-    uint32_t nextSampleTime{0};
     uint32_t sampleInterval{0};
+    uint32_t sampleRounding{0};
+    uint32_t sampleOffset{0};
     uint32_t lastCommTime{0};
-    uint32_t nextCommTime{0};
     uint32_t commInterval{0};
+    uint32_t nextCommTime{0};
     uint32_t commDuration{0};
     uint8_t errors{0};
 
@@ -25,7 +26,6 @@ public:
     void timeConfig(Message<TIME_CONFIG>& m);
     void naiveTimeConfig();
     const MACAddress& getMACAddress() const { return mac; }
-    uint32_t getNextSampleTime() const { return nextSampleTime; }
     uint32_t getSampleInterval() const { return sampleInterval; }
     uint32_t getLastCommTime() const { return lastCommTime; }
     uint32_t getNextCommTime() const { return nextCommTime; }

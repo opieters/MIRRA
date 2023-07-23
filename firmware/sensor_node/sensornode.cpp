@@ -5,10 +5,12 @@
 
 RTC_DATA_ATTR bool initialBoot = true;
 
-RTC_DATA_ATTR uint32_t nextSampleTime;
-RTC_DATA_ATTR uint32_t sampleInterval = DEFAULT_SAMPLING_INTERVAL;
-RTC_DATA_ATTR uint32_t nextCommTime = -1;
+RTC_DATA_ATTR std::array<uint32_t, MAX_SENSORS> sensorsNextSampleTimes{0};
+RTC_DATA_ATTR uint32_t sampleInterval{DEFAULT_SAMPLING_INTERVAL};
+RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLING_ROUNDING};
+RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLING_OFFSET};
 RTC_DATA_ATTR uint32_t commInterval;
+RTC_DATA_ATTR uint32_t nextCommTime = -1;
 RTC_DATA_ATTR uint32_t commDuration;
 RTC_DATA_ATTR MACAddress gatewayMAC;
 
@@ -20,7 +22,8 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
             LittleFS.remove(DATA_FP);
         File dataFile = LittleFS.open(DATA_FP, FILE_WRITE, true);
         dataFile.close();
-        nextSampleTime = ((rtc.read_time_epoch() + sampleInterval) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING;
+        initSensors();
+        clearSensors();
         // discovery();
         initialBoot = false;
     }
@@ -29,20 +32,32 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
 void SensorNode::wake()
 {
     Log::debug("Running wake()...");
-    uint32_t ctime{rtc.read_time_epoch()};
+    uint32_t ctime{time(nullptr)};
     if (ctime >= WAKE_COMM_PERIOD(nextCommTime))
     {
         commPeriod();
     }
-    ctime = rtc.read_time_epoch();
+    uint32_t nextSampleTime = -1;
+    for (uint32_t t : sensorsNextSampleTimes)
+    {
+        if (t != 0 && t < nextSampleTime)
+            nextSampleTime = t;
+    }
+    ctime = time(nullptr);
     if (ctime >= nextSampleTime)
     {
         samplePeriod();
+        for (uint32_t t : sensorsNextSampleTimes)
+        {
+            if (t != 0 && t < nextSampleTime)
+                nextSampleTime = t;
+        }
     }
+    ctime = time(nullptr);
     Log::info("Next sample in ", nextSampleTime - ctime, "s, next comm period in ", nextCommTime - ctime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
     Commands(this).prompt();
-    ctime = rtc.read_time_epoch();
+    ctime = time(nullptr);
     if (ctime >= nextCommTime || ctime >= nextSampleTime)
         wake();
     Log::debug("Entering deep sleep...");
@@ -77,10 +92,18 @@ void SensorNode::discovery()
 void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
 {
     rtc.write_time_epoch(m.getCTime());
-    nextSampleTime = (m.getSampleTime() == 0) ? nextSampleTime : m.getSampleTime();
-    sampleInterval = (m.getSampleInterval() == 0) ? sampleInterval : m.getSampleInterval();
-    nextCommTime = m.getCommTime();
+    rtc.setSysTime();
+    if (sampleInterval != m.getSampleInterval() || sampleRounding != m.getSampleRounding() || sampleOffset != m.getSampleOffset())
+    {
+        sensorsNextSampleTimes.fill(0);
+        initSensors();
+        clearSensors();
+    }
+    sampleInterval = m.getSampleInterval();
+    sampleRounding = m.getSampleRounding();
+    sampleOffset = m.getSampleOffset();
     commInterval = m.getCommInterval();
+    nextCommTime = m.getCommTime();
     commDuration = m.getCommDuration();
     gatewayMAC = m.getSource();
     Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Comm duration: ", commDuration,
@@ -91,6 +114,17 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
 {
     if (nSensors > MAX_SENSORS)
         return;
+    uint32_t cTime{time(nullptr)};
+    if (sensorsNextSampleTimes[nSensors] == 0)
+    {
+        sensor->setNextSampleTime(((cTime / sampleRounding) - 1) * sampleRounding + sampleOffset);
+        while (sensor->getNextSampleTime() < cTime)
+            sensor->updateNextSampleTime(sampleInterval);
+    }
+    else
+    {
+        sensor->setNextSampleTime(sensorsNextSampleTimes[nSensors]);
+    }
     sensor->setup();
     sensors[nSensors] = std::move(sensor);
     nSensors++;
@@ -98,45 +132,76 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
 
 void SensorNode::initSensors()
 {
-    addSensor(std::make_unique<RandomSensor>(rtc.read_time_epoch()));
-    addSensor(std::make_unique<BatterySensor>(35, 33));
+    addSensor(std::make_unique<RandomSensor>(time(nullptr)));
+    addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
 }
 
 void SensorNode::clearSensors()
 {
     for (size_t i{0}; i < nSensors; i++)
     {
-        sensors[nSensors].reset();
+        sensorsNextSampleTimes[i] = sensors[i]->getNextSampleTime();
+        sensors[i].reset();
     }
     nSensors = 0;
 }
 
 Message<SENSOR_DATA> SensorNode::sampleAll()
 {
-    initSensors();
-    Log::info("Sampling sensors...");
-    for (size_t i = 0; i < nSensors; i++)
+    Log::info("Sampling all sensors...");
+    for (size_t i{0}; i < nSensors; i++)
     {
         sensors[i]->startMeasurement();
     }
-    uint32_t ctime = rtc.read_time_epoch();
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
-    for (size_t i = 0; i < nSensors; i++)
+    for (size_t i{0}, j{0}; i < nSensors; i++)
     {
         values[i] = sensors[i]->getMeasurement();
     }
-    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, ctime, static_cast<uint8_t>(nSensors), values);
+    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, 0, static_cast<uint8_t>(nSensors), values);
+}
+
+Message<SENSOR_DATA> SensorNode::sampleScheduled(uint32_t cTime)
+{
+    Log::info("Sampling scheduled sensors...");
+    for (size_t i{0}; i < nSensors; i++)
+    {
+        if (sensors[i]->getNextSampleTime() == cTime)
+            sensors[i]->startMeasurement();
+    }
+    std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
+    for (size_t i{0}, j{0}; i < nSensors; i++)
+    {
+        if (sensors[i]->getNextSampleTime() == cTime)
+        {
+            values[j] = sensors[i]->getMeasurement();
+            j++;
+        }
+    }
+    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, cTime, static_cast<uint8_t>(nSensors), values);
+}
+
+void SensorNode::updateSensorsSampleTimes(uint32_t cTime)
+{
+    for (size_t i = 0; i < nSensors; i++)
+    {
+        while (sensors[i]->getNextSampleTime() <= cTime)
+            sensors[i]->updateNextSampleTime(sampleInterval);
+    }
 }
 void SensorNode::samplePeriod()
 {
-    Message<SENSOR_DATA> message{sampleAll()};
+    initSensors();
+    auto lambdaByNextSampleTime = [](const std::unique_ptr<Sensor>& a, const std::unique_ptr<Sensor>& b)
+    { return a->getNextSampleTime() < b->getNextSampleTime(); };
+    uint32_t cTime{(*std::min_element(sensors.begin(), std::next(sensors.begin(), nSensors), lambdaByNextSampleTime))->getNextSampleTime()};
+    Message<SENSOR_DATA> message{sampleScheduled(cTime)};
     Log::debug("Constructed Sensor Message with length ", message.getLength());
     File data = LittleFS.open(DATA_FP, FILE_APPEND);
     storeSensorData(message, data);
     data.close();
-    uint32_t ctime{message.getCTime()};
-    while (nextSampleTime <= ctime)
-        nextSampleTime += sampleInterval;
+    updateSensorsSampleTimes(cTime);
+    clearSensors();
 }
 
 void SensorNode::commPeriod()

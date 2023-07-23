@@ -25,6 +25,13 @@ private:
     void discovery();
     void timeConfig(Message<TIME_CONFIG>& m);
 
+    void addSensor(std::unique_ptr<Sensor>&& sensor);
+    void initSensors();
+    void clearSensors();
+
+    Message<SENSOR_DATA> sampleAll();
+    Message<SENSOR_DATA> sampleScheduled(uint32_t cTime);
+    void updateSensorsSampleTimes(uint32_t cTime);
     void samplePeriod();
 
     void commPeriod();
@@ -32,10 +39,6 @@ private:
 
     std::array<std::unique_ptr<Sensor>, MAX_SENSORS> sensors;
     size_t nSensors{0};
-    void addSensor(std::unique_ptr<Sensor>&& sensor);
-    void initSensors();
-    void clearSensors();
-    Message<SENSOR_DATA> sampleAll();
 };
 
 #endif

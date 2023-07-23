@@ -1,7 +1,4 @@
 #include "ESPCamUART.h"
-#include "PCF2129_RTC.h"
-
-extern PCF2129_RTC rtc;
 
 // specifies the time of the sun rise starting from 12PM at the first day of each month
 // Brussels timezone (UTC+1) WITHOUT daylight savings!!!
@@ -41,7 +38,7 @@ void ESPCamUART::startMeasurement()
     // camSerial->write(ESPCamUARTCommand::GET_STATUS);
     // write current time
     delay(100);
-    time_t ctime = rtc.read_time_epoch();
+    time_t ctime = time(nullptr);
     camSerial->write(ESPCamCodes::SET_TIME);
     camSerial->write((uint8_t*)&ctime, sizeof(ctime));
 
