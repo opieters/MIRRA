@@ -63,29 +63,20 @@ SensorValue ESPCamUART::getMeasurement()
     return SensorValue(getID(), 0);
 }
 
-uint32_t ESPCamUART::adaptive_sample_interval_update(uint32_t ctime)
+void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
 {
     Serial.println("[ESPCAM] ADAPTIVE adaptive interval called.");
     // extract month and day from current time
-    struct tm result;
-    gmtime_r(reinterpret_cast<time_t*>(&ctime), &result);
+    time_t t{nextSampleTime + 24 * 60 * 60};
+    tm* day{gmtime(&t)};
 
     // interpolate sunrise time
-    uint32_t pointA = sunRiseTable[result.tm_mon];
-    uint32_t pointB = sunRiseTable[(result.tm_mon + 1) % 12];
-    uint32_t point = pointB * (result.tm_mday / 31) + pointA * ((31 - result.tm_mday) / 31);
+    uint32_t pointA = sunRiseTable[day->tm_mon];
+    uint32_t pointB = sunRiseTable[(day->tm_mon + 1) % 12];
+    uint32_t point = pointB * (day->tm_mday / 31) + pointA * ((31 - day->tm_mday) / 31);
 
-    // calculate sample interval
-    time_t ttime = (ctime / 60 / 60 / 24) * 60 * 60 * 24;
-    ttime += (time_t)point;
-    ttime += 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
-
-    if (ttime <= ctime)
-    {
-        ttime += 24 * 60 * 60;
-    }
-
-    // return sample interval: target time - current time
-    // return 60;
-    return ttime - ctime;
+    // calculate target sample time
+    uint32_t target = ((t / 60 / 60 / 24) * 60 * 60 * 24) + point + 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
+    while ((target - nextSampleTime) > (sampleInterval / 2))
+        nextSampleTime += sampleInterval;
 }

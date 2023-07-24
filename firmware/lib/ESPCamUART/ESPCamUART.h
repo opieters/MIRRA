@@ -21,6 +21,6 @@ public:
     SensorValue getMeasurement();
     uint8_t getID() const { return CAM_KEY; };
 
-    uint32_t adaptive_sample_interval_update(uint32_t ctime);
+    void updateNextSampleTime(uint32_t sampleInterval);
 };
 #endif
