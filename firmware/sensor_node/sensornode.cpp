@@ -329,6 +329,7 @@ MIRRAModule::Commands<SensorNode>::CommandCode SensorNode::Commands::processComm
 
 void SensorNode::Commands::printSample()
 {
+    parent->initSensors();
     Message<SENSOR_DATA> message{parent->sampleAll()};
     auto& values = message.getValues();
     Serial.println("TAG\tVALUE");
