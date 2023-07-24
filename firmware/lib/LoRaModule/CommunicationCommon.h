@@ -13,14 +13,16 @@ public:
     MACAddress() = default;
     MACAddress(const uint8_t* address) : address{*reinterpret_cast<const std::array<uint8_t, 6>*>(address)} {};
     uint8_t* getAddress() { return address.data(); };
-    char* toString(char* string = str_buffer) const;
+    char* toString(char* string = strBuffer) const;
     bool operator==(const MACAddress& other) const { return this->address == other.address; }
     bool operator!=(const MACAddress& other) const { return this->address != other.address; }
 
+    static MACAddress fromString(char* string);
+
     static const size_t length = sizeof(address);
-    static const size_t string_length = length * 3;
+    static const size_t stringLength = length * 3;
     static const MACAddress broadcast;
-    static char str_buffer[string_length];
+    static char strBuffer[stringLength];
 } __attribute__((packed));
 
 enum MessageType : uint8_t
@@ -38,9 +40,11 @@ enum MessageType : uint8_t
 
 class MessageHeader
 {
-protected:
+private:
     MessageType type{MessageType::ERROR};
     MACAddress src{}, dest{};
+
+protected:
     MessageHeader(MessageType type, const MACAddress& src, const MACAddress& dest) : type{static_cast<MessageType>(type << 1)}, src{src}, dest{dest} {};
 
 public:
@@ -72,13 +76,13 @@ public:
 template <> class Message<TIME_CONFIG> : public MessageHeader
 {
 private:
-    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, commTime, commDuration;
+    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, commTime, maxMessages;
 
 public:
     Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
-            uint32_t commInterval, uint32_t commTime, uint32_t commDuration)
+            uint32_t commInterval, uint32_t commTime, uint32_t messages)
         : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
-          commInterval{commInterval}, commTime{commTime}, commDuration{commDuration} {};
+          commInterval{commInterval}, commTime{commTime}, maxMessages{maxMessages} {};
 
     uint32_t getCTime() const { return curTime; };
     uint32_t getSampleInterval() const { return sampleInterval; };
@@ -86,7 +90,7 @@ public:
     uint32_t getSampleOffset() const { return sampleOffset; };
     uint32_t getCommInterval() const { return commInterval; };
     uint32_t getCommTime() const { return commTime; };
-    uint32_t getCommDuration() const { return commDuration; };
+    uint32_t getMaxMessages() const { return maxMessages; };
 
     constexpr size_t getLength() const { return sizeof(*this); };
     constexpr bool isValid() const { return isType(TIME_CONFIG); }

@@ -6,7 +6,7 @@ template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 {
     // When the transmission of the LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
-    char mac_src_buffer[MACAddress::string_length];
+    char mac_src_buffer[MACAddress::stringLength];
     size_t length = message.getLength();
     Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ", message.getSource().toString(mac_src_buffer), " to ",
                message.getDest().toString());
@@ -75,7 +75,7 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             Log::debug("Dest: ", received.getDest().toString());
             if (source.get() != MACAddress::broadcast && source.get() != received.getSource())
             {
-                char mac_src_buffer[MACAddress::string_length];
+                char mac_src_buffer[MACAddress::stringLength];
                 Log::debug("Message from ", received.getSource().toString(), " discared because it is not the desired source of the message, namely ",
                            source.get().toString(mac_src_buffer));
                 continue;
