@@ -11,7 +11,7 @@ RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLING_ROUNDING};
 RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLING_OFFSET};
 RTC_DATA_ATTR uint32_t commInterval;
 RTC_DATA_ATTR uint32_t nextCommTime = -1;
-RTC_DATA_ATTR uint32_t commDuration;
+RTC_DATA_ATTR uint32_t maxMessages;
 RTC_DATA_ATTR MACAddress gatewayMAC;
 
 SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
@@ -104,9 +104,9 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
     sampleOffset = m.getSampleOffset();
     commInterval = m.getCommInterval();
     nextCommTime = m.getCommTime();
-    commDuration = m.getCommDuration();
+    maxMessages = m.getMaxMessages();
     gatewayMAC = m.getSource();
-    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Comm duration: ", commDuration,
+    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Max messages: ", maxMessages,
               ", Gateway MAC: ", gatewayMAC.toString());
 }
 
@@ -208,7 +208,7 @@ void SensorNode::commPeriod()
 {
     MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
     Log::info("Communicating with gateway", destMAC.toString(), " ...");
-    size_t messagesToSend{((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT};
+    uint32_t messagesToSend{maxMessages};
     Log::info("Max messages to send: ", messagesToSend);
     size_t firstNonUploaded{0};
     std::vector<Message<SENSOR_DATA>> data;

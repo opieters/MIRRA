@@ -11,16 +11,37 @@ void Node::timeConfig(Message<TIME_CONFIG>& m)
     this->lastCommTime = m.getCTime();
     this->commInterval = m.getCommInterval();
     this->nextCommTime = m.getCommTime();
-    this->commDuration = m.getCommDuration();
+    this->maxMessages = m.getMaxMessages();
+    if (this->errors > 0)
+        this->errors--;
 }
 
-void Node::naiveTimeConfig() { nextCommTime += commInterval; }
+void Node::naiveTimeConfig()
+{
+    this->nextCommTime += commInterval;
+    this->errors++;
+}
 
 RTC_DATA_ATTR bool initialBoot{true};
 RTC_DATA_ATTR int commPeriods{0};
 
 RTC_DATA_ATTR char ssid[32]{WIFI_SSID};
 RTC_DATA_ATTR char pass[32]{WIFI_PASS};
+
+RTC_DATA_ATTR uint32_t defaultSampleInterval{DEFAULT_SAMPLE_INTERVAL};
+RTC_DATA_ATTR uint32_t defaultSampleRounding{DEFAULT_SAMPLE_ROUNDING};
+RTC_DATA_ATTR uint32_t defaultSampleOffset{DEFAULT_SAMPLE_OFFSET};
+RTC_DATA_ATTR uint32_t commInterval{DEFAULT_COMM_INTERVAL};
+
+// TODO: Instead of using this lambda to determine if a node is lost, use a bool stored in each node that
+// signifies if a node is ' well-scheduled ', implying both that the node is not lost and that it follows
+// the scheduled comm time of the previous node tightly (i.e., without scheduling gaps). Removal of a node
+// would imply loss of well-scheduledness of all following nodes, and changing of the comm period would imply
+// loss of well-scheduledness for all nodes.
+// Currently only the latter portion of this functionality is available with just the isLost lambda,
+// During the comm period, a node that is not 'well-scheduled' would be scheduled so that it would become so.
+
+auto lambdaIsLost = [](const Node& e) { return e.getCommInterval() != commInterval; };
 
 Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClient()}, mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, mqttClient)}
 {
@@ -57,9 +78,21 @@ void Gateway::wake()
     Commands(this).prompt();
     Log::debug("Entering deep sleep...");
     if (nodes.empty())
-        deepSleep(COMMUNICATION_INTERVAL);
+        deepSleep(commInterval);
     else
         deepSleepUntil(WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
+}
+
+std::optional<std::reference_wrapper<Node>> Gateway::macToNode(char* mac)
+{
+    MACAddress searchMac{MACAddress::fromString(mac)};
+    for (Node& n : nodes)
+    {
+        if (searchMac == n.getMACAddress())
+            return std::make_optional(std::ref(n));
+    }
+    Log::error("No node found for ", mac);
+    return std::nullopt;
 }
 
 void Gateway::discovery()
@@ -81,13 +114,19 @@ void Gateway::discovery()
     Log::info("Node found at ", helloReply->getSource().toString());
 
     uint32_t cTime{time(nullptr)};
-    uint32_t sampleTime{((cTime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING};
-    uint32_t commTime{nodes.empty() ? cTime + COMMUNICATION_INTERVAL
-                                    : nodes.back().getNextCommTime() + COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING};
+    uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
+    uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
 
     Log::debug("Sending time config message to ", helloReply->getSource().toString());
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), helloReply->getSource(), cTime,    SAMPLING_INTERVAL,          SAMPLING_ROUNDING,
-                                    SAMPLING_OFFSET,      COMMUNICATION_INTERVAL,  commTime, COMMUNICATION_PERIOD_LENGTH};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
+                                    helloReply->getSource(),
+                                    cTime,
+                                    sampleInterval,
+                                    sampleRounding,
+                                    sampleOffset,
+                                    commInterval,
+                                    commTime,
+                                    MAX_MESSAGES(commInterval, sampleInterval)};
     lora.sendMessage(timeConfig);
     auto time_ack{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, helloReply->getSource())};
     if (!time_ack)
@@ -96,8 +135,8 @@ void Gateway::discovery()
         return;
     }
 
-    Log::info("Registering node %s", time_ack->getSource().toString());
-    nodes.push_back(Node(timeConfig));
+    Log::info("Registering node ", time_ack->getSource().toString());
+    nodes.emplace_back(timeConfig);
     updateNodesFile();
 }
 
@@ -120,27 +159,22 @@ void Gateway::updateNodesFile()
     nodesFile.close();
 }
 
-void Gateway::printNodes()
-{
-    for (const Node& n : nodes)
-    {
-        Serial.printf("NODE MAC: %s, LAST COMM TIME: %u, NEXT COMM TIME: %u\n", n.getMACAddress().toString(), n.getLastCommTime(), n.getNextCommTime());
-    }
-}
-
 void Gateway::commPeriod()
 {
     Log::info("Starting comm period...");
     std::vector<Message<SENSOR_DATA>> data;
-    data.reserve(MAX_SENSOR_MESSAGES * nodes.size());
+    size_t expectedMessages{0};
+    for (const Node& n : nodes)
+        expectedMessages += n.getMaxMessages();
+    data.reserve(expectedMessages);
     auto lambdaByNextCommTime = [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); };
     std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
-    uint32_t lastCommTime{nodes.empty() ? 0 : nodes[0].getNextCommTime()};
+    uint32_t farCommTime = -1;
     for (Node& n : nodes)
     {
-        if (n.getNextCommTime() > (2 * (COMMUNICATION_PERIOD_LENGTH + COMMUNICATION_PERIOD_PADDING)) + lastCommTime)
+        if (n.getNextCommTime() > farCommTime)
             break;
-        lastCommTime = n.getNextCommTime();
+        farCommTime = n.getNextCommTime() + 2 * (COMM_PERIOD_LENGTH(MAX_MESSAGES(commInterval, n.getSampleInterval())) + COMM_PERIOD_PADDING);
         if (!nodeCommPeriod(n, data))
             n.naiveTimeConfig();
     }
@@ -162,6 +196,18 @@ void Gateway::commPeriod()
     commPeriods++;
 }
 
+uint32_t Gateway::nextScheduledCommTime()
+{
+    for (size_t i{1}; i <= nodes.size(); i++)
+    {
+        const Node& n{nodes[nodes.size() - i]};
+        if (!lambdaIsLost(n))
+            return n.getNextCommTime() + COMM_PERIOD_LENGTH(n.getMaxMessages()) + COMM_PERIOD_PADDING;
+    }
+    Log::error("Next scheduled comm time was asked but all nodes are lost!");
+    return -1;
+}
+
 bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
 {
     uint32_t cTime{time(nullptr)};
@@ -172,13 +218,13 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
         return false;
     }
     lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
-    uint32_t listen_ms{COMMUNICATION_PERIOD_PADDING * 1000};  // pre-listen in anticipation of message
+    uint32_t listenMs{COMM_PERIOD_PADDING * 1000};            // pre-listen in anticipation of message
     size_t messagesReceived{0};
     while (true)
     {
         Log::debug("Awaiting data from ", n.getMACAddress().toString(), " ...");
-        auto sensorData{lora.receiveMessage<SENSOR_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), listen_ms)};
-        listen_ms = 0;
+        auto sensorData{lora.receiveMessage<SENSOR_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), listenMs)};
+        listenMs = 0;
         if (!sensorData)
         {
             Log::error("Error while awaiting/receiving data from ", n.getMACAddress().toString(), ". Skipping communication with this node.");
@@ -187,7 +233,7 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
         Log::info("Sensor data received from ", n.getMACAddress().toString(), " with length ", sensorData->getLength());
         data.push_back(*sensorData);
         messagesReceived++;
-        if (sensorData->isLast() || messagesReceived >= MAX_SENSOR_MESSAGES)
+        if (sensorData->isLast() || messagesReceived >= n.getMaxMessages())
         {
             Log::debug("Last message received.");
             break;
@@ -195,12 +241,20 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
         Log::debug("Sending data ACK to ", n.getMACAddress().toString(), " ...");
         lora.sendMessage(Message<ACK_DATA>(lora.getMACAddress(), n.getMACAddress()));
     }
-    uint32_t commTime = n.getNextCommTime() + COMMUNICATION_INTERVAL;
+    uint32_t commTime{n.getNextCommTime() + commInterval};
+    if (lambdaIsLost(n) && !(std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)))
+        commTime = nextScheduledCommTime();
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
     cTime = time(nullptr);
-    uint32_t sampleTime{SAMPLING_INTERVAL == n.getSampleInterval() ? 0 : ((cTime + SAMPLING_INTERVAL) / (SAMPLING_ROUNDING)) * SAMPLING_ROUNDING};
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), n.getMACAddress(),      cTime,    SAMPLING_INTERVAL,          SAMPLING_ROUNDING,
-                                    SAMPLING_OFFSET,      COMMUNICATION_INTERVAL, commTime, COMMUNICATION_PERIOD_LENGTH};
+    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
+                                    n.getMACAddress(),
+                                    cTime,
+                                    n.getSampleInterval(),
+                                    n.getSampleRounding(),
+                                    n.getSampleOffset(),
+                                    commInterval,
+                                    commTime,
+                                    MAX_MESSAGES(commInterval, n.getSampleInterval())};
     lora.sendMessage(timeConfig);
     auto timeAck = lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (!timeAck)
@@ -277,7 +331,7 @@ bool Gateway::mqttConnect()
 // (TOPIC_PREFIX)/(MAC address gateway)/(MAC address node)
 char* Gateway::createTopic(char* topic, const MACAddress& nodeMAC)
 {
-    char macStringBuffer[MACAddress::string_length];
+    char macStringBuffer[MACAddress::stringLength];
     snprintf(topic, topic_size, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(macStringBuffer));
     return topic;
 }
@@ -349,6 +403,32 @@ void Gateway::uploadPeriod()
     commPeriods = 0;
     data.seek(0);
     pruneSensorData(std::move(data), MAX_SENSORDATA_FILESIZE);
+}
+
+void Gateway::parseUpdate(char* update)
+{
+    if (strlen(update) < (MACAddress::stringLength + 2 + 2 + 1))
+    {
+        Log::error("Update string '", update, "' has invalid length.");
+        return;
+    }
+    char* macString{update};
+    auto node{macToNode(macString)};
+    if (!node)
+    {
+        Log::error("Could not deduce node from update.");
+        return;
+    }
+    char* timeString{&update[MACAddress::stringLength + 1]};
+    uint32_t sampleInterval, sampleRounding, sampleOffset;
+    if (sscanf(timeString, "%u %u %u", &sampleInterval, &sampleRounding, &sampleOffset) != 3)
+    {
+        Log::error("Could not deduce updated timings from update string '", update, "'.");
+        return;
+    }
+    node->get().setSampleInterval(sampleInterval);
+    node->get().setSampleRounding(sampleRounding);
+    node->get().setSampleOffset(sampleOffset);
 }
 
 Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
