@@ -13,10 +13,9 @@ void setup(void)
                                          .rx_pin = RX_PIN,
                                          .rtc_int_pin = RTC_INT_PIN,
                                          .rtc_address = RTC_ADDRESS};
+    MIRRAModule::prepare(pins);
     SensorNode sensorNode = SensorNode(pins);
     sensorNode.wake();
 }
 
-void loop(void)
-{
-}
+void loop(void) {}
