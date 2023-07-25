@@ -21,21 +21,14 @@ ESP32-CAM
 // for debugging purposes
 #define __DEBUG__ // comment out when not debugging
 
-// define the number of bytes you want to access
-#define EEPROM_SIZE 1
-
 RTC_DATA_ATTR bool firstBoot = true;
 
 // Variables to save date and time
 char formattedDatetime[26];
 String datetimeString;
-// String dayStamp;
-// String timeStamp;
 
-// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO13 (=ow_pin)
-constexpr gpio_num_t ow_pin = GPIO_NUM_12;
-// constexpr gpio_num_t stat_pin = GPIO_NUM_13;
-HardwareSerial serial2(2);
+// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO12 (=uartPin)
+constexpr gpio_num_t uartPin = GPIO_NUM_12;
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
 #define PWDN_GPIO_NUM 32
@@ -271,7 +264,7 @@ void setup()
 
     Serial.setDebugOutput(true);
 
-    serial2.begin(9600, SERIAL_8N1, ow_pin, -1, true);
+    Serial2.begin(9600, SERIAL_8N1, uartPin, -1, true);
 
     if (firstBoot)
     {
@@ -288,36 +281,44 @@ void setup()
     Serial.println("Setup done.");
 #endif
 
-    serial2.flush();
+    Serial2.flush();
 
     // Go to sleep after boot (enable external wake up on IO12)
     if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0)
     {
-        esp_sleep_enable_ext0_wakeup(ow_pin, 1);
+        esp_sleep_enable_ext0_wakeup(uartPin, 1);
         Serial.println("Going to sleep now");
         Serial.flush();
         esp_deep_sleep_start();
     }
 }
 
+time_t owi_time{0};
+timeval owi_time_value{0};
+
+#define COMMAND_TIMEOUT 15
+
 void loop()
 {
 
 // Additional sketch code could be placed here before
-// polling one-wire bus for commands
+// polling uart single wire bus for commands
 // if (!owi.rom_command()) { return; }
 #ifdef __DEBUG__
     Serial.println("");
     Serial.println("Cycle started");
 #endif
-
-    while (!serial2.available())
+    uint64_t timeout{esp_timer_get_time() + COMMAND_TIMEOUT * 1000 * 1000};
+    while (!Serial2.available() && timeout > esp_timer_get_time())
         ;
-
-    uint8_t cmd = serial2.read();
+    uint8_t cmd{ESPCamCodes::ENABLE_SLEEP};
+    if (Serial2.available())
+    {
+        cmd = Serial2.read();
+        Serial.print("Received command ");
+    }
 
 #ifdef __DEBUG__
-    Serial.print("Received command ");
 #endif
 
     // Read and dispatch remote arduino commands
@@ -327,12 +328,11 @@ void loop()
 #ifdef __DEBUG__
         Serial.println("ESPCam::SET_TIME");
 #endif
-        time_t owi_time{0};
-        serial2.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
+        Serial2.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
 #ifdef __DEBUG__
         Serial.println(owi_time);
 #endif
-        timeval owi_time_value{owi_time, 0};
+        owi_time_value = {owi_time, 0};
         sntp_sync_time(&owi_time_value);
         delay(100);
         sntp_sync_time(&owi_time_value);
@@ -369,12 +369,13 @@ void loop()
 #endif
         // always sleep in the loop-state
         // swSer.end();
-        serial2.end();
-        esp_sleep_enable_ext0_wakeup(ow_pin, 1);
+        Serial2.end();
+        esp_sleep_enable_ext0_wakeup(uartPin, 1);
         Serial.flush();
         esp_deep_sleep_start();
         break;
     default:
+        Serial.println("ESPCam::INVALID");
         break;
     }
 }
