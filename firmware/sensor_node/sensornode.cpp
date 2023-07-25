@@ -1,6 +1,7 @@
 #include "sensornode.h"
 
 #include <BatterySensor.h>
+#include <ESPCamUART.h>
 #include <RandomSensor.h>
 
 RTC_DATA_ATTR bool initialBoot = true;
@@ -134,6 +135,7 @@ void SensorNode::initSensors()
 {
     addSensor(std::make_unique<RandomSensor>(time(nullptr)));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
+    addSensor(std::make_unique<ESPCamUART>(&Serial2, CAM_PIN));
 }
 
 void SensorNode::clearSensors()

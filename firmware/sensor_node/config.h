@@ -47,6 +47,6 @@
 #define BATT_PIN 35
 #define BATT_EN_PIN 33
 
-#define CAM_PIN GPIO_NUM_02
+#define CAM_PIN GPIO_NUM_2
 
 #endif
