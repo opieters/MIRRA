@@ -1,6 +1,7 @@
 #include "sensornode.h"
 
 #include <BatterySensor.h>
+#include <ESPCamUART.h>
 #include <RandomSensor.h>
 
 RTC_DATA_ATTR bool initialBoot = true;
@@ -11,7 +12,7 @@ RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLING_ROUNDING};
 RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLING_OFFSET};
 RTC_DATA_ATTR uint32_t commInterval;
 RTC_DATA_ATTR uint32_t nextCommTime = -1;
-RTC_DATA_ATTR uint32_t commDuration;
+RTC_DATA_ATTR uint32_t maxMessages;
 RTC_DATA_ATTR MACAddress gatewayMAC;
 
 SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
@@ -104,9 +105,9 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
     sampleOffset = m.getSampleOffset();
     commInterval = m.getCommInterval();
     nextCommTime = m.getCommTime();
-    commDuration = m.getCommDuration();
+    maxMessages = m.getMaxMessages();
     gatewayMAC = m.getSource();
-    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Comm duration: ", commDuration,
+    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Max messages: ", maxMessages,
               ", Gateway MAC: ", gatewayMAC.toString());
 }
 
@@ -134,6 +135,7 @@ void SensorNode::initSensors()
 {
     addSensor(std::make_unique<RandomSensor>(time(nullptr)));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
+    addSensor(std::make_unique<ESPCamUART>(&Serial2, CAM_PIN));
 }
 
 void SensorNode::clearSensors()
@@ -208,7 +210,7 @@ void SensorNode::commPeriod()
 {
     MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
     Log::info("Communicating with gateway", destMAC.toString(), " ...");
-    size_t messagesToSend{((commDuration * 1000) - TIME_CONFIG_TIMEOUT) / SENSOR_DATA_TIMEOUT};
+    uint32_t messagesToSend{maxMessages};
     Log::info("Max messages to send: ", messagesToSend);
     size_t firstNonUploaded{0};
     std::vector<Message<SENSOR_DATA>> data;
@@ -329,6 +331,7 @@ MIRRAModule::Commands<SensorNode>::CommandCode SensorNode::Commands::processComm
 
 void SensorNode::Commands::printSample()
 {
+    parent->initSensors();
     Message<SENSOR_DATA> message{parent->sampleAll()};
     auto& values = message.getValues();
     Serial.println("TAG\tVALUE");

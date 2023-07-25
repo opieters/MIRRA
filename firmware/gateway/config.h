@@ -42,25 +42,20 @@
 
 // Communication and sensor settings
 
-// s, time reserved for communication between gateway and one node, in function of how many sensor data messages are to be sent
-#define COMMUNICATION_PERIOD_LENGTH ((MAX_SENSOR_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
 // s, time between each node's communication period
-#define COMMUNICATION_PERIOD_PADDING 3
+#define COMM_PERIOD_PADDING 3
 // s, time between communication times for every nodes
-#define COMMUNICATION_INTERVAL (60 * 60 * 12)
+#define DEFAULT_COMM_INTERVAL (60 * 60 * 12)
 
 #define WAKE_BEFORE_COMM_PERIOD 5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
-#define LISTEN_COMM_PERIOD(X) ((X)-COMMUNICATION_PERIOD_PADDING)
+#define LISTEN_COMM_PERIOD(X) ((X)-COMM_PERIOD_PADDING)
 
 #define UPLOAD_EVERY 3 // amount of times the gateway will communicate with the nodes before uploading data to the server
 
-#define SAMPLING_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
-#define SAMPLING_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
-#define SAMPLING_OFFSET (0)
-
-#define IDEAL_SENSOR_MESSAGES ((COMMUNICATION_INTERVAL / SAMPLING_INTERVAL))
-#define MAX_SENSOR_MESSAGES (((3 * COMMUNICATION_INTERVAL) / (2 * SAMPLING_INTERVAL)) + 1)
+#define DEFAULT_SAMPLE_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
+#define DEFAULT_SAMPLE_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
+#define DEFAULT_SAMPLE_OFFSET (0)
 
 #define DISCOVERY_TIMEOUT 5000 // ms
 

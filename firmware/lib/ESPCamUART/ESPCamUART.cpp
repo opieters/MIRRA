@@ -3,18 +3,18 @@
 // specifies the time of the sun rise starting from 12PM at the first day of each month
 // Brussels timezone (UTC+1) WITHOUT daylight savings!!!
 static uint32_t sunRiseTable[12] = {
-    8.8 * 60 * 60,   // January
-    8.367 * 60 * 60, // February
-    7.5 * 60 * 60,   // March
-    6.35 * 60 * 60,  // April
-    5.317 * 60 * 60, //  May
-    4.617 * 60 * 60, // June
-    4.583 * 60 * 60, // July
-    5.183 * 60 * 60, // Aug
-    5.983 * 60 * 60, // sep
-    6.75 * 60 * 60,  // Oct
-    7.617 * 60 * 60, // nov
-    8.433 * 60 * 60, // Dec
+    8 * 60 + 48, // January
+    8 * 60 + 22, // February
+    7 * 60 + 30, // March
+    6 * 60 + 21, // April
+    5 * 60 + 19, // May
+    4 * 60 + 37, // June
+    4 * 60 + 35, // July
+    5 * 60 + 11, // August
+    5 * 60 + 59, // September
+    6 * 60 + 45, // October
+    7 * 60 + 37, // November
+    8 * 60 + 26, // December
 };
 
 void ESPCamUART::setup()
@@ -27,9 +27,8 @@ void ESPCamUART::setup()
     delay(500);
     digitalWrite(pin, LOW);
 
-    camSerial->begin(9600, SERIAL_8N1, -1, pin, true);
-
     Serial.println("Configuring ESPCAM UART.");
+    camSerial->begin(9600, SERIAL_8N1, -1, pin, true);
 }
 
 void ESPCamUART::startMeasurement()
@@ -56,6 +55,7 @@ SensorValue ESPCamUART::getMeasurement()
     Serial.println("[ESPCAM] Flushing");
     camSerial->end();
     Serial.println("[ESPCAM] End");
+
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
     gpio_hold_en(pin);
@@ -63,29 +63,20 @@ SensorValue ESPCamUART::getMeasurement()
     return SensorValue(getID(), 0);
 }
 
-uint32_t ESPCamUART::adaptive_sample_interval_update(uint32_t ctime)
+void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
 {
     Serial.println("[ESPCAM] ADAPTIVE adaptive interval called.");
     // extract month and day from current time
-    struct tm result;
-    gmtime_r(reinterpret_cast<time_t*>(&ctime), &result);
+    time_t t{nextSampleTime + 24 * 60 * 60};
+    tm* day{gmtime(&t)};
 
     // interpolate sunrise time
-    uint32_t pointA = sunRiseTable[result.tm_mon];
-    uint32_t pointB = sunRiseTable[(result.tm_mon + 1) % 12];
-    uint32_t point = pointB * (result.tm_mday / 31) + pointA * ((31 - result.tm_mday) / 31);
+    uint32_t pointA = sunRiseTable[day->tm_mon];
+    uint32_t pointB = sunRiseTable[(day->tm_mon + 1) % 12];
+    uint32_t point = pointB * (day->tm_mday / 31) + pointA * ((31 - day->tm_mday) / 31);
 
-    // calculate sample interval
-    time_t ttime = (ctime / 60 / 60 / 24) * 60 * 60 * 24;
-    ttime += (time_t)point;
-    ttime += 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
-
-    if (ttime <= ctime)
-    {
-        ttime += 24 * 60 * 60;
-    }
-
-    // return sample interval: target time - current time
-    // return 60;
-    return ttime - ctime;
+    // calculate target sample time
+    uint32_t target = ((t / 60 / 60 / 24) * 60 * 60 * 24) + point + 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
+    while ((target - nextSampleTime) > (sampleInterval / 2))
+        nextSampleTime += sampleInterval;
 }

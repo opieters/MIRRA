@@ -10,10 +10,16 @@ Message<SENSOR_DATA>::Message(const MACAddress& src, const MACAddress& dest, uin
 
 char* MACAddress::toString(char* string) const
 {
-    snprintf(string, MACAddress::string_length, "%02X:%02X:%02X:%02X:%02X:%02X", this->address[0], this->address[1], this->address[2], this->address[3],
+    snprintf(string, MACAddress::stringLength, "%02X:%02X:%02X:%02X:%02X:%02X", this->address[0], this->address[1], this->address[2], this->address[3],
              this->address[4], this->address[5]);
     return string;
 }
 
+MACAddress MACAddress::fromString(char* string)
+{
+    uint8_t address[6];
+    sscanf(string, "%02X:%02X:%02X:%02X:%02X:%02X", &address[0], &address[1], &address[2], &address[3], &address[4], &address[5]);
+    return MACAddress(address);
+}
 const MACAddress MACAddress::broadcast{};
-char MACAddress::str_buffer[MACAddress::string_length];
+char MACAddress::strBuffer[MACAddress::stringLength];

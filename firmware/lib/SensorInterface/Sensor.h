@@ -36,7 +36,7 @@ public:
     uint32_t getNextSampleTime() const { return nextSampleTime; };
     virtual ~Sensor() = default;
 
-private:
+protected:
     uint32_t nextSampleTime = -1;
 };
 
