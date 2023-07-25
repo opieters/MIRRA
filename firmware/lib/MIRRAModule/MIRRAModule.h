@@ -41,9 +41,9 @@ protected:
     void pruneSensorData(File&& dataFile, uint32_t maxSize);
 
     void deepSleep(uint32_t time);
-    void deepSleepUntil(uint32_t time);
+    void deepSleepUntil(uint32_t untilTime);
     void lightSleep(float time);
-    void lightSleepUntil(uint32_t time);
+    void lightSleepUntil(uint32_t untilTime);
 
     const MIRRAPins pins;
     PCF2129_RTC rtc;

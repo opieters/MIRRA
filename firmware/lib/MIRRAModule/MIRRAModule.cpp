@@ -82,11 +82,6 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
         return deepSleep(1);
     }
 
-    // For an unknown reason pin 15 was high by default, as pin 15 is connected to VPP with a 4.7k pull-up resistor it forced 3.3V on VPP when VPP was powered
-    // off. Therefore we force pin 15 to a LOW state here.
-    pinMode(15, OUTPUT);
-    digitalWrite(15, LOW);
-
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep
     // sleep
@@ -112,16 +107,16 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     esp_deep_sleep_start();
 }
 
-void MIRRAModule::deepSleepUntil(uint32_t time)
+void MIRRAModule::deepSleepUntil(uint32_t untilTime)
 {
-    uint32_t ctime{rtc.read_time_epoch()};
-    if (time <= ctime)
+    uint32_t ctime{time(nullptr)};
+    if (untilTime <= ctime)
     {
         deepSleep(0);
     }
     else
     {
-        deepSleep(time - ctime);
+        deepSleep(untilTime - ctime);
     }
 }
 
