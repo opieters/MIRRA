@@ -9,13 +9,13 @@
 
 // LoRa module pins
 #define CS_PIN 27   // Chip select pin
-#define RST_PIN 26  // Reset pin
-#define DIO0_PIN 34 // DIO0 pin: LoRa interrupt pin
-#define TX_PIN 13
-#define RX_PIN 25
+#define RST_PIN 5   // Reset pin
+#define DIO0_PIN 13 // DIO0 pin: LoRa interrupt pin
+#define TX_PIN 12
+#define RX_PIN 26
 
 // PCF2129 timer
-#define RTC_INT_PIN 4    // Interrupt pin
+#define RTC_INT_PIN 35   // Interrupt pin
 #define RTC_ADDRESS 0x51 // i2c address
 
 // Filepaths
@@ -44,9 +44,9 @@
 
 // Sensor pins
 
-#define BATT_PIN 35
+#define BATT_PIN 34
 #define BATT_EN_PIN 33
 
-#define CAM_PIN GPIO_NUM_02
+#define CAM_PIN GPIO_NUM_15
 
 #endif
