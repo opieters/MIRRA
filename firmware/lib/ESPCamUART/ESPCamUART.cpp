@@ -3,18 +3,18 @@
 // specifies the time of the sun rise starting from 12PM at the first day of each month
 // Brussels timezone (UTC+1) WITHOUT daylight savings!!!
 static uint32_t sunRiseTable[12] = {
-    8.8 * 60 * 60,   // January
-    8.367 * 60 * 60, // February
-    7.5 * 60 * 60,   // March
-    6.35 * 60 * 60,  // April
-    5.317 * 60 * 60, //  May
-    4.617 * 60 * 60, // June
-    4.583 * 60 * 60, // July
-    5.183 * 60 * 60, // Aug
-    5.983 * 60 * 60, // sep
-    6.75 * 60 * 60,  // Oct
-    7.617 * 60 * 60, // nov
-    8.433 * 60 * 60, // Dec
+    8 * 60 + 48, // January
+    8 * 60 + 22, // February
+    7 * 60 + 30, // March
+    6 * 60 + 21, // April
+    5 * 60 + 19, // May
+    4 * 60 + 37, // June
+    4 * 60 + 35, // July
+    5 * 60 + 11, // August
+    5 * 60 + 59, // September
+    6 * 60 + 45, // October
+    7 * 60 + 37, // November
+    8 * 60 + 26, // December
 };
 
 void ESPCamUART::setup()
@@ -27,9 +27,8 @@ void ESPCamUART::setup()
     delay(500);
     digitalWrite(pin, LOW);
 
-    camSerial->begin(9600, SERIAL_8N1, -1, pin, true);
-
     Serial.println("Configuring ESPCAM UART.");
+    camSerial->begin(9600, SERIAL_8N1, -1, pin, true);
 }
 
 void ESPCamUART::startMeasurement()
@@ -56,6 +55,7 @@ SensorValue ESPCamUART::getMeasurement()
     Serial.println("[ESPCAM] Flushing");
     camSerial->end();
     Serial.println("[ESPCAM] End");
+
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
     gpio_hold_en(pin);
