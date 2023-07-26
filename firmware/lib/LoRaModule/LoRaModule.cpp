@@ -26,11 +26,11 @@ void LoRaModule::sendRepeat(const MACAddress& dest)
 
 void LoRaModule::sendPacket(uint8_t* buffer, size_t length)
 {
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
     int state = this->startTransmit(buffer, length);
     if (state == RADIOLIB_ERR_NONE)
     {
-        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
         esp_light_sleep_start();
         Log::debug("Packet sent!");
     }
@@ -46,6 +46,7 @@ void LoRaModule::resendPacket()
     if (sendLength == 0)
     {
         Log::error("Could not repeat last sent packet because no packet has been sent yet.");
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
         return;
     }
     Log::debug("Resending last sent packet to ", this->lastDest.toString());

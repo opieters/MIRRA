@@ -80,7 +80,7 @@ private:
 
 public:
     Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
-            uint32_t commInterval, uint32_t commTime, uint32_t messages)
+            uint32_t commInterval, uint32_t commTime, uint32_t maxMessages)
         : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
           commInterval{commInterval}, commTime{commTime}, maxMessages{maxMessages} {};
 

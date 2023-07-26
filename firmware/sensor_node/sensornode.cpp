@@ -10,6 +10,7 @@ RTC_DATA_ATTR std::array<uint32_t, MAX_SENSORS> sensorsNextSampleTimes{0};
 RTC_DATA_ATTR uint32_t sampleInterval{DEFAULT_SAMPLING_INTERVAL};
 RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLING_ROUNDING};
 RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLING_OFFSET};
+RTC_DATA_ATTR uint32_t nextSampleTime = -1;
 RTC_DATA_ATTR uint32_t commInterval;
 RTC_DATA_ATTR uint32_t nextCommTime = -1;
 RTC_DATA_ATTR uint32_t maxMessages;
@@ -38,21 +39,10 @@ void SensorNode::wake()
     {
         commPeriod();
     }
-    uint32_t nextSampleTime = -1;
-    for (uint32_t t : sensorsNextSampleTimes)
-    {
-        if (t != 0 && t < nextSampleTime)
-            nextSampleTime = t;
-    }
     ctime = time(nullptr);
     if (ctime >= nextSampleTime)
     {
         samplePeriod();
-        for (uint32_t t : sensorsNextSampleTimes)
-        {
-            if (t != 0 && t < nextSampleTime)
-                nextSampleTime = t;
-        }
     }
     ctime = time(nullptr);
     Log::info("Next sample in ", nextSampleTime - ctime, "s, next comm period in ", nextCommTime - ctime, "s");
@@ -62,7 +52,7 @@ void SensorNode::wake()
     if (ctime >= nextCommTime || ctime >= nextSampleTime)
         wake();
     Log::debug("Entering deep sleep...");
-    deepSleepUntil((nextCommTime < nextSampleTime) ? WAKE_COMM_PERIOD(nextCommTime) : nextSampleTime);
+    deepSleepUntil(std::min(WAKE_COMM_PERIOD(nextCommTime), nextSampleTime));
 }
 
 void SensorNode::discovery()
@@ -94,12 +84,7 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
 {
     rtc.write_time_epoch(m.getCTime());
     rtc.setSysTime();
-    if (sampleInterval != m.getSampleInterval() || sampleRounding != m.getSampleRounding() || sampleOffset != m.getSampleOffset())
-    {
-        sensorsNextSampleTimes.fill(0);
-        initSensors();
-        clearSensors();
-    }
+    bool scheduleValid{sampleInterval == m.getSampleInterval() && sampleRounding == m.getSampleRounding() && sampleOffset == m.getSampleOffset()};
     sampleInterval = m.getSampleInterval();
     sampleRounding = m.getSampleRounding();
     sampleOffset = m.getSampleOffset();
@@ -107,6 +92,12 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
     nextCommTime = m.getCommTime();
     maxMessages = m.getMaxMessages();
     gatewayMAC = m.getSource();
+    if (!scheduleValid)
+    {
+        sensorsNextSampleTimes.fill(0);
+        initSensors();
+        clearSensors();
+    }
     Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Max messages: ", maxMessages,
               ", Gateway MAC: ", gatewayMAC.toString());
 }
@@ -135,14 +126,17 @@ void SensorNode::initSensors()
 {
     addSensor(std::make_unique<RandomSensor>(time(nullptr)));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
-    addSensor(std::make_unique<ESPCamUART>(&Serial2, CAM_PIN));
+    addSensor(std::make_unique<ESPCamUART>(&Serial1, CAM_PIN));
 }
 
 void SensorNode::clearSensors()
 {
+    nextSampleTime = -1;
     for (size_t i{0}; i < nSensors; i++)
     {
         sensorsNextSampleTimes[i] = sensors[i]->getNextSampleTime();
+        if (sensors[i]->getNextSampleTime() < nextSampleTime)
+            nextSampleTime = sensors[i]->getNextSampleTime();
         sensors[i].reset();
     }
     nSensors = 0;
@@ -156,7 +150,7 @@ Message<SENSOR_DATA> SensorNode::sampleAll()
         sensors[i]->startMeasurement();
     }
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
-    for (size_t i{0}, j{0}; i < nSensors; i++)
+    for (size_t i{0}; i < nSensors; i++)
     {
         values[i] = sensors[i]->getMeasurement();
     }
@@ -172,15 +166,16 @@ Message<SENSOR_DATA> SensorNode::sampleScheduled(uint32_t cTime)
             sensors[i]->startMeasurement();
     }
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
-    for (size_t i{0}, j{0}; i < nSensors; i++)
+    uint8_t nValues{0};
+    for (size_t i{0}; i < nSensors; i++)
     {
         if (sensors[i]->getNextSampleTime() == cTime)
         {
-            values[j] = sensors[i]->getMeasurement();
-            j++;
+            values[nValues] = sensors[i]->getMeasurement();
+            nValues++;
         }
     }
-    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, cTime, static_cast<uint8_t>(nSensors), values);
+    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, cTime, nValues, values);
 }
 
 void SensorNode::updateSensorsSampleTimes(uint32_t cTime)
@@ -209,52 +204,45 @@ void SensorNode::samplePeriod()
 void SensorNode::commPeriod()
 {
     MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
-    Log::info("Communicating with gateway", destMAC.toString(), " ...");
-    uint32_t messagesToSend{maxMessages};
-    Log::info("Max messages to send: ", messagesToSend);
-    size_t firstNonUploaded{0};
-    std::vector<Message<SENSOR_DATA>> data;
-    data.reserve(messagesToSend);
-    bool uploadSuccess[messagesToSend];
+    Log::info("Communicating with gateway ", destMAC.toString(), " ...");
+    uint32_t _maxMessages{maxMessages};
+    Log::info("Max messages to send: ", _maxMessages);
+    std::vector<Message<SENSOR_DATA>> messages;
+    messages.reserve(_maxMessages);
+    uint32_t messagesFlagPositions[_maxMessages];
     File dataFile = LittleFS.open(DATA_FP, "r+");
     while (dataFile.available())
     {
+        if (messages.size() == _maxMessages)
+            break;
         uint8_t size{dataFile.read()};
         uint8_t buffer[size];
         dataFile.read(buffer, size);
-        if (buffer[0] == 0 && messagesToSend > 0) // not yet uploaded
+        if (buffer[0] == 0) // not yet uploaded
         {
-            if (firstNonUploaded == 0)
-                firstNonUploaded = dataFile.position();
+            messagesFlagPositions[messages.size()] = dataFile.position() - size;
             Log::debug("Reconstructing message from buffer...");
             Message<SENSOR_DATA>& message{Message<SENSOR_DATA>::fromData(buffer)};
             message.setType(SENSOR_DATA);
-            if ((messagesToSend == 1) ||
+            if ((messages.size() == _maxMessages - 1) ||
                 (!dataFile.available())) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
             {
                 Log::debug("Last sensor data message...");
                 message.setLast();
             }
-            data.push_back(message);
-            messagesToSend--;
+            messages.push_back(message);
         }
     }
+    bool uploadSuccess[messages.size()];
     bool firstMessage{true};
-    for (size_t i{0}; i < data.size(); i++)
+    for (size_t i{0}; i < messages.size(); i++)
+        uploadSuccess[i] = sendSensorMessage(messages[i], destMAC, firstMessage);
+    for (size_t i{0}; i < messages.size(); i++)
     {
-        uploadSuccess[i] = sendSensorMessage(data[i], destMAC, firstMessage);
+        dataFile.seek(messagesFlagPositions[i]);
+        dataFile.write(uploadSuccess[i]);
     }
-    dataFile.seek(firstNonUploaded);
-    for (size_t i{0}; i < data.size();)
-    {
-        uint8_t size{dataFile.read()};
-        if (dataFile.peek() == 0)
-        {
-            dataFile.write(static_cast<uint8_t>(uploadSuccess[i]));
-            i++;
-        }
-        dataFile.seek(size, SeekCur);
-    }
+    Log::debug("Messages that were uploaded have been marked as such.");
     dataFile.seek(0);
     pruneSensorData(std::move(dataFile), MAX_SENSORDATA_FILESIZE);
 }
