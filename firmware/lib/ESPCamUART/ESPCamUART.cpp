@@ -17,46 +17,31 @@ static uint32_t sunRiseTable[12] = {
     8 * 60 + 26, // December
 };
 
-void ESPCamUART::setup()
+void ESPCamUART::startMeasurement()
 {
-    Serial.println("Waking ESPCAM.");
+    Serial.println("[ESPCAM] Waking....");
 
     pinMode(pin, OUTPUT);
     gpio_hold_dis(pin);
     digitalWrite(pin, HIGH);
-    delay(500);
-    digitalWrite(pin, LOW);
-
-    Serial.println("Configuring ESPCAM UART.");
     camSerial->begin(9600, SERIAL_8N1, -1, pin, true);
-}
-
-void ESPCamUART::startMeasurement()
-{
-    // send the get status message
-    // camSerial->write(ESPCamUARTCommand::GET_STATUS);
-    // write current time
     delay(100);
-    time_t ctime = time(nullptr);
+    time_t ctime{time(nullptr)};
     camSerial->write(ESPCamCodes::SET_TIME);
     camSerial->write((uint8_t*)&ctime, sizeof(ctime));
+    camSerial->flush();
 
-    Serial.println("Starting measurement, writing time");
-    Serial.println(ctime);
+    Serial.printf("[ESPCAM] Starting measurement, writing time: %i\n", ctime);
 }
 
 SensorValue ESPCamUART::getMeasurement()
 {
-    // uint8_t status;
     Serial.println("[ESPCAM] Taking picture");
     camSerial->write(ESPCamCodes::TAKE_PICTURE);
-    Serial.println("[ESPCAM] ESPCamUARTCommand sent");
     camSerial->flush();
-    Serial.println("[ESPCAM] Flushing");
+    Serial.println("[ESPCAM] ESPCamUARTCommand sent");
     camSerial->end();
     Serial.println("[ESPCAM] End");
-
-    pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
     gpio_hold_en(pin);
 
@@ -65,7 +50,8 @@ SensorValue ESPCamUART::getMeasurement()
 
 void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
 {
-    Serial.println("[ESPCAM] ADAPTIVE adaptive interval called.");
+    nextSampleTime += 3 * sampleInterval;
+    return;
     // extract month and day from current time
     time_t t{nextSampleTime + 24 * 60 * 60};
     tm* day{gmtime(&t)};
