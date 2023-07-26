@@ -4,6 +4,7 @@
 void setup(void)
 {
     constexpr MIRRAModule::MIRRAPins pins = {.boot_pin = BOOT_PIN,
+                                             .per_power_pin = PERIPHERAL_POWER_PIN,
                                              .sda_pin = SDA_PIN,
                                              .scl_pin = SCL_PIN,
                                              .cs_pin = CS_PIN,

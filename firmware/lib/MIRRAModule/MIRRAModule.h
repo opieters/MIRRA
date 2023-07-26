@@ -23,6 +23,7 @@ public:
     struct MIRRAPins
     {
         uint8_t boot_pin;
+        uint8_t per_power_pin;
         uint8_t sda_pin;
         uint8_t scl_pin;
         uint8_t cs_pin;
@@ -44,6 +45,8 @@ protected:
     void deepSleepUntil(uint32_t untilTime);
     void lightSleep(float time);
     void lightSleepUntil(uint32_t untilTime);
+
+    void end();
 
     const MIRRAPins pins;
     PCF2129_RTC rtc;

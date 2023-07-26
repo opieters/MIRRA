@@ -8,6 +8,9 @@
 
 // Pin assignments
 #define BOOT_PIN 0
+
+#define PERIPHERAL_POWER_PIN 16
+
 #define SDA_PIN 21
 #define SCL_PIN 22
 

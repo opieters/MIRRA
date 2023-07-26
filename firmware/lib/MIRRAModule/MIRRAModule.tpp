@@ -11,6 +11,7 @@ template <class T> void MIRRAModule::Commands<T>::prompt()
         {
             Log::info("Entering command phase...");
             start();
+            commandPhaseFlag = false;
             return;
         }
         delay(100);

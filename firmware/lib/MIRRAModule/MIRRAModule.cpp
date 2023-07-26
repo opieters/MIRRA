@@ -8,7 +8,9 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
-    Serial2.begin(9600);
+    gpio_hold_dis(static_cast<gpio_num_t>(pins.per_power_pin));
+    pinMode(pins.per_power_pin, OUTPUT);
+    digitalWrite(pins.per_power_pin, HIGH);
     Wire.begin(pins.sda_pin, pins.scl_pin); // i2c
     Serial.println("I2C wire initialised.");
     if (!LittleFS.begin())
@@ -22,6 +24,16 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
     attachInterrupt(pins.boot_pin, commandPhaseInterrupt, FALLING);
 }
 
+void MIRRAModule::end()
+{
+    Log::log.close();
+    lora.sleep();
+    LittleFS.end();
+    Wire.end();
+    digitalWrite(pins.per_power_pin, LOW);
+    gpio_hold_en(static_cast<gpio_num_t>(pins.per_power_pin));
+    Serial.end();
+}
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, lora{pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
 {
@@ -93,17 +105,12 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     else
     {
         Log::debug("Using RTC for deep sleep.");
-        // We use the external RTC
         rtc.write_alarm_epoch(rtc.read_time_epoch() + sleep_time);
         rtc.enable_alarm();
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
-    digitalWrite(16, LOW);
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     Log::info("Good night.");
-    lora.sleep();
-    Log::log.close();
-    LittleFS.end();
     esp_deep_sleep_start();
 }
 
