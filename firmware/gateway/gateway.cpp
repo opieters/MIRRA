@@ -117,7 +117,6 @@ void Gateway::discovery()
     uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
     uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
 
-    Log::debug("Sending time config message to ", helloReply->getSource().toString());
     Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
                                     helloReply->getSource(),
                                     cTime,
@@ -127,6 +126,9 @@ void Gateway::discovery()
                                     commInterval,
                                     commTime,
                                     MAX_MESSAGES(commInterval, sampleInterval)};
+    Log::debug("Time config constructed. cTime = ", cTime, " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
+               " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
+    Log::debug("Sending time config message to ", helloReply->getSource().toString());
     lora.sendMessage(timeConfig);
     auto time_ack{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, helloReply->getSource())};
     if (!time_ack)
