@@ -52,33 +52,34 @@ void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)
 
 void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
 {
+    size_t fileSize = dataFile.size();
+    if (fileSize <= maxSize)
+        return;
+
     char fileName[strlen(dataFile.name()) + 2];
     snprintf(fileName, strlen(dataFile.name()) + 2, "/%s", dataFile.name());
     char tempFileName[strlen(fileName) - strlen(strrchr(fileName, '.')) + 4 + 1];
     strcpy(tempFileName, fileName);
     strcpy(strrchr(tempFileName, '.'), ".tmp");
-
-    size_t fileSize = dataFile.size();
-    if (fileSize <= maxSize)
-        return;
     File dataFileTemp{LittleFS.open(tempFileName, "w", true)};
+
     while (dataFile.available())
     {
-        uint8_t message_length = sizeof(message_length) + dataFile.peek();
+        uint8_t messageLength = sizeof(messageLength) + dataFile.peek();
         if (fileSize > maxSize)
         {
-            fileSize -= message_length;
-            dataFile.seek(message_length, SeekCur); // skip over the next message
+            fileSize -= messageLength;
+            dataFile.seek(messageLength, SeekCur); // skip over the next message
         }
         else
         {
-            uint8_t buffer[message_length];
-            dataFile.read(buffer, message_length);
-            dataFileTemp.write(buffer, message_length);
+            uint8_t buffer[messageLength];
+            dataFile.read(buffer, messageLength);
+            dataFileTemp.write(buffer, messageLength);
         }
     }
-    LittleFS.remove(fileName);
     dataFile.close();
+    LittleFS.remove(fileName);
     dataFileTemp.flush();
     Log::info("Sensor data pruned from ", fileSize / 1000, " KB to ", dataFileTemp.size() / 1000, " KB.");
     dataFileTemp.close();
