@@ -27,8 +27,8 @@ RTC_DATA_ATTR bool firstBoot = true;
 char formattedDatetime[26];
 String datetimeString;
 
-// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO13 (=uartPin)
-constexpr gpio_num_t uartPin = GPIO_NUM_13;
+// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO12 (=uartPin)
+constexpr gpio_num_t uartPin = GPIO_NUM_12;
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
 #define PWDN_GPIO_NUM 32
@@ -285,7 +285,7 @@ void setup()
 
     Serial2.flush();
 
-    // Go to sleep after boot (enable external wake up on IO13)
+    // Go to sleep after boot (enable external wake up on IO12)
     if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0)
     {
         esp_sleep_enable_ext0_wakeup(uartPin, 1);
