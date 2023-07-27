@@ -3,18 +3,18 @@
 // specifies the time of the sun rise starting from 12PM at the first day of each month
 // Brussels timezone (UTC+1) WITHOUT daylight savings!!!
 static uint32_t sunRiseTable[12] = {
-    8 * 60 + 48, // January
-    8 * 60 + 22, // February
-    7 * 60 + 30, // March
-    6 * 60 + 21, // April
-    5 * 60 + 19, // May
-    4 * 60 + 37, // June
-    4 * 60 + 35, // July
-    5 * 60 + 11, // August
-    5 * 60 + 59, // September
-    6 * 60 + 45, // October
-    7 * 60 + 37, // November
-    8 * 60 + 26, // December
+    8 * 60 * 60 + 48 * 60, // January
+    8 * 60 * 60 + 22 * 60, // February
+    7 * 60 * 60 + 30 * 60, // March
+    6 * 60 * 60 + 21 * 60, // April
+    5 * 60 * 60 + 19 * 60, // May
+    4 * 60 * 60 + 37 * 60, // June
+    4 * 60 * 60 + 35 * 60, // July
+    5 * 60 * 60 + 11 * 60, // August
+    5 * 60 * 60 + 59 * 60, // September
+    6 * 60 * 60 + 45 * 60, // October
+    7 * 60 * 60 + 37 * 60, // November
+    8 * 60 * 60 + 26 * 60, // December
 };
 
 void ESPCamUART::startMeasurement()
@@ -61,12 +61,11 @@ void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
         // interpolate sunrise time
         uint32_t pointA = sunRiseTable[day.tm_mon];
         uint32_t pointB = sunRiseTable[(day.tm_mon + 1) % 12];
-        uint32_t point = pointB * (day.tm_mday / 31) + pointA * ((31 - day.tm_mday) / 31);
+        uint32_t point = (pointB * day.tm_mday) / 31 + (pointA * (31 - day.tm_mday)) / 31;
 
         // calculate target sample time
         target = ((target / 60 / 60 / 24) * 60 * 60 * 24) + point + 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
-        while ((target - nextSampleTime) > (sampleInterval / 2))
-            nextSampleTime += sampleInterval;
+        nextSampleTime = (target / sampleInterval) * sampleInterval + (nextSampleTime % sampleInterval);
         target += 24 * 60 * 60;
     }
 }
