@@ -15,6 +15,7 @@ public:
     {
     private:
         void printSample();
+        void printSchedule();
 
     public:
         Commands(SensorNode* parent) : MIRRAModule::Commands<SensorNode>(parent){};

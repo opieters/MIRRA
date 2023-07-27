@@ -85,8 +85,8 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
     rtc.write_time_epoch(m.getCTime());
     rtc.setSysTime();
     bool scheduleValid{sampleInterval == m.getSampleInterval() && sampleRounding == m.getSampleRounding() && sampleOffset == m.getSampleOffset()};
-    sampleInterval = m.getSampleInterval();
-    sampleRounding = m.getSampleRounding();
+    sampleInterval = m.getSampleInterval() == 0 ? DEFAULT_SAMPLING_INTERVAL : m.getSampleInterval();
+    sampleRounding = m.getSampleRounding() == 0 ? DEFAULT_SAMPLING_ROUNDING : m.getSampleRounding();
     sampleOffset = m.getSampleOffset();
     commInterval = m.getCommInterval();
     nextCommTime = m.getCommTime();
@@ -109,8 +109,8 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
     uint32_t cTime{time(nullptr)};
     if (sensorsNextSampleTimes[nSensors] == 0)
     {
-        sensor->setNextSampleTime(((cTime / sampleRounding) - 1) * sampleRounding + sampleOffset);
-        while (sensor->getNextSampleTime() < cTime)
+        sensor->setNextSampleTime(((cTime / sampleRounding) * sampleRounding + sampleOffset));
+        while (sensor->getNextSampleTime() <= cTime)
             sensor->updateNextSampleTime(sampleInterval);
     }
     else
@@ -239,8 +239,11 @@ void SensorNode::commPeriod()
         uploadSuccess[i] = sendSensorMessage(messages[i], destMAC, firstMessage);
     for (size_t i{0}; i < messages.size(); i++)
     {
-        dataFile.seek(messagesFlagPositions[i]);
-        dataFile.write(uploadSuccess[i]);
+        if (uploadSuccess[i])
+        {
+            dataFile.seek(messagesFlagPositions[i]);
+            dataFile.write(1);
+        }
     }
     Log::debug("Messages that were uploaded have been marked as such.");
     dataFile.seek(0);
@@ -310,6 +313,10 @@ MIRRAModule::Commands<SensorNode>::CommandCode SensorNode::Commands::processComm
     {
         printSample();
     }
+    else if (strcmp(command, "printschedule") == 0)
+    {
+        printSchedule();
+    }
     else
     {
         return CommandCode::COMMAND_NOT_FOUND;
@@ -326,6 +333,23 @@ void SensorNode::Commands::printSample()
     for (size_t i{0}, nValues{message.getNValues()}; i < nValues; i++)
     {
         Serial.printf("%u\t%f\n", values[i].tag, values[i].value);
+    }
+    parent->clearSensors();
+}
+
+void SensorNode::Commands::printSchedule()
+{
+    parent->initSensors();
+    constexpr size_t timeLength{sizeof("0000-00-00 00:00:00")};
+    char buffer[timeLength]{0};
+    Serial.println("TAG\tNEXT SAMPLE");
+    for (size_t i{0}; i < parent->nSensors; i++)
+    {
+        tm time;
+        time_t nextSensorSampleTime{parent->sensors[i]->getNextSampleTime()};
+        gmtime_r(&nextSensorSampleTime, &time);
+        strftime(buffer, timeLength, "%F %T", &time);
+        Serial.printf("%u\t%s\n", parent->sensors[i]->getID(), buffer);
     }
     parent->clearSensors();
 }
