@@ -6,7 +6,6 @@ void Log::generateLogfilePath(char* buffer, const struct tm& time) { strftime(bu
 
 void Log::removeOldLogfiles(struct tm& time)
 {
-    this->info("Removing old logfiles...");
     time_t deleteEpoch{mktime(&time) - static_cast<time_t>(daysToKeep * 24 * 60 * 60)};
     tm deleteTime;
     gmtime_r(&deleteEpoch, &deleteTime);
