@@ -50,8 +50,7 @@ template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::line
             buffer[length] = c;
             length++;
             if (length == lineMaxLength - 1)
-            {
-            }
+                break;
         }
     };
     return buffer;
