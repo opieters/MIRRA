@@ -25,7 +25,7 @@ private:
     bool logfileEnabled{false};
     tm logfileTime{0};
     File logfile{};
-    static const size_t daysToKeep{7};
+    static const size_t daysToKeep{14};
     void generateLogfilePath(char* buffer, const struct tm& time);
     void removeOldLogfiles(struct tm& time);
     void openLogfile(const struct tm& time);

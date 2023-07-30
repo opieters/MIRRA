@@ -35,6 +35,7 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
     Serial.println("Logger initialised.");
+    Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
     pinMode(pins.boot_pin, INPUT);
     commandPhaseFlag = !static_cast<bool>(digitalRead(pins.boot_pin));
 }

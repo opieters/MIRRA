@@ -60,7 +60,6 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
         rtcUpdateTime();
         initialBoot = false;
     }
-    Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
     nodesFromFile();
 }
 
@@ -296,18 +295,21 @@ void Gateway::rtcUpdateTime()
     wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
-        configTime(0, 0, NTP_URL);
-        uint64_t timeout{millis() + 10 * 1000};
+        sntp_setoperatingmode(SNTP_OPMODE_POLL);
+        sntp_setservername(0, NTP_URL);
+        sntp_init();
+        uint64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
         while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
         {
-            if (millis() > timeout)
+            if (esp_timer_get_time() > timeout)
             {
                 Log::error("Failed to update system time within 10s timeout");
                 WiFi.disconnect();
                 return;
             }
         }
-        sntp_stop();
+        if (sntp_enabled())
+            sntp_stop();
         Log::debug("Writing time to RTC...");
         rtc.write_time_epoch(static_cast<uint32_t>(time(nullptr)));
         Log::info("RTC and system time updated.");

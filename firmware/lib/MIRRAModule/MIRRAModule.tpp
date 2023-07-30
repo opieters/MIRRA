@@ -8,6 +8,7 @@ template <class T> void MIRRAModule::Commands<T>::prompt()
         start();
     else
         Serial.println("Hold the BOOT pin during startup to enter command phase.");
+    parent->commandPhaseFlag = false;
 }
 
 template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::lineMaxLength>> MIRRAModule::Commands<T>::readLine()
