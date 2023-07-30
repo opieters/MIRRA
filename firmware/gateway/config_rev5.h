@@ -3,9 +3,6 @@
 
 #define TINY_GSM_MODEM_SIM800
 
-#define M_SEL0 25
-#define M_SEL1 27
-
 // Pin assignments
 #define BOOT_PIN 0
 
@@ -15,14 +12,14 @@
 #define SCL_PIN 22
 
 // LoRa module pins
-#define CS_PIN 13   // Chip select pin
-#define RST_PIN 14  // Reset pin
+#define CS_PIN 27   // Chip select pin
+#define RST_PIN 26  // Reset pin
 #define DIO0_PIN 34 // DIO0 pin: LoRa interrupt pin
-#define TX_PIN 17
-#define RX_PIN 16
+#define TX_PIN 13
+#define RX_PIN 25
 
 // PCF2129 timer
-#define RTC_INT_PIN 35   // Interrupt pin
+#define RTC_INT_PIN 4    // Interrupt pin
 #define RTC_ADDRESS 0x51 // i2c address
 
 // Filepaths
@@ -31,7 +28,7 @@
 #define DATA_TEMP_FP "/data_temp.dat"
 
 // WiFi settings
-#define WIFI_SSID "GontrodeWiFi2"
+#define WIFI_SSID "PUT WIFI NAME HERE"
 #define WIFI_PASS "b5uJeswA"
 #define NTP_URL "be.pool.ntp.org"
 
@@ -48,7 +45,7 @@
 // s, time between each node's communication period
 #define COMM_PERIOD_PADDING 3
 // s, time between communication times for every nodes
-#define DEFAULT_COMM_INTERVAL (60 * 60 * 1)
+#define DEFAULT_COMM_INTERVAL (60 * 60 * 12)
 
 #define WAKE_BEFORE_COMM_PERIOD 5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
@@ -56,8 +53,8 @@
 
 #define UPLOAD_EVERY 3 // amount of times the gateway will communicate with the nodes before uploading data to the server
 
-#define DEFAULT_SAMPLE_INTERVAL (20 * 60) // s, time between sensor sampling for every node
-#define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
+#define DEFAULT_SAMPLE_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
+#define DEFAULT_SAMPLE_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
 #define DEFAULT_SAMPLE_OFFSET (0)
 
 #define DISCOVERY_TIMEOUT 5000 // ms
@@ -68,7 +65,7 @@
 #define SENSOR_DATA_TIMEOUT 6000 // ms
 #define SENSOR_DATA_ATTEMPTS 1
 
-#define MAX_SENSORDATA_FILESIZE 128 * 1024 // bytes
+#define MAX_SENSORDATA_FILESIZE 64 * 1024 // bytes
 
 #define MAX_SENSOR_NODES 20
 
