@@ -1,20 +1,20 @@
 #include "ESPCamUART.h"
 
 // specifies the time of the sun rise starting from 12PM at the first day of each month
-// Brussels timezone (UTC+1) WITHOUT daylight savings!!!
+// UTC WITHOUT daylight savings!!!
 static uint32_t sunRiseTable[12] = {
-    8 * 60 * 60 + 48 * 60, // January
-    8 * 60 * 60 + 22 * 60, // February
-    7 * 60 * 60 + 30 * 60, // March
-    6 * 60 * 60 + 21 * 60, // April
-    5 * 60 * 60 + 19 * 60, // May
-    4 * 60 * 60 + 37 * 60, // June
-    4 * 60 * 60 + 35 * 60, // July
-    5 * 60 * 60 + 11 * 60, // August
-    5 * 60 * 60 + 59 * 60, // September
-    6 * 60 * 60 + 45 * 60, // October
-    7 * 60 * 60 + 37 * 60, // November
-    8 * 60 * 60 + 26 * 60, // December
+    7 * 60 * 60 + 48 * 60, // January
+    7 * 60 * 60 + 22 * 60, // February
+    6 * 60 * 60 + 30 * 60, // March
+    5 * 60 * 60 + 21 * 60, // April
+    4 * 60 * 60 + 19 * 60, // May
+    3 * 60 * 60 + 37 * 60, // June
+    3 * 60 * 60 + 35 * 60, // July
+    4 * 60 * 60 + 11 * 60, // August
+    4 * 60 * 60 + 59 * 60, // September
+    5 * 60 * 60 + 45 * 60, // October
+    6 * 60 * 60 + 37 * 60, // November
+    7 * 60 * 60 + 26 * 60, // December
 };
 
 void ESPCamUART::startMeasurement()
