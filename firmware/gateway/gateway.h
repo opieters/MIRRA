@@ -54,6 +54,8 @@ public:
     public:
         Commands(Gateway* parent) : MIRRAModule::Commands<Gateway>(parent){};
         CommandCode processCommands(char* command);
+        CommandCode changeWifi();
+        void printSchedule();
     };
 
 private:

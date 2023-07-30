@@ -2,7 +2,10 @@
 
 #include <BatterySensor.h>
 #include <ESPCamUART.h>
+#include <LightSensor.h>
 #include <RandomSensor.h>
+#include <SoilTempSensor.h>
+#include <TempHumiSensor.h>
 
 RTC_DATA_ATTR bool initialBoot = true;
 
@@ -34,22 +37,31 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
 void SensorNode::wake()
 {
     Log::debug("Running wake()...");
-    uint32_t ctime{time(nullptr)};
-    if (ctime >= WAKE_COMM_PERIOD(nextCommTime))
+    uint32_t cTime{time(nullptr)};
+    if (cTime >= WAKE_COMM_PERIOD(nextCommTime))
     {
-        commPeriod();
+        if (cTime >= nextCommTime + (SENSOR_DATA_TIMEOUT / 1000))
+        {
+            Log::error("Too late to start comm period. Skipping and assuming next comm period from given interval.");
+            while (nextCommTime <= cTime)
+                nextCommTime += commInterval;
+        }
+        else
+        {
+            commPeriod();
+        }
     }
-    ctime = time(nullptr);
-    if (ctime >= nextSampleTime)
+    cTime = time(nullptr);
+    if (cTime >= nextSampleTime)
     {
         samplePeriod();
     }
-    ctime = time(nullptr);
-    Log::info("Next sample in ", nextSampleTime - ctime, "s, next comm period in ", nextCommTime - ctime, "s");
+    cTime = time(nullptr);
+    Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ", nextCommTime - cTime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
     Commands(this).prompt();
-    ctime = time(nullptr);
-    if (ctime >= nextCommTime || ctime >= nextSampleTime)
+    cTime = time(nullptr);
+    if (cTime >= nextCommTime || cTime >= nextSampleTime)
         wake();
     Log::debug("Entering deep sleep...");
     deepSleepUntil(std::min(WAKE_COMM_PERIOD(nextCommTime), nextSampleTime));
@@ -125,6 +137,10 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
 void SensorNode::initSensors()
 {
     addSensor(std::make_unique<RandomSensor>(time(nullptr)));
+    addSensor(std::make_unique<SoilTemperatureSensor>(SOILTEMP_PIN, SOILTEMP_BUS_INDEX));
+    addSensor(std::make_unique<LightSensor>());
+    addSensor(std::make_unique<TempSHTSensor>());
+    addSensor(std::make_unique<HumiSHTSensor>(*reinterpret_cast<TempSHTSensor*>(sensors[nSensors - 1].get())));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
     addSensor(std::make_unique<ESPCamUART>(&Serial1, CAM_PIN));
 }
@@ -147,11 +163,13 @@ Message<SENSOR_DATA> SensorNode::sampleAll()
     Log::info("Sampling all sensors...");
     for (size_t i{0}; i < nSensors; i++)
     {
+        Serial.printf("Starting measurement for %u\n", sensors[i]->getID());
         sensors[i]->startMeasurement();
     }
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
     for (size_t i{0}; i < nSensors; i++)
     {
+        Serial.printf("Getting measurement for %u\n", sensors[i]->getID());
         values[i] = sensors[i]->getMeasurement();
     }
     return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, 0, static_cast<uint8_t>(nSensors), values);
@@ -289,8 +307,9 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
         }
         else
         {
-            Log::error("Error while receiving new time config from gateway. Guessing next comm and sample time based on past interaction...");
-            nextCommTime += commInterval;
+            Log::error("Error while receiving new time config from gateway. Assuming next comm period from given interval.");
+            while (nextCommTime <= time(nullptr))
+                nextCommTime += commInterval;
             return 0;
         }
     }

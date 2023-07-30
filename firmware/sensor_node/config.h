@@ -49,6 +49,9 @@
 #define BATT_PIN 35
 #define BATT_EN_PIN 33
 
+#define SOILTEMP_PIN 17
+#define SOILTEMP_BUS_INDEX 0
+
 #define CAM_PIN GPIO_NUM_2
 
 #endif
