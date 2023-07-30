@@ -1,9 +1,5 @@
 #include <MIRRAModule.h>
 
-volatile bool commandPhaseFlag{false};
-
-void IRAM_ATTR commandPhaseInterrupt() { commandPhaseFlag = true; }
-
 void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
@@ -20,8 +16,6 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
         ESP.restart();
     }
     Serial.println("LittleFS initialsed.");
-    pinMode(pins.boot_pin, INPUT);
-    attachInterrupt(pins.boot_pin, commandPhaseInterrupt, FALLING);
 }
 
 void MIRRAModule::end()
@@ -41,6 +35,8 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
     Serial.println("Logger initialised.");
+    pinMode(pins.boot_pin, INPUT);
+    commandPhaseFlag = !static_cast<bool>(digitalRead(pins.boot_pin));
 }
 
 void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)

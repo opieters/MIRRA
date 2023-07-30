@@ -12,10 +12,7 @@
 #define LOG_FP "/"
 #define LOG_LEVEL Log::DEBUG
 
-#define UART_PHASE_ENTRY_PERIOD 5   // s, length of time after wakeup and comm period in which command phase can be entered
 #define UART_PHASE_TIMEOUT (1 * 60) // s, length of UART inactivity required to automatically exit command phase
-
-extern volatile bool commandPhaseFlag;
 
 class MIRRAModule
 {
@@ -51,6 +48,8 @@ protected:
     const MIRRAPins pins;
     PCF2129_RTC rtc;
     LoRaModule lora;
+
+    bool commandPhaseFlag{false};
 
     template <class T> class Commands
     {

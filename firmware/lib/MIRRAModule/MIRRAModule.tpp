@@ -4,25 +4,17 @@
 
 template <class T> void MIRRAModule::Commands<T>::prompt()
 {
-    Serial.println("Press the BOOT pin to enter command phase ...");
-    for (size_t i = 0; i < UART_PHASE_ENTRY_PERIOD * 10; i++)
-    {
-        if (commandPhaseFlag)
-        {
-            Log::info("Entering command phase...");
-            start();
-            commandPhaseFlag = false;
-            return;
-        }
-        delay(100);
-    }
+    if (parent->commandPhaseFlag)
+        start();
+    else
+        Serial.println("Hold the BOOT pin during startup to enter command phase.");
 }
 
 template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::lineMaxLength>> MIRRAModule::Commands<T>::readLine()
 {
     uint64_t timeout{static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000)};
     uint8_t length{0};
-    std::array<char, lineMaxLength> buffer{};
+    std::array<char, lineMaxLength> buffer{0};
     while (length < lineMaxLength - 1)
     {
         while (!Serial.available())
@@ -53,7 +45,7 @@ template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::line
                 break;
         }
     };
-    return buffer;
+    return std::make_optional(buffer);
 }
 
 template <class T> void MIRRAModule::Commands<T>::start()
@@ -63,7 +55,10 @@ template <class T> void MIRRAModule::Commands<T>::start()
     {
         auto buffer{readLine()};
         if (!buffer)
+        {
+            Serial.println("Command phase timeout. Exiting...");
             return;
+        }
         switch (static_cast<typename T::Commands*>(this)->processCommands(buffer->data()))
         {
         case COMMAND_FOUND:
