@@ -112,7 +112,8 @@ private:
     std::array<SensorValue, maxNValues> values{};
 
 public:
-    Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues, const std::array<SensorValue, maxNValues>& values);
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues, const std::array<SensorValue, maxNValues> values)
+        : MessageHeader(SENSOR_DATA, src, dest), time{time}, nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{values} {};
 
     uint32_t getCTime() const { return time; };
     uint32_t getNValues() const { return nValues; };
