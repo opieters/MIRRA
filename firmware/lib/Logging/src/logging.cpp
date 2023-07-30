@@ -26,14 +26,9 @@ void Log::removeOldLogfiles(struct tm& time)
                 char buffer[32]{0};
                 snprintf(buffer, sizeof(buffer), "/%s", fileName);
                 if (!LittleFS.remove(buffer))
-                {
-                    this->logfileEnabled = false;
-                    this->error("Could not remove logfile '", buffer, "'. Log will disable logging to file.");
-                }
+                    this->error("Could not remove logfile '", buffer, "'.");
                 else
-                {
                     this->info("Removed old logfile '", buffer, "'.");
-                }
             }
         }
         file = root.openNextFile();
@@ -70,10 +65,10 @@ void Log::logfilePrint(struct tm& time)
     {
         if (this->logfile)
             this->logfile.close();
-        removeOldLogfiles(time);
         openLogfile(time);
         if (!this->logfile)
             return;
+        removeOldLogfiles(time);
     }
     logfile.println(buffer);
 }
