@@ -448,24 +448,11 @@ Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
     }
     else if (strcmp(command, "wifi") == 0)
     {
-        Serial.println("Enter WiFi SSID:");
-        auto ssid_buffer{readLine()};
-        if (!ssid_buffer)
-            return COMMAND_EXIT;
-        Serial.println("Enter WiFi password:");
-        auto pass_buffer{readLine()};
-        if (!pass_buffer)
-            return COMMAND_EXIT;
-        parent->wifiConnect(ssid_buffer->data(), pass_buffer->data());
-        if (WiFi.status() == WL_CONNECTED)
-        {
-            WiFi.disconnect();
-            Serial.println("WiFi connected! This WiFi network has been set as the default.");
-        }
-        else
-        {
-            Serial.println("Could not connect to the supplied WiFi network.");
-        }
+        return changeWifi();
+    }
+    else if (strcmp(command, "printschedule") == 0)
+    {
+        printSchedule();
     }
     else
     {
@@ -473,3 +460,41 @@ Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
     }
     return CommandCode::COMMAND_FOUND;
 };
+
+Gateway::Commands::CommandCode Gateway::Commands::changeWifi()
+{
+    Serial.println("Enter WiFi SSID:");
+    auto ssid_buffer{readLine()};
+    if (!ssid_buffer)
+        return COMMAND_EXIT;
+    Serial.println("Enter WiFi password:");
+    auto pass_buffer{readLine()};
+    if (!pass_buffer)
+        return COMMAND_EXIT;
+    parent->wifiConnect(ssid_buffer->data(), pass_buffer->data());
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        WiFi.disconnect();
+        Serial.println("WiFi connected! This WiFi network has been set as the default.");
+    }
+    else
+    {
+        Serial.println("Could not connect to the supplied WiFi network.");
+    }
+    return COMMAND_FOUND;
+}
+
+void Gateway::Commands::printSchedule()
+{
+    constexpr size_t timeLength{sizeof("0000-00-00 00:00:00")};
+    char buffer[timeLength]{0};
+    Serial.println("MAC\tNEXT COMM TIME\tSAMPLE INTERVAL\tMAX MESSAGES");
+    for (const Node& n : parent->nodes)
+    {
+        tm time;
+        time_t nextNodeCommTime{n.getNextCommTime()};
+        gmtime_r(&nextNodeCommTime, &time);
+        strftime(buffer, timeLength, "%F %T", &time);
+        Serial.printf("%s\t%s\t%u\t%u\n", n.getMACAddress().toString(), buffer, n.getSampleInterval(), n.getMaxMessages());
+    }
+}
