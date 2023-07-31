@@ -45,7 +45,7 @@
 // s, time between each node's communication period
 #define COMM_PERIOD_PADDING 3
 // s, time between communication times for every nodes
-#define DEFAULT_COMM_INTERVAL (60 * 60 * 12)
+#define DEFAULT_COMM_INTERVAL (60 * 60)
 
 #define WAKE_BEFORE_COMM_PERIOD 5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
@@ -53,8 +53,8 @@
 
 #define UPLOAD_EVERY 3 // amount of times the gateway will communicate with the nodes before uploading data to the server
 
-#define DEFAULT_SAMPLE_INTERVAL (60 * 60 * 3) // s, time between sensor sampling for every node
-#define DEFAULT_SAMPLE_ROUNDING (60 * 60)     // s, round sampling time to nearest ...
+#define DEFAULT_SAMPLE_INTERVAL (20 * 60) // s, time between sensor sampling for every node
+#define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
 #define DEFAULT_SAMPLE_OFFSET (0)
 
 #define DISCOVERY_TIMEOUT 5000 // ms
