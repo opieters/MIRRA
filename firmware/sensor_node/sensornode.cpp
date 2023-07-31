@@ -39,18 +39,7 @@ void SensorNode::wake()
     Log::debug("Running wake()...");
     uint32_t cTime{time(nullptr)};
     if (cTime >= WAKE_COMM_PERIOD(nextCommTime))
-    {
-        if (cTime >= nextCommTime + (SENSOR_DATA_TIMEOUT / 1000))
-        {
-            Log::error("Too late to start comm period. Skipping and assuming next comm period from given interval.");
-            while (nextCommTime <= cTime)
-                nextCommTime += commInterval;
-        }
-        else
-        {
-            commPeriod();
-        }
-    }
+        commPeriod();
     cTime = time(nullptr);
     if (cTime >= nextSampleTime)
     {
@@ -221,6 +210,14 @@ void SensorNode::samplePeriod()
 
 void SensorNode::commPeriod()
 {
+    uint32_t cTime{time(nullptr)};
+    if (cTime >= nextCommTime + (SENSOR_DATA_TIMEOUT / 1000))
+    {
+        Log::error("Too late to start comm period. Skipping and assuming next comm period from given interval.");
+        while (nextCommTime <= cTime)
+            nextCommTime += commInterval;
+        return;
+    }
     MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
     Log::info("Communicating with gateway ", destMAC.toString(), " ...");
     uint32_t _maxMessages{maxMessages};
