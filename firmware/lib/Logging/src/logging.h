@@ -29,7 +29,8 @@ private:
     void generateLogfilePath(char* buffer, const struct tm& time);
     void removeOldLogfiles(struct tm& time);
     void openLogfile(const struct tm& time);
-    void logfilePrint(struct tm& time);
+    void manageLogfile(struct tm& time);
+    void logfilePrint();
 
     char buffer[256]{0};
     template <Level level> size_t printPreamble(const tm& time);
@@ -144,10 +145,11 @@ template <Log::Level level, class... Ts> void Log::print(Ts... args)
         return;
     time_t ctime{time(nullptr)};
     tm* time{gmtime(&ctime)};
+    manageLogfile(*time);
     size_t cur{printPreamble<level>(*time)};
     size_t left{sizeof(buffer) - cur};
     printv(&buffer[cur], left, args...);
-    logfilePrint(*time);
+    logfilePrint();
     logSerial->println(buffer);
 }
 

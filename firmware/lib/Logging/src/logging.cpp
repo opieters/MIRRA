@@ -56,7 +56,7 @@ void Log::openLogfile(const struct tm& time)
     }
 }
 
-void Log::logfilePrint(struct tm& time)
+void Log::manageLogfile(struct tm& time)
 {
     if (!this->logfileEnabled)
         return;
@@ -70,11 +70,19 @@ void Log::logfilePrint(struct tm& time)
             return;
         removeOldLogfiles(time);
     }
-    logfile.println(buffer);
+}
+
+void Log::logfilePrint()
+{
+    if (!this->logfileEnabled)
+        return;
+    this->logfile.println(buffer);
+    this->logfile.flush();
 }
 
 void Log::close()
 {
+    this->logfile.flush();
     this->logfile.close();
     this->logfileEnabled = false;
 }
