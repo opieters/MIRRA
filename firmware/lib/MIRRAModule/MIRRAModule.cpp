@@ -114,14 +114,14 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
 
 void MIRRAModule::deepSleepUntil(uint32_t untilTime)
 {
-    uint32_t ctime{time(nullptr)};
-    if (untilTime <= ctime)
+    uint32_t cTime{time(nullptr)};
+    if (untilTime <= cTime)
     {
         deepSleep(0);
     }
     else
     {
-        deepSleep(untilTime - ctime);
+        deepSleep(untilTime - cTime);
     }
 }
 
@@ -137,15 +137,15 @@ void MIRRAModule::lightSleep(float sleep_time)
     esp_light_sleep_start();
 }
 
-void MIRRAModule::lightSleepUntil(uint32_t time)
+void MIRRAModule::lightSleepUntil(uint32_t untilTime)
 {
-    uint32_t ctime = rtc.read_time_epoch();
-    if (time <= ctime)
+    uint32_t cTime{time(nullptr)};
+    if (untilTime <= cTime)
     {
         return;
     }
     else
     {
-        lightSleep(time - ctime);
+        lightSleep(untilTime - cTime);
     }
 }
