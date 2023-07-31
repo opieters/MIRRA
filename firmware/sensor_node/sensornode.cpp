@@ -221,7 +221,7 @@ void SensorNode::commPeriod()
     MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
     Log::info("Communicating with gateway ", destMAC.toString(), " ...");
     uint32_t _maxMessages{maxMessages};
-    Log::info("Max messages to send: ", _maxMessages);
+    Log::debug("Max messages to send: ", _maxMessages);
     std::vector<Message<SENSOR_DATA>> messages;
     messages.reserve(_maxMessages);
     uint32_t messagesFlagPositions[_maxMessages];
@@ -281,7 +281,7 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     Log::debug("Awaiting acknowledgement...");
     if (!message.isLast())
     {
-        auto dataAck = lora.receiveMessage<ACK_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, dest);
+        auto dataAck{lora.receiveMessage<ACK_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, dest)};
         if (dataAck)
         {
             return 1;
@@ -294,7 +294,7 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     }
     else
     {
-        auto timeConfig = lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, dest);
+        auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, dest)};
         if (timeConfig)
         {
             this->timeConfig(*timeConfig);
