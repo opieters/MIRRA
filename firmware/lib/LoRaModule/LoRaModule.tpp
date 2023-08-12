@@ -98,7 +98,7 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             }
             if (!received.isValid())
             {
-                Log::debug("Message of type ", received.getType(), " discarded because message of type ", received.desiredType, " is desired.");
+                Log::debug("Message of type ", received.getType(), " discarded because message of type ", T, " is desired.");
                 continue;
             }
 

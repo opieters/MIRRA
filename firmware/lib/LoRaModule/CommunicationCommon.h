@@ -70,7 +70,6 @@ public:
     constexpr bool isValid() const { return isType(T); }
     constexpr static Message<T>& fromData(uint8_t* data) { return *reinterpret_cast<Message<T>*>(data); }
     uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
-    static const MessageType desiredType{T};
 } __attribute__((packed));
 
 template <> class Message<TIME_CONFIG> : public MessageHeader
@@ -96,7 +95,6 @@ public:
     constexpr bool isValid() const { return isType(TIME_CONFIG); }
     constexpr static Message<TIME_CONFIG>& fromData(uint8_t* data) { return *reinterpret_cast<Message<TIME_CONFIG>*>(data); }
     uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
-    static const MessageType desiredType{TIME_CONFIG};
 } __attribute__((packed));
 
 template <> class Message<SENSOR_DATA> : public MessageHeader
@@ -123,7 +121,6 @@ public:
     constexpr bool isValid() const { return isType(SENSOR_DATA); }
     static constexpr Message<SENSOR_DATA>& fromData(uint8_t* data);
     uint8_t* toData() { return reinterpret_cast<uint8_t*>(this); }
-    static const MessageType desiredType{SENSOR_DATA};
 } __attribute__((packed));
 
 constexpr Message<SENSOR_DATA>& Message<SENSOR_DATA>::fromData(uint8_t* data)
