@@ -311,7 +311,7 @@ void Gateway::rtcUpdateTime()
         if (sntp_enabled())
             sntp_stop();
         Log::debug("Writing time to RTC...");
-        rtc.write_time_epoch(rtc.getSysTime());
+        rtc.writeTime(rtc.getSysTime());
         Log::info("RTC and system time updated.");
     }
     WiFi.disconnect();

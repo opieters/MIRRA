@@ -21,17 +21,17 @@ public:
     /// @brief Struct that groups pin configurations for the initialisation of a MIRRAModule.
     struct MIRRAPins
     {
-        uint8_t boot_pin;
-        uint8_t per_power_pin;
-        uint8_t sda_pin;
-        uint8_t scl_pin;
-        uint8_t cs_pin;
-        uint8_t rst_pin;
-        uint8_t dio0_pin;
-        uint8_t tx_pin;
-        uint8_t rx_pin;
-        uint8_t rtc_int_pin;
-        uint8_t rtc_address;
+        uint8_t bootPin;
+        uint8_t peripheralPowerPin;
+        uint8_t sdaPin;
+        uint8_t sclPin;
+        uint8_t csPin;
+        uint8_t rstPin;
+        uint8_t dio0Pin;
+        uint8_t txPin;
+        uint8_t rxPin;
+        uint8_t rtcIntPin;
+        uint8_t rtcAddress;
     };
     /// @brief Configures the ESP32's pins, starts basic communication primitives (UART, I2C) and mounts the filesystem. Must be called before initialisation of
     /// the MIRRAModule.

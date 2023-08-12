@@ -4,11 +4,11 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
-    gpio_hold_dis(static_cast<gpio_num_t>(pins.per_power_pin));
-    pinMode(pins.per_power_pin, OUTPUT);
-    digitalWrite(pins.per_power_pin, HIGH);
-    Wire.begin(pins.sda_pin, pins.scl_pin); // i2c
-    pinMode(pins.boot_pin, INPUT);
+    gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    pinMode(pins.peripheralPowerPin, OUTPUT);
+    digitalWrite(pins.peripheralPowerPin, HIGH);
+    Wire.begin(pins.sdaPin, pins.sclPin); // i2c
+    pinMode(pins.bootPin, INPUT);
     Serial.println("I2C wire initialised.");
     if (!LittleFS.begin())
     {
@@ -25,19 +25,19 @@ void MIRRAModule::end()
     lora.sleep();
     LittleFS.end();
     Wire.end();
-    digitalWrite(pins.per_power_pin, LOW);
-    gpio_hold_en(static_cast<gpio_num_t>(pins.per_power_pin));
+    digitalWrite(pins.peripheralPowerPin, LOW);
+    gpio_hold_en(static_cast<gpio_num_t>(pins.peripheralPowerPin));
     Serial.end();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtc_int_pin, pins.rtc_address}, lora{pins.cs_pin, pins.rst_pin, pins.dio0_pin, pins.rx_pin, pins.tx_pin}
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}
 {
     Log::log.setSerial(&Serial);
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
     Serial.println("Logger initialised.");
     Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
-    commandPhaseFlag = !static_cast<bool>(digitalRead(pins.boot_pin));
+    commandPhaseFlag = !static_cast<bool>(digitalRead(pins.bootPin));
 }
 
 void MIRRAModule::storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile)
@@ -103,11 +103,11 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     else
     {
         Log::debug("Using RTC for deep sleep.");
-        rtc.write_alarm_epoch(rtc.read_time_epoch() + sleep_time);
-        rtc.enable_alarm();
+        rtc.writeAlarm(rtc.readTimeEpoch() + sleep_time);
+        rtc.enableAlarm();
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
-    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.boot_pin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.bootPin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     Log::info("Good night.");
     esp_deep_sleep_start();
 }

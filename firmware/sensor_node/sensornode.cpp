@@ -37,19 +37,19 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
 void SensorNode::wake()
 {
     Log::debug("Running wake()...");
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     if (cTime >= WAKE_COMM_PERIOD(nextCommTime))
         commPeriod();
-    cTime = time(nullptr);
+    cTime = rtc.getSysTime();
     if (cTime >= nextSampleTime)
     {
         samplePeriod();
     }
-    cTime = time(nullptr);
+    cTime = rtc.getSysTime();
     Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ", nextCommTime - cTime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
     Commands(this).prompt();
-    cTime = time(nullptr);
+    cTime = rtc.getSysTime();
     if (cTime >= nextCommTime || cTime >= nextSampleTime)
         wake();
     Log::debug("Entering deep sleep...");
@@ -83,7 +83,7 @@ void SensorNode::discovery()
 
 void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
 {
-    rtc.write_time_epoch(m.getCTime());
+    rtc.writeTime(m.getCTime());
     rtc.setSysTime();
     bool scheduleValid{sampleInterval == m.getSampleInterval() && sampleRounding == m.getSampleRounding() && sampleOffset == m.getSampleOffset()};
     sampleInterval = m.getSampleInterval() == 0 ? DEFAULT_SAMPLING_INTERVAL : m.getSampleInterval();
@@ -107,7 +107,7 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
 {
     if (nSensors > MAX_SENSORS)
         return;
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     if (sensorsNextSampleTimes[nSensors] == 0)
     {
         sensor->setNextSampleTime(((cTime / sampleRounding) * sampleRounding + sampleOffset));
@@ -125,7 +125,7 @@ void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
 
 void SensorNode::initSensors()
 {
-    addSensor(std::make_unique<RandomSensor>(time(nullptr)));
+    addSensor(std::make_unique<RandomSensor>(rtc.getSysTime()));
     addSensor(std::make_unique<SoilTemperatureSensor>(SOILTEMP_PIN, SOILTEMP_BUS_INDEX));
     addSensor(std::make_unique<LightSensor>());
     addSensor(std::make_unique<TempSHTSensor>());
@@ -210,7 +210,7 @@ void SensorNode::samplePeriod()
 
 void SensorNode::commPeriod()
 {
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     if (cTime >= nextCommTime + (SENSOR_DATA_TIMEOUT / 1000))
     {
         Log::error("Too late to start comm period. Skipping and assuming next comm period from given interval.");
@@ -230,7 +230,7 @@ void SensorNode::commPeriod()
     {
         if (messages.size() == _maxMessages)
             break;
-        uint8_t size{dataFile.read()};
+        uint8_t size{static_cast<uint8_t>(dataFile.read())};
         uint8_t buffer[size];
         dataFile.read(buffer, size);
         if (buffer[0] == 0) // not yet uploaded
@@ -305,7 +305,7 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
         else
         {
             Log::error("Error while receiving new time config from gateway. Assuming next comm period from given interval.");
-            while (nextCommTime <= time(nullptr))
+            while (nextCommTime <= rtc.getSysTime())
                 nextCommTime += commInterval;
             return 0;
         }
@@ -362,7 +362,7 @@ void SensorNode::Commands::printSchedule()
     for (size_t i{0}; i < parent->nSensors; i++)
     {
         tm time;
-        time_t nextSensorSampleTime{parent->sensors[i]->getNextSampleTime()};
+        time_t nextSensorSampleTime{static_cast<time_t>(parent->sensors[i]->getNextSampleTime())};
         gmtime_r(&nextSensorSampleTime, &time);
         strftime(buffer, timeLength, "%F %T", &time);
         Serial.printf("%u\t%s\n", parent->sensors[i]->getID(), buffer);
