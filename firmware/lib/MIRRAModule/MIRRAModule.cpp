@@ -8,6 +8,7 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
     pinMode(pins.per_power_pin, OUTPUT);
     digitalWrite(pins.per_power_pin, HIGH);
     Wire.begin(pins.sda_pin, pins.scl_pin); // i2c
+    pinMode(pins.boot_pin, INPUT);
     Serial.println("I2C wire initialised.");
     if (!LittleFS.begin())
     {
@@ -36,11 +37,10 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::log.setLogLevel(LOG_LEVEL);
     Serial.println("Logger initialised.");
     Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
-    pinMode(pins.boot_pin, INPUT);
     commandPhaseFlag = !static_cast<bool>(digitalRead(pins.boot_pin));
 }
 
-void MIRRAModule::storeSensorData(Message<SENSOR_DATA>& m, File& dataFile)
+void MIRRAModule::storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile)
 {
     dataFile.write(static_cast<uint8_t>(m.getLength()));
     dataFile.write(0); // mark not uploaded (yet)
@@ -114,7 +114,7 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
 
 void MIRRAModule::deepSleepUntil(uint32_t untilTime)
 {
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     if (untilTime <= cTime)
     {
         deepSleep(0);
@@ -139,7 +139,7 @@ void MIRRAModule::lightSleep(float sleep_time)
 
 void MIRRAModule::lightSleepUntil(uint32_t untilTime)
 {
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     if (untilTime <= cTime)
     {
         return;

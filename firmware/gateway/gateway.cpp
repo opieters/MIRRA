@@ -66,7 +66,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
 void Gateway::wake()
 {
     Log::debug("Running wake()...");
-    if (!nodes.empty() && time(nullptr) >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
+    if (!nodes.empty() && rtc.getSysTime() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
         commPeriod();
     // send data to server only every UPLOAD_EVERY comm periods
     if (commPeriods >= UPLOAD_EVERY)
@@ -112,7 +112,7 @@ void Gateway::discovery()
     }
     Log::info("Node found at ", helloReply->getSource().toString());
 
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{rtc.getSysTime()};
     uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
     uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
 
@@ -211,7 +211,7 @@ uint32_t Gateway::nextScheduledCommTime()
 
 bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
 {
-    uint32_t cTime{time(nullptr)};
+    uint32_t cTime{static_cast<uint32_t>(rtc.getSysTime())};
     if (cTime > n.getNextCommTime())
     {
         Log::error("Node ", n.getMACAddress().toString(),
@@ -246,7 +246,7 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
     if (lambdaIsLost(n) && !(std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)))
         commTime = nextScheduledCommTime();
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
-    cTime = time(nullptr);
+    cTime = rtc.getSysTime();
     Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
                                     n.getMACAddress(),
                                     cTime,
@@ -298,7 +298,7 @@ void Gateway::rtcUpdateTime()
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, NTP_URL);
         sntp_init();
-        uint64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
+        int64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
         while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
         {
             if (esp_timer_get_time() > timeout)
@@ -311,7 +311,7 @@ void Gateway::rtcUpdateTime()
         if (sntp_enabled())
             sntp_stop();
         Log::debug("Writing time to RTC...");
-        rtc.write_time_epoch(static_cast<uint32_t>(time(nullptr)));
+        rtc.write_time_epoch(rtc.getSysTime());
         Log::info("RTC and system time updated.");
     }
     WiFi.disconnect();
@@ -494,7 +494,7 @@ void Gateway::Commands::printSchedule()
     for (const Node& n : parent->nodes)
     {
         tm time;
-        time_t nextNodeCommTime{n.getNextCommTime()};
+        time_t nextNodeCommTime{static_cast<time_t>(n.getNextCommTime())};
         gmtime_r(&nextNodeCommTime, &time);
         strftime(buffer, timeLength, "%F %T", &time);
         Serial.printf("%s\t%s\t%u\t%u\n", n.getMACAddress().toString(), buffer, n.getSampleInterval(), n.getMaxMessages());

@@ -61,6 +61,7 @@ public:
      */
     void write_alarm_epoch(uint32_t alarm_epoch);
     void setSysTime();
+    uint32_t getSysTime() { return static_cast<uint32_t>(time(nullptr)); }
     uint8_t getIntPin() { return int_pin; };
 };
 #endif
