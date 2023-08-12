@@ -24,11 +24,11 @@ void LoRaModule::sendRepeat(const MACAddress& dest)
     sendPacket(repeatMessage.toData(), repeatMessage.getLength());
 }
 
-void LoRaModule::sendPacket(uint8_t* buffer, size_t length)
+void LoRaModule::sendPacket(const uint8_t* buffer, size_t length)
 {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
-    int state = this->startTransmit(buffer, length);
+    int state = this->startTransmit(const_cast<uint8_t*>(buffer), length);
     if (state == RADIOLIB_ERR_NONE)
     {
         esp_light_sleep_start();

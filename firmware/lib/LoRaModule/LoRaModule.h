@@ -43,7 +43,7 @@ public:
 
     template <class T> void sendMessage(T&& message, uint32_t delay = SEND_DELAY);
     void sendRepeat(const MACAddress& dest);
-    void sendPacket(uint8_t* buffer, size_t length);
+    void sendPacket(const uint8_t* buffer, size_t length);
     void resendPacket();
 
     template <MessageType T>
