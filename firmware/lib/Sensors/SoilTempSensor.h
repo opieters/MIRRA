@@ -10,19 +10,14 @@
 class SoilTemperatureSensor final : public Sensor
 {
 private:
-    uint8_t busIndex; // The bus index of the sensor
-    uint8_t pin;      // pin number of 1W interface
+    /// @brief Pin number of 1W interface.
+    uint8_t pin;
+    /// @brief The bus index of the sensor.
+    uint8_t busIndex;
     OneWire wire;
     DallasTemperature dallas;
 
 public:
-    /**
-     * Constructor
-     *
-     * @param pin   The pin on which the sensor is connected
-     *
-     * @param busIndex The onewire bus index of the sensor
-     */
     SoilTemperatureSensor(uint8_t pin, uint8_t busIndex) : pin{pin}, busIndex{busIndex}, wire{OneWire(pin)}, dallas{&wire} {}
     void startMeasurement();
     SensorValue getMeasurement();
