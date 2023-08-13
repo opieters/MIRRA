@@ -24,7 +24,6 @@ public:
      * @param busIndex The onewire bus index of the sensor
      */
     SoilTemperatureSensor(uint8_t pin, uint8_t busIndex) : pin{pin}, busIndex{busIndex}, wire{OneWire(pin)}, dallas{&wire} {}
-    void setup(){};
     void startMeasurement();
     SensorValue getMeasurement();
     uint8_t getID() const { return SOIL_TEMPERATURE_KEY; };

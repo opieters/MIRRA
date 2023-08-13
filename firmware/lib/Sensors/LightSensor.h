@@ -14,7 +14,6 @@ private:
 
 public:
     LightSensor() = default;
-    void setup(){};
     void startMeasurement();
     SensorValue getMeasurement();
     uint8_t getID() const { return LIGHT_KEY; };

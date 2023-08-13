@@ -13,7 +13,6 @@ private:
 
 public:
     SoilMoistureSensor(uint8_t pin) : pin{pin} {};
-    void setup(){};
     void startMeasurement() { pinMode(pin, INPUT); };
     SensorValue getMeasurement() { return SensorValue(getID(), static_cast<float>(analogRead(pin))); };
     uint8_t getID() const { return SOIL_MOISTURE_KEY; };

@@ -30,8 +30,6 @@ private:
 
 public:
     HumiSHTSensor(const TempSHTSensor& base) : baseSensor{base.getBase()} {};
-    void setup(){};
-    void startMeasurement(){};
     SensorValue getMeasurement();
     uint8_t getID() const { return HUMI_SHT_KEY; };
 };

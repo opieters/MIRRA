@@ -11,8 +11,6 @@ private:
 
 public:
     RandomSensor(uint32_t seed) { srand(seed); }
-    void setup(){};
-    void startMeasurement(){};
     SensorValue getMeasurement() { return SensorValue(getID(), static_cast<float>(rand() % 101)); };
     uint8_t getID() const { return RANDOM_KEY; }
 };
