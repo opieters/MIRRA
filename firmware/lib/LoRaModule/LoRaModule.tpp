@@ -4,7 +4,7 @@
 
 template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 {
-    // When the transmission of the LoRa message is done an interrupt will be generated on DIO0,
+    // When the transmission of a LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
     char mac_src_buffer[MACAddress::stringLength];
     size_t length = message.getLength();
@@ -12,7 +12,6 @@ template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
                message.getDest().toString());
     this->sendLength = length;
     message.fromData(this->sendBuffer) = std::forward<T>(message);
-    this->lastDest = message.getDest();
     if (delay > 0)
     {
         esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
@@ -27,9 +26,7 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
 {
     auto source{std::cref(src)};
     if (source.get() == MACAddress::broadcast && this->sendLength != 0)
-    {
-        source = std::cref(this->lastDest);
-    }
+        source = std::cref(this->getLastDest());
     timeoutMs /= repeatAttempts + 1;
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
@@ -89,9 +86,9 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             if (received.isType(REPEAT))
             {
                 Log::debug("Received REPEAT message from ", received.getSource().toString());
-                if (this->lastDest == received.getSource())
+                if (this->getLastDest() == received.getSource())
                 {
-                    this->resendPacket();
+                    this->resendMessage();
                     esp_sleep_enable_timer_wakeup(timeoutMs * 1000);
                 }
                 continue;

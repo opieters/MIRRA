@@ -41,14 +41,14 @@ void LoRaModule::sendPacket(const uint8_t* buffer, size_t length)
     this->finishTransmit();
 }
 
-void LoRaModule::resendPacket()
+void LoRaModule::resendMessage()
 {
     if (sendLength == 0)
     {
-        Log::error("Could not repeat last sent packet because no packet has been sent yet.");
+        Log::error("Could not repeat last sent message because no message has been sent yet.");
         esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
         return;
     }
-    Log::debug("Resending last sent packet to ", this->lastDest.toString());
+    Log::debug("Resending last sent message to ", this->getLastDest().toString());
     sendPacket(this->sendBuffer, this->sendLength);
 }
