@@ -19,39 +19,74 @@ public:
 private:
     Log() = default;
 
+    /// @brief Serial to print to.
     HardwareSerial* logSerial{nullptr};
+    /// @brief Logging level of the logging module. Messages below this level will not be printed.
     Level level{static_cast<uint8_t>(-1)};
 
+    /// @brief Whether logging to file is enabled.
     bool logfileEnabled{false};
+    /// @brief Time struct of the currently loaded logging file.
     tm logfileTime{0};
+    /// @brief Currently loaded logging file. Should be opened in append mode.
     File logfile{};
-    static const size_t daysToKeep{14};
+    /// @brief Days to keep a logging file in the filesystem.
+    static constexpr size_t daysToKeep{14};
+
+    /// @brief Generates a logfile path from a time struct.
+    /// @param buffer Buffer to which to write the logfile path.
+    /// @param time Time for which to generate a logfile path.
     void generateLogfilePath(char* buffer, const struct tm& time);
+    /// @brief Removes all logfiles that have reached the expiry date by a given date.
+    /// @param time Date from which logfile expiration is calculated according to daysToKeep.
     void removeOldLogfiles(struct tm& time);
+    /// @brief Opens/creates a logfile with the given date.
+    /// @param time The date for which to open/create a logfile.
     void openLogfile(const struct tm& time);
+    /// @brief Manages all file-related operations for a given date.
+    /// @param time The date from which to manage the filesystem.
     void manageLogfile(struct tm& time);
+    /// @brief Prints the current buffer to the currently open logfile.
     void logfilePrint();
 
+    /// @brief Buffer in which the final string is constructed and printed from.
     char buffer[256]{0};
+    /// @brief Prints the preamble portion of the log line.
+    /// @tparam level The level displayed in the preamble.
+    /// @param time The time displayed in the preamble.
+    /// @return The length of the preamble that was printed.
     template <Level level> size_t printPreamble(const tm& time);
+    /// @return String conversion from a level.
     static constexpr std::string_view levelToString(Level level);
+    /// @return A format specifier string matched to the type argument.
     template <class T> static constexpr std::string_view typeToFormatSpecifier();
     template <class T> static constexpr std::string_view rawTypeToFormatSpecifier();
+    /// @return A format string matched to the given type arguments.
     template <class... Ts> static constexpr auto createFormatString();
+    /// @brief Type-safe variadic print function. Uses compile-time format string instantiation to ensure safety in using printf.
+    /// @param buffer Buffer to which to print.
+    /// @param max Max number of characters to print to buffer.
     template <class... Ts> void printv(char* buffer, size_t max, Ts... args);
+    /// @brief Prints to the logging buffer and forwards to (if enabled) the output serial and logfile.
+    /// @tparam level Log level of printed message.
     template <Level level, class... Ts> void print(Ts... args);
 
 public:
+    /// @param logSerial HardwareSerial object to print to.
     void setSerial(HardwareSerial* logSerial) { this->logSerial = logSerial; }
+    /// @param level Level to set the logging module to. Messages below this level will not be printed.
     void setLogLevel(Log::Level level) { this->level = level; }
+    /// @brief Enables or disables the logging to file functionality.
     void setLogfile(bool enable) { this->logfileEnabled = enable; }
 
+    /// @brief Singleton global log object
     static Log log;
 
     template <class... Ts> static void debug(Ts... args) { log.print<DEBUG>(args...); }
     template <class... Ts> static void info(Ts... args) { log.print<INFO>(args...); }
     template <class... Ts> static void error(Ts... args) { log.print<ERROR>(args...); }
 
+    /// @brief Closes the logging module, releasing the logging file.
     void close();
 
     Log(const Log&) = delete;
