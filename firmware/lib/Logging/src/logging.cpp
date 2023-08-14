@@ -76,8 +76,8 @@ void Log::logfilePrint()
 {
     if (!this->logfileEnabled)
         return;
-    this->logfile.println(buffer);
     this->logfile.flush();
+    this->logfile.println(buffer);
 }
 
 void Log::close()
