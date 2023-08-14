@@ -16,9 +16,10 @@ void Node::timeConfig(Message<TIME_CONFIG>& m)
         this->errors--;
 }
 
-void Node::naiveTimeConfig()
+void Node::naiveTimeConfig(uint32_t cTime)
 {
-    this->nextCommTime += commInterval;
+    while (this->nextCommTime <= cTime)
+        this->nextCommTime += commInterval;
     this->errors++;
 }
 
@@ -177,7 +178,7 @@ void Gateway::commPeriod()
             break;
         farCommTime = n.getNextCommTime() + 2 * (COMM_PERIOD_LENGTH(MAX_MESSAGES(commInterval, n.getSampleInterval())) + COMM_PERIOD_PADDING);
         if (!nodeCommPeriod(n, data))
-            n.naiveTimeConfig();
+            n.naiveTimeConfig(rtc.getSysTime());
     }
     std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
     if (nodes.empty())
@@ -499,9 +500,13 @@ void Gateway::Commands::discoveryLoop(char* arg)
         esp_sleep_enable_timer_wakeup(150 * 1000 * 1000);
         esp_sleep_enable_ext0_wakeup(static_cast<gpio_num_t>(parent->pins.bootPin), 0);
         Serial.printf("Sleeping 2.5 minutes. Press BOOT pin to exit discovery looping. %u loops left.\n", loops);
+        Serial.flush();
         esp_light_sleep_start();
         if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0)
+        {
+            Serial.println("Exiting discovery loop...");
             return;
+        }
         parent->discovery();
         loops--;
     }

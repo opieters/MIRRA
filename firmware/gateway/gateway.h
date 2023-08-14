@@ -32,7 +32,7 @@ public:
     /// @param m Time Config message used to saturate the representation's attributes.
     void timeConfig(Message<TIME_CONFIG>& m);
     /// @brief Configures the Node as if the time config message was missed, the same way the actual module would do.
-    void naiveTimeConfig();
+    void naiveTimeConfig(uint32_t cTime);
 
     const MACAddress& getMACAddress() const { return mac; }
     uint32_t getSampleInterval() const { return sampleInterval; }
