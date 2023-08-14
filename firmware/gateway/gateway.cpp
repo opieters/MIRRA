@@ -444,6 +444,10 @@ Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
     {
         parent->discovery();
     }
+    else if (strncmp(command, "discoveryloop ", 14) == 0)
+    {
+        discoveryLoop(&command[14]);
+    }
     else if (strcmp(command, "rtc") == 0)
     {
         parent->rtcUpdateTime();
@@ -484,6 +488,23 @@ Gateway::Commands::CommandCode Gateway::Commands::changeWifi()
         Serial.println("Could not connect to the supplied WiFi network.");
     }
     return COMMAND_FOUND;
+}
+
+void Gateway::Commands::discoveryLoop(char* arg)
+{
+    size_t loops{strtoul(arg, nullptr, 10)};
+    while (loops != 0)
+    {
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+        esp_sleep_enable_timer_wakeup(150 * 1000 * 1000);
+        esp_sleep_enable_ext0_wakeup(static_cast<gpio_num_t>(parent->pins.bootPin), 0);
+        Serial.printf("Sleeping 2.5 minutes. Press BOOT pin to exit discovery looping. %u loops left.\n", loops);
+        esp_light_sleep_start();
+        if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0)
+            return;
+        parent->discovery();
+        loops--;
+    }
 }
 
 void Gateway::Commands::printSchedule()

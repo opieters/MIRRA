@@ -11,6 +11,7 @@
 #define IDEAL_MESSAGES(COMM_INTERVAL, SAMP_INTERVAL) (COMM_INTERVAL / SAMP_INTERVAL)
 #define MAX_MESSAGES(COMM_INTERVAL, SAMP_INTERVAL) ((3 * COMM_INTERVAL / (2 * SAMP_INTERVAL)) + 1)
 
+/// @brief Representation of a Sensor Node's attributes relevant for communication, used for tracking the status of nodes from the gateway.
 class Node
 {
 private:
@@ -27,7 +28,10 @@ private:
 public:
     Node() {}
     Node(Message<TIME_CONFIG>& m) : mac{m.getDest()} { timeConfig(m); }
+    /// @brief Configures the Node with a time config message, the same way the actual module would do.
+    /// @param m Time Config message used to saturate the representation's attributes.
     void timeConfig(Message<TIME_CONFIG>& m);
+    /// @brief Configures the Node as if the time config message was missed, the same way the actual module would do.
     void naiveTimeConfig();
 
     const MACAddress& getMACAddress() const { return mac; }
@@ -55,6 +59,7 @@ public:
         Commands(Gateway* parent) : MIRRAModule::Commands<Gateway>(parent){};
         CommandCode processCommands(char* command);
         CommandCode changeWifi();
+        void discoveryLoop(char* arg);
         void printSchedule();
     };
 
