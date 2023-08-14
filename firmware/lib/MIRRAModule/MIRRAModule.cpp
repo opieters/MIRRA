@@ -84,9 +84,9 @@ void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
     LittleFS.rename(tempFileName, fileName);
 }
 
-void MIRRAModule::deepSleep(uint32_t sleep_time)
+void MIRRAModule::deepSleep(uint32_t sleepTime)
 {
-    if (sleep_time <= 0)
+    if (sleepTime <= 0)
     {
         Log::error("Sleep time was zero or negative! Sleeping one second to avert crisis.");
         return deepSleep(1);
@@ -95,15 +95,15 @@ void MIRRAModule::deepSleep(uint32_t sleep_time)
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep
     // sleep
-    if (sleep_time <= 30)
+    if (sleepTime <= 30)
     {
         Log::debug("Using internal timer for deep sleep.");
-        esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
+        esp_sleep_enable_timer_wakeup((uint64_t)sleepTime * 1000 * 1000);
     }
     else
     {
         Log::debug("Using RTC for deep sleep.");
-        rtc.writeAlarm(rtc.readTimeEpoch() + sleep_time);
+        rtc.writeAlarm(rtc.readTimeEpoch() + sleepTime);
         rtc.enableAlarm();
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
@@ -125,15 +125,15 @@ void MIRRAModule::deepSleepUntil(uint32_t untilTime)
     }
 }
 
-void MIRRAModule::lightSleep(float sleep_time)
+void MIRRAModule::lightSleep(float sleepTime)
 {
-    if (sleep_time <= 0)
+    if (sleepTime <= 0)
     {
         Log::error("Sleep time was zero or negative! Skipping to avert crisis.");
         return;
     }
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    esp_sleep_enable_timer_wakeup((uint64_t)sleep_time * 1000 * 1000);
+    esp_sleep_enable_timer_wakeup((uint64_t)sleepTime * 1000 * 1000);
     esp_light_sleep_start();
 }
 

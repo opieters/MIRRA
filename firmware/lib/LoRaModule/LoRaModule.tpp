@@ -6,9 +6,9 @@ template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 {
     // When the transmission of a LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
-    char mac_src_buffer[MACAddress::stringLength];
+    char macSrcBuffer[MACAddress::stringLength];
     size_t length = message.getLength();
-    Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ", message.getSource().toString(mac_src_buffer), " to ",
+    Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ", message.getSource().toString(macSrcBuffer), " to ",
                message.getDest().toString());
     this->sendLength = length;
     message.fromData(this->sendBuffer) = std::forward<T>(message);
@@ -47,9 +47,9 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
 
         esp_light_sleep_start();
 
-        esp_sleep_wakeup_cause_t wakeup_cause{esp_sleep_get_wakeup_cause()};
+        esp_sleep_wakeup_cause_t wakeupCause{esp_sleep_get_wakeup_cause()};
 
-        if (wakeup_cause == ESP_SLEEP_WAKEUP_GPIO || wakeup_cause == ESP_SLEEP_WAKEUP_EXT0)
+        if (wakeupCause == ESP_SLEEP_WAKEUP_GPIO || wakeupCause == ESP_SLEEP_WAKEUP_EXT0)
         {
             uint8_t buffer[Message<T>::maxLength]{0};
             state = this->readData(buffer, std::min(this->getPacketLength(), Message<T>::maxLength));
@@ -72,9 +72,9 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             Log::debug("Dest: ", received.getDest().toString());
             if (source.get() != MACAddress::broadcast && source.get() != received.getSource())
             {
-                char mac_src_buffer[MACAddress::stringLength];
+                char macSrcBuffer[MACAddress::stringLength];
                 Log::debug("Message from ", received.getSource().toString(), " discared because it is not the desired source of the message, namely ",
-                           source.get().toString(mac_src_buffer));
+                           source.get().toString(macSrcBuffer));
                 continue;
             }
 
