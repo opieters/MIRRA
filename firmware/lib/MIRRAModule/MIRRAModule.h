@@ -52,14 +52,14 @@ protected:
     void pruneSensorData(File&& dataFile, uint32_t maxSize);
 
     /// @brief Enters deep sleep for the specified time.
-    /// @param time The time in seconds to sleep.
-    void deepSleep(uint32_t time);
+    /// @param sleepTime The time in seconds to sleep.
+    void deepSleep(uint32_t sleepTime);
     /// @brief Enters deep sleep until the specified time.
     /// @param untilTime The time (UNIX epoch, seconds) the module should wake.
     void deepSleepUntil(uint32_t untilTime);
     /// @brief Enters light sleep for the specified time.
-    /// @param time The time in seconds to sleep.
-    void lightSleep(float time);
+    /// @param sleepTime The time in seconds to sleep.
+    void lightSleep(float sleepTime);
     /// @brief Enters light sleep until the specified time.
     /// @param untilTime The time (UNIX epoch, seconds) the module should wake.
     void lightSleepUntil(uint32_t untilTime);
