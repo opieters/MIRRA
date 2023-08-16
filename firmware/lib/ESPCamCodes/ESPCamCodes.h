@@ -1,8 +1,8 @@
 enum ESPCamCodes : uint8_t
 {
-    SET_TIME = 11,
-    GET_TIME = 22,
-    TAKE_PICTURE = 33,
-    ENABLE_SLEEP = 44,
-    GET_STATUS = 55,
+    SET_TIME = 's',
+    GET_TIME = 'g',
+    TAKE_PICTURE = 'p',
+    ENABLE_SLEEP = 'z',
+    GET_STATUS = 'a',
 };
