@@ -10,6 +10,8 @@ ESP32-CAM
 #include "SPI.h"
 #include "driver/rtc_io.h"
 #include "esp_camera.h"
+#include "espcam.h"
+#include "logging.h"
 #include "soc/rtc_cntl_reg.h" // Disable brownour problems
 #include "soc/soc.h"          // Disable brownour problems
 #include <EEPROM.h>           // read and write from flash memory
@@ -18,17 +20,10 @@ ESP32-CAM
 #include <esp_sntp.h>
 #include <time.h>
 
-// for debugging purposes
-#define __DEBUG__ // comment out when not debugging
+RTC_DATA_ATTR bool firstBoot{true};
 
-RTC_DATA_ATTR bool firstBoot = true;
-
-// Variables to save date and time
-char formattedDatetime[26];
-String datetimeString;
-
-// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO12 (=uartPin)
-constexpr gpio_num_t uartPin = GPIO_NUM_12;
+// one wire interface to sensor node: not 1-Wire anymore! NOW: serial via GPIO12 (=uartRxPin)
+constexpr gpio_num_t uartRxPin{GPIO_NUM_12};
 
 // Pin definition for CAMERA_MODEL_AI_THINKER
 #define PWDN_GPIO_NUM 32
@@ -68,8 +63,8 @@ void takePicture(void)
     config.pin_pclk = PCLK_GPIO_NUM;
     config.pin_vsync = VSYNC_GPIO_NUM;
     config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_sccb_sda = SIOD_GPIO_NUM;
+    config.pin_sccb_scl = SIOC_GPIO_NUM;
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
@@ -82,9 +77,7 @@ void takePicture(void)
 
     if (psramFound())
     {
-#ifdef __DEBUG__
-        Serial.println("psram found");
-#endif
+        Log::debug("PSRAM found");
         config.frame_size = FRAMESIZE_SXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
         config.jpeg_quality = 10;
         config.fb_count = 1;
@@ -104,36 +97,29 @@ void takePicture(void)
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK)
     {
-        Serial.printf("Camera init failed with error 0x%x", err);
+        Log::error("Camera init failed with error ", static_cast<uint32_t>(err));
         pictureSuccess = false;
         return;
     }
     else
     {
-#ifdef __DEBUG__
-        Serial.println("Camera init OK.");
-#endif
+        Log::info("Camera init OK.");
         pictureSuccess = true;
     }
-
-    // pinMode(stat_pin, INPUT);
-
-#ifdef __DEBUG__
-    Serial.println("Starting SD Card");
-#endif
+    Log::info("Starting SD Card");
     delay(500);
 
     // delay(1000);
     if (!SD_MMC.begin("/sdcard", true, false))
     { // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
-        Serial.println("SD Card Mount Failed");
+        Log::error("SD Card Mount Failed");
         delay(500);
     }
 
     uint8_t cardType = SD_MMC.cardType();
     if (cardType == CARD_NONE)
     {
-        Serial.println("No SD Card attached");
+        Log::error("No SD Card attached");
         pictureSuccess = false;
         return;
     }
@@ -143,13 +129,11 @@ void takePicture(void)
     timeval tv;
     gettimeofday(&tv, NULL);
     timeinfo = *gmtime(&tv.tv_sec);
-
-    strftime(formattedDatetime, sizeof(formattedDatetime), "%Y-%m-%d %H_%M_%S", &timeinfo);
-    datetimeString = String(formattedDatetime);
-#ifdef __DEBUG__
-    Serial.print("Current datetime:");
-    Serial.println(datetimeString);
-#endif
+    String datetimeString;
+    constexpr size_t datetimeStringLength{sizeof("0000-00-00 00_00_00")};
+    datetimeString.reserve(datetimeStringLength);
+    strftime(datetimeString.begin(), datetimeStringLength, "%Y-%m-%d %H_%M_%S", &timeinfo);
+    Log::debug("Current datetime:", datetimeString.c_str());
     delay(500);
 
     camera_fb_t* fb = NULL;
@@ -212,7 +196,7 @@ void takePicture(void)
             fb = esp_camera_fb_get();
             if (!fb)
             {
-                Serial.println("Camera capture failed");
+                Log::error("Camera capture failed");
                 pictureSuccess = false;
                 return;
             }
@@ -221,23 +205,19 @@ void takePicture(void)
             String path2 = "/" + datetimeString + "_" + b_s + String(1) + String(1) + "_" + ae_s + ".jpg";
 
             fs::FS& fs = SD_MMC;
-#ifdef __DEBUG__
-            Serial.printf("Picture file name: %s\n", path2.c_str());
-#endif
+            Log::debug("Picture file name: ", path2.c_str());
 
             File file2 = fs.open(path2.c_str(), FILE_WRITE);
             if (!file2)
             {
-                Serial.println("Failed to open file in writing mode");
+                Log::error("Failed to open file in writing mode");
                 pictureSuccess = false;
                 return;
             }
             else
             {
                 file2.write(fb->buf, fb->len); // payload (image), payload length
-#ifdef __DEBUG__
-                Serial.printf("Saved file to path: %s\n", path2.c_str());
-#endif
+                Log::info("Saved file to path: ", path2.c_str());
             }
 
             file2.close();
@@ -263,120 +243,87 @@ void setup()
 {
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detector
     Serial.begin(115200);
-
     Serial.setDebugOutput(true);
+    Serial2.begin(9600, SERIAL_8N1, uartRxPin, -1, true);
 
-    Serial2.begin(9600, SERIAL_8N1, uartPin, -1, true);
-
+    if (!LittleFS.begin())
+    {
+        Serial.println("Mounting LittleFS failed! Formatting and restarting ...");
+        LittleFS.format();
+        ESP.restart();
+    }
+    Log::log.setSerial(&Serial);
+    Log::log.setLogLevel(Log::DEBUG);
+    Log::log.setLogfile(true);
     if (firstBoot)
     {
         pictureSuccess = true;
         firstBoot = false;
     }
-
-    // pinMode(stat_pin, OUTPUT);
-    // digitalWrite(stat_pin, LOW);
-
     sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
 
-#ifdef __DEBUG__
-    Serial.println("Setup done.");
-#endif
+    Log::debug("Setup done.");
 
-    Serial2.flush();
-
-    // Go to sleep after boot (enable external wake up on IO12)
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0)
-    {
-        esp_sleep_enable_ext0_wakeup(uartPin, 1);
-        Serial.println("Going to sleep now");
-        Serial.flush();
-        esp_deep_sleep_start();
-    }
+    Serial.flush();
+    ESPCam::Commands(nullptr, true).prompt();
 }
-
-time_t owi_time{0};
-timeval owi_time_value{0};
-
-#define COMMAND_TIMEOUT 15
 
 void loop()
 {
-
-// Additional sketch code could be placed here before
-// polling uart single wire bus for commands
-#ifdef __DEBUG__
-    Serial.println("");
-    Serial.println("Cycle started");
-#endif
-    uint64_t timeout{esp_timer_get_time() + COMMAND_TIMEOUT * 1000 * 1000};
-    while (!Serial2.available() && timeout > esp_timer_get_time())
+    Log::debug("Cycle started");
+    int64_t timeout{esp_timer_get_time() + 15 * 1000 * 1000};
+    while (!Serial.available() && timeout > esp_timer_get_time())
         ;
     uint8_t cmd{ESPCamCodes::ENABLE_SLEEP};
-    if (Serial2.available())
+    if (Serial.available())
     {
-        cmd = Serial2.read();
+        cmd = Serial.read();
         Serial.print("Received command ");
     }
-
-#ifdef __DEBUG__
-#endif
-
-    // Read and dispatch remote arduino commands
+    time_t owi_time{0};
+    timeval owi_time_value{0};
     switch (cmd)
     {
     case ESPCamCodes::SET_TIME:
-#ifdef __DEBUG__
-        Serial.println("ESPCam::SET_TIME");
-#endif
-        Serial2.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
-#ifdef __DEBUG__
-        Serial.println(owi_time);
-#endif
+        Log::info("ESPCam::SET_TIME");
+        Serial.readBytes((uint8_t*)&owi_time, sizeof(owi_time));
+        Log::info(owi_time);
         owi_time_value = {owi_time, 0};
         sntp_sync_time(&owi_time_value);
         delay(100);
         sntp_sync_time(&owi_time_value);
         break;
     case ESPCamCodes::GET_TIME:
-#ifdef __DEBUG__
-        Serial.println("ESPCam::GET_TIME");
-#endif
+        Log::info("ESPCam::GET_TIME");
         break;
     case ESPCamCodes::GET_STATUS:
-#ifdef __DEBUG__
-        Serial.println("ESPCam::GET_STATUS");
-#endif
+        Log::info("ESPCam::GET_STATUS");
         if (pictureSuccess)
         {
-            Serial.println("SUCCESS PRINT");
+            Log::info("SUCCESS PRINT");
             // digitalWrite(stat_pin, HIGH);
         }
         else
         {
-            Serial.println("FAIL PRINT");
+            Log::info("FAIL PRINT");
             // digitalWrite(stat_pin, LOW);
         }
         break;
     case ESPCamCodes::TAKE_PICTURE:
-// delay(500);
-#ifdef __DEBUG__
-        Serial.println("ESPCam::TAKE_PICTURE");
-#endif
+        Log::info("ESPCam::TAKE_PICTURE");
         takePicture();
     case ESPCamCodes::ENABLE_SLEEP:
-#ifdef __DEBUG__
-        Serial.println("ESPCam::ENABLE_SLEEP");
-#endif
-        // always sleep in the loop-state
-        // swSer.end();
-        Serial2.end();
-        esp_sleep_enable_ext0_wakeup(uartPin, 1);
+        // switch case fallthrough intended!
+        Log::info("ESPCam::ENABLE_SLEEP");
         Serial.flush();
+        Serial.end();
+        Log::log.close();
+        LittleFS.end();
+        esp_sleep_enable_ext0_wakeup(uartRxPin, HIGH);
         esp_deep_sleep_start();
         break;
     default:
-        Serial.println("ESPCam::INVALID");
+        Log::info("ESPCam::INVALID");
         break;
     }
 }
