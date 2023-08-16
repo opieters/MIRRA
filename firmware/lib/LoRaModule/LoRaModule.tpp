@@ -1,3 +1,6 @@
+#ifndef __RADIO_T__
+#define __RADIO_T__
+
 #include <LoRaModule.h>
 #include <algorithm>
 #include <functional>
@@ -116,3 +119,5 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
     } while (repeatAttempts >= 0);
     return std::nullopt;
 }
+
+#endif
