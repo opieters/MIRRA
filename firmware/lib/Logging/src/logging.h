@@ -31,7 +31,7 @@ private:
     /// @brief Currently loaded logging file. Should be opened in append mode.
     File logfile{};
     /// @brief Days to keep a logging file in the filesystem.
-    static constexpr size_t daysToKeep{14};
+    static constexpr size_t daysToKeep{7};
 
     /// @brief Generates a logfile path from a time struct.
     /// @param buffer Buffer to which to write the logfile path.

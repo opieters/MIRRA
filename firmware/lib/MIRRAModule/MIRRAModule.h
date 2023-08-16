@@ -10,7 +10,7 @@
 #include <logging.h>
 
 #define LOG_FP "/"
-#define LOG_LEVEL Log::DEBUG
+#define LOG_LEVEL Log::INFO
 
 #define UART_PHASE_TIMEOUT (1 * 60) // s, length of UART inactivity required to automatically exit command phase
 

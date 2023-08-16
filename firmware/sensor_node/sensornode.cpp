@@ -29,7 +29,7 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
         dataFile.close();
         initSensors();
         clearSensors();
-        // discovery();
+        discovery();
         initialBoot = false;
     }
 }
