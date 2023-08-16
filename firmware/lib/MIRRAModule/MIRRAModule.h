@@ -1,18 +1,15 @@
 #ifndef __MIRRAMODULE_H__
 #define __MIRRAMODULE_H__
 
+#include "Commands.h"
+#include "CommunicationCommon.h"
 #include "LoRaModule.h"
 #include "PCF2129_RTC.h"
+#include "logging.h"
 #include <Arduino.h>
-#include <CommunicationCommon.h>
-#include <FS.h>
 #include <LittleFS.h>
-#include <logging.h>
 
-#define LOG_FP "/"
 #define LOG_LEVEL Log::INFO
-
-#define UART_PHASE_TIMEOUT (1 * 60) // s, length of UART inactivity required to automatically exit command phase
 
 /// @brief A base class for MIRRA modules to inherit from, which implements common functionality.
 class MIRRAModule
@@ -37,6 +34,12 @@ public:
     /// the MIRRAModule.
     /// @param pins The pin configuration for the MIRRAModule.
     static void prepare(const MIRRAPins& pins);
+
+    class Commands : public BaseCommands<MIRRAModule>
+    {
+    public:
+        Commands(MIRRAModule* parent, uint8_t checkPin, bool invert = false) : BaseCommands(parent, checkPin, invert) {}
+    };
 
 protected:
     /// @brief Initialises the MIRRAModule, RTC, LoRa and logging modules.
@@ -75,61 +78,11 @@ protected:
     /// @brief LoRa module in use by this module.
     LoRaModule lora;
 
-    /// @brief Flag that determines if command phase should be entered at startup.
-    bool commandPhaseFlag{false};
+private:
+    Commands commands;
 
-    /// @brief Inline class that implements command functionality for a MIRRAModule T.
-    /// @tparam T MIRRAModule to implement commands for.
-    template <class T> class Commands
-    {
-    protected:
-        /// @brief Maximum line length in characters when entering commands.
-        static constexpr size_t lineMaxLength{256};
-
-        /// @brief Enumeration describing the different states the execution of a command can feed back to the commands subsystem.
-        enum CommandCode : uint8_t
-        {
-            COMMAND_NOT_FOUND,
-            COMMAND_FOUND,
-            COMMAND_EXIT
-        };
-
-        /// @brief Module for which this commands subsystem is implementing commands.
-        T* parent;
-
-        /// @brief Initialises the command loop, exiting when the appropriate command code is returned by processCommands.
-        void start();
-        /// @brief Reads a line from the UART input stream. Helper function to be used during the command phase.
-        /// @return An array representing a command sequence entered by the user. Disengaged if this function times out.
-        std::optional<std::array<char, lineMaxLength>> readLine();
-        /// @brief Reads the command, calls the correct function and its arguments.
-        /// @param command Pointer to char buffer holding the command.
-        /// @return A command code desribing the result of the execution of the command.
-        CommandCode processCommands(char* command);
-
-        /// @brief Lists all files currently available on the filesystem.
-        void listFiles();
-        /// @brief Prints the given file to the serial output.
-        /// @param filename The name of the file to be printed, including slashes.
-        /// @param hex Whether to print the file in hexadecimal format or in ASCII.
-        void printFile(const char* filename, bool hex = false);
-        /// @brief Removes the file from the filesystem.
-        /// @param filename The name of the file to be removed.
-        void removeFile(const char* filename);
-        /// @brief Creates an empty file.
-        /// @param filename The name of the empty file to be created.
-        void touchFile(const char* filename);
-
-        /// @brief Creates the commands subsystem.
-        /// @param parent Module for which this commands subsystem is implementing commands.
-        Commands(T* parent) : parent{parent} {};
-
-    public:
-        /// @brief Checks the module's MIRRAModule::commandPhaseFlag and enters the command phase if it is set.
-        void prompt();
-    };
+protected:
+    template <class T> constexpr typename T::Commands* getCommands() { return reinterpret_cast<typename T::Commands*>(&commands); }
 };
-
-#include <MIRRAModule.tpp>
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef __SENSORNODE_H__
 #define __SENSORNODE_H__
 
+#include "Commands.h"
 #include "MIRRAModule.h"
 #include "config.h"
 #include <vector>
@@ -11,14 +12,12 @@ public:
     SensorNode(const MIRRAPins& pins);
     void wake();
 
-    class Commands : public MIRRAModule::Commands<SensorNode>
+    class Commands : public BaseCommands<SensorNode>
     {
-    private:
         void printSample();
         void printSchedule();
 
     public:
-        Commands(SensorNode* parent) : MIRRAModule::Commands<SensorNode>(parent){};
         CommandCode processCommands(char* command);
     };
 

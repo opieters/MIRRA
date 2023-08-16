@@ -1,10 +1,11 @@
 #ifndef __GATEWAY_H__
 #define __GATEWAY_H__
 
+#include "Commands.h"
 #include "MIRRAModule.h"
+#include "PubSubClient.h"
 #include "WiFi.h"
 #include "config.h"
-#include <PubSubClient.h>
 #include <vector>
 
 #define COMM_PERIOD_LENGTH(MAX_MESSAGES) ((MAX_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
@@ -53,14 +54,15 @@ class Gateway : public MIRRAModule
 public:
     Gateway(const MIRRAPins& pins);
     void wake();
-    class Commands : public MIRRAModule::Commands<Gateway>
+
+    class Commands : public BaseCommands<Gateway>
     {
-    public:
-        Commands(Gateway* parent) : MIRRAModule::Commands<Gateway>(parent){};
-        CommandCode processCommands(char* command);
         CommandCode changeWifi();
         void discoveryLoop(char* arg);
         void printSchedule();
+
+    public:
+        CommandCode processCommands(char* command);
     };
 
 private:

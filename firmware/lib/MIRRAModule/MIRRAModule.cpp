@@ -30,14 +30,13 @@ void MIRRAModule::end()
     Serial.end();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}, commands{this, pins.bootPin, true}
 {
     Log::log.setSerial(&Serial);
     Log::log.setLogfile(true);
     Log::log.setLogLevel(LOG_LEVEL);
     Serial.println("Logger initialised.");
     Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
-    commandPhaseFlag = !static_cast<bool>(digitalRead(pins.bootPin));
 }
 
 void MIRRAModule::storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile)

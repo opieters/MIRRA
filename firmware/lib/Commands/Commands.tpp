@@ -1,17 +1,17 @@
-#ifndef __MIRRAMODULE_T__
-#define __MIRRAMODULE_T__
-#include <MIRRAModule.h>
+#ifndef __COMMANDS_T__
+#define __COMMANDS_T__
+#include "Commands.h"
 
-template <class T> void MIRRAModule::Commands<T>::prompt()
+template <class T> void BaseCommands<T>::prompt()
 {
-    if (parent->commandPhaseFlag)
+    if (commandPhaseFlag)
         start();
     else
         Serial.println("Hold the BOOT pin during startup to enter command phase.");
-    parent->commandPhaseFlag = false;
+    commandPhaseFlag = false;
 }
 
-template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::lineMaxLength>> MIRRAModule::Commands<T>::readLine()
+template <class T> std::optional<std::array<char, BaseCommands<T>::lineMaxLength>> BaseCommands<T>::readLine()
 {
     uint64_t timeout{static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000)};
     uint8_t length{0};
@@ -49,7 +49,7 @@ template <class T> std::optional<std::array<char, MIRRAModule::Commands<T>::line
     return std::make_optional(buffer);
 }
 
-template <class T> void MIRRAModule::Commands<T>::start()
+template <class T> void BaseCommands<T>::start()
 {
     Serial.println("COMMAND PHASE");
     while (true)
@@ -73,7 +73,7 @@ template <class T> void MIRRAModule::Commands<T>::start()
     }
 }
 
-template <class T> typename MIRRAModule::Commands<T>::CommandCode MIRRAModule::Commands<T>::processCommands(char* command)
+template <class T> typename BaseCommands<T>::CommandCode BaseCommands<T>::processCommands(char* command)
 {
     if (strcmp(command, "exit") == 0 || strcmp(command, "close") == 0)
     {
@@ -117,7 +117,7 @@ template <class T> typename MIRRAModule::Commands<T>::CommandCode MIRRAModule::C
     }
     return COMMAND_FOUND;
 }
-template <class T> void MIRRAModule::Commands<T>::listFiles()
+template <class T> void BaseCommands<T>::listFiles()
 {
     File root{LittleFS.open("/")};
     File file{root.openNextFile()};
@@ -131,7 +131,7 @@ template <class T> void MIRRAModule::Commands<T>::listFiles()
     root.close();
 }
 
-template <class T> void MIRRAModule::Commands<T>::printFile(const char* filename, bool hex)
+template <class T> void BaseCommands<T>::printFile(const char* filename, bool hex)
 {
     if (!LittleFS.exists(filename))
     {
@@ -164,13 +164,13 @@ template <class T> void MIRRAModule::Commands<T>::printFile(const char* filename
     Serial.flush();
 }
 
-template <class T> void MIRRAModule::Commands<T>::removeFile(const char* filename)
+template <class T> void BaseCommands<T>::removeFile(const char* filename)
 {
     if (!LittleFS.remove(filename))
         Serial.printf("Could not delete the file '%s' because it does not exist.\n", filename);
 }
 
-template <class T> void MIRRAModule::Commands<T>::touchFile(const char* filename)
+template <class T> void BaseCommands<T>::touchFile(const char* filename)
 {
     File touch{LittleFS.open(filename, "w", true)};
     if (!touch)

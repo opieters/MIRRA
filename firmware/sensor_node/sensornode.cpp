@@ -48,7 +48,7 @@ void SensorNode::wake()
     cTime = rtc.getSysTime();
     Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ", nextCommTime - cTime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
-    Commands(this).prompt();
+    getCommands<SensorNode>()->prompt();
     cTime = rtc.getSysTime();
     if (cTime >= nextCommTime || cTime >= nextSampleTime)
         wake();
@@ -312,9 +312,9 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     }
 }
 
-MIRRAModule::Commands<SensorNode>::CommandCode SensorNode::Commands::processCommands(char* command)
+SensorNode::Commands::CommandCode SensorNode::Commands::processCommands(char* command)
 {
-    CommandCode code = MIRRAModule::Commands<SensorNode>::processCommands(command);
+    CommandCode code = BaseCommands<SensorNode>::processCommands(command);
     if (code != CommandCode::COMMAND_NOT_FOUND)
         return code;
     if (strcmp(command, "discovery") == 0)

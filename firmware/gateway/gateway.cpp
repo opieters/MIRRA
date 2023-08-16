@@ -75,7 +75,7 @@ void Gateway::wake()
         uploadPeriod();
     }
     Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
-    Commands(this).prompt();
+    getCommands<Gateway>()->prompt();
     Log::debug("Entering deep sleep...");
     if (nodes.empty())
         deepSleep(commInterval);
@@ -438,7 +438,7 @@ void Gateway::parseUpdate(char* update)
 
 Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
 {
-    CommandCode code{MIRRAModule::Commands<Gateway>::processCommands(command)};
+    CommandCode code{BaseCommands<Gateway>::processCommands(command)};
     if (code != CommandCode::COMMAND_NOT_FOUND)
         return code;
     if (strcmp(command, "discovery") == 0)
