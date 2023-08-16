@@ -49,6 +49,8 @@ The following commands are exclusive to the gateway:
 
 - `discovery`: Broadcasts initial discovery message (make sure RTC and WiFi are properly configured at this point!).
 
+- `discoveryloop ARG`: Sends a discovery message every 2.5 minutes, `ARG` times.
+
 - `rtc`: Attempts to configure the RTC time using WiFi.
 
 - `wifi`: Enters wifi configuration mode, in which the wifi SSID and password can be entered and checked. If the new credentials are correct and connection is sucessful, the gateway will remember and henceforth use the given credentials whenever connecting to WiFi.
