@@ -21,7 +21,6 @@
 #define RTC_ADDRESS 0x51 // i2c address
 
 // Filepaths
-#define LOG_FP "/"
 #define DATA_FP "/data.dat"
 #define DATA_TEMP_FP "/data_temp.dat"
 

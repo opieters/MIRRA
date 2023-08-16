@@ -77,7 +77,7 @@ public:
     /// @param level Level to set the logging module to. Messages below this level will not be printed.
     void setLogLevel(Log::Level level) { this->level = level; }
     /// @brief Enables or disables the logging to file functionality.
-    void setLogfile(bool enable) { this->logfileEnabled = enable; }
+    void setLogfile(bool enable = true) { this->logfileEnabled = enable; }
 
     /// @brief Singleton global log object
     static Log log;
@@ -152,6 +152,7 @@ template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned int>() { return "%u"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<long signed int>() { return "%i"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed char>() { return "%i"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned char>() { return "%u"; };
 template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; };
