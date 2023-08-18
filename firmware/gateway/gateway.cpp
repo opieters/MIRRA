@@ -508,6 +508,11 @@ void Gateway::Commands::discoveryLoop(char* arg)
             return;
         }
         parent->discovery();
+        if (parent->nodes.size() >= MAX_SENSOR_NODES)
+        {
+            Serial.printf("Max count of sensor nodes (%u) reached. Exiting discovery loop...\n", MAX_SENSOR_NODES);
+            return;
+        }
         loops--;
     }
 }
