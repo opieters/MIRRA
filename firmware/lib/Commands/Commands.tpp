@@ -2,54 +2,16 @@
 #define __COMMANDS_T__
 #include "Commands.h"
 
-template <class T> void BaseCommands<T>::prompt()
+template <class C> typename std::enable_if_t<std::is_base_of_v<BaseCommands, C>, void> CommandEntry::prompt()
 {
     if (commandPhaseFlag)
-        start();
+        CommandParser().start<C>();
     else
-        Serial.println("Hold the BOOT pin during startup to enter command phase.");
+        Serial.println("Command phase flag not set. Command phase will not start.");
     commandPhaseFlag = false;
 }
 
-template <class T> std::optional<std::array<char, BaseCommands<T>::lineMaxLength>> BaseCommands<T>::readLine()
-{
-    uint64_t timeout{static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000)};
-    uint8_t length{0};
-    std::array<char, lineMaxLength> buffer{0};
-    while (length < lineMaxLength - 1)
-    {
-        while (!Serial.available())
-        {
-            if (esp_timer_get_time() >= timeout)
-                return std::nullopt;
-        }
-        char c = Serial.read();
-        Serial.print(c);
-        if (c == '\r' || c == '\n')
-        {
-            if (Serial.available()) // on Windows: both CR and LF
-                Serial.print(static_cast<char>(Serial.read()));
-            break;
-        }
-        else if (c == '\b')
-        {
-            if (length == 0)
-                continue;
-            length--;
-            buffer[length] = '\0';
-        }
-        else
-        {
-            buffer[length] = c;
-            length++;
-            if (length == lineMaxLength - 1)
-                break;
-        }
-    };
-    return std::make_optional(buffer);
-}
-
-template <class T> void BaseCommands<T>::start()
+template <class C> typename std::enable_if_t<std::is_base_of_v<BaseCommands, C>, void> CommandParser::start()
 {
     Serial.println("COMMAND PHASE");
     while (true)
@@ -60,24 +22,71 @@ template <class T> void BaseCommands<T>::start()
             Serial.println("Command phase timeout. Exiting...");
             return;
         }
-        switch (static_cast<typename T::Commands*>(this)->processCommands(buffer->data()))
+        switch (processCommands<C::commands>(buffer->data()))
         {
-        case COMMAND_FOUND:
-            break;
         case COMMAND_NOT_FOUND:
             Serial.printf("Command '%s' not found or invalid argument(s) given.\n", buffer->data());
             break;
         case COMMAND_EXIT:
+            Serial.println("Exiting command phase...");
             return;
+        default:
+            break;
         }
     }
 }
 
-template <class T> typename BaseCommands<T>::CommandCode BaseCommands<T>::processCommands(char* command)
+template <size_t nAliases, class... CommandArgs>
+struct AliasesCommandPair : std::pair<std::array<const std::string_view, nAliases>, CommandCode (*)(CommandArgs...)>
 {
+    constexpr AliasesCommandPair(const std::array<const std::string_view, nAliases>&& aliases, CommandCode (*&&f)(CommandArgs...))
+        : std::pair<std::array<const std::string_view, nAliases>, CommandCode (*)(CommandArgs...)>(
+              std::forward<std::array<const std::string_view, nAliases>>(aliases), std::forward<CommandCode (*)(CommandArgs...)>(f))
+    {
+    }
+
+    constexpr AliasesCommandPair(const std::string_view (&&aliases)[nAliases], CommandCode (*&&f)(CommandArgs...))
+        : std::pair<std::array<const std::string_view, nAliases>, CommandCode (*)(CommandArgs...)>(
+              std::array<const std::string_view, nAliases>(std::forward<const std::string_view[nAliases]>(aliases)),
+              std::forward<CommandCode (*)(CommandArgs...)>(f))
+    {
+    }
+};
+
+CommandCode testCommand(const char* arg) { return COMMAND_SUCCESS; }
+
+constexpr AliasesCommandPair lol{{std::string_view("test")}, &testCommand};
+
+template <class T, class... Ts> struct parseCommands
+{
+    template <size_t nAliases, const char*... CommandArgs, AliasesCommandPair<nAliases, CommandArgs...>& pair, Ts... pairs>
+    CommandCode operator()(char* command)
+    {
+        constexpr auto& aliases{std::get<0>(pair)};
+        constexpr auto& function{std::get<1>(pair)};
+        for (const char*& alias : aliases)
+            if (strcmp(command, alias) == 0)
+            {
+                constexpr std::array<char*, sizeof...(CommandArgs)> commandArgs;
+                for (char*& commandArg : commandArgs)
+                    commandArg = strtok(nullptr, " \r\n");
+                return std::apply(function, commandArgs);
+            }
+        return parseCommands().operator()<pairs...>(command);
+    }
+
+    CommandCode operator()(char* command) { return COMMAND_NOT_FOUND; }
+};
+
+template <class C, C CommandsTuple> CommandCode CommandParser::processCommands(char* line)
+{
+    char* command = strtok(command, " \r\n");
+    if (command == nullptr) // when no command entered, simply loop again
+        return COMMAND_NOT_FOUND;
+    executeCommand<CommandsTuple>(command);
+
     if (strcmp(command, "exit") == 0 || strcmp(command, "close") == 0)
     {
-        Serial.println("Exiting command phase...");
         return COMMAND_EXIT;
     }
     else if (strcmp(command, "ls") == 0 || strcmp(command, "list") == 0)
@@ -116,65 +125,5 @@ template <class T> typename BaseCommands<T>::CommandCode BaseCommands<T>::proces
         return COMMAND_NOT_FOUND;
     }
     return COMMAND_FOUND;
-}
-template <class T> void BaseCommands<T>::listFiles()
-{
-    File root{LittleFS.open("/")};
-    File file{root.openNextFile()};
-    while (file)
-    {
-        Serial.printf("%s\t%uB\n", file.path(), file.size());
-        file.close();
-        file = root.openNextFile();
-    }
-    file.close();
-    root.close();
-}
-
-template <class T> void BaseCommands<T>::printFile(const char* filename, bool hex)
-{
-    if (!LittleFS.exists(filename))
-    {
-        Serial.printf("File '%s' does not exist.\n", filename);
-        return;
-    }
-    File file{LittleFS.open(filename)};
-    if (!file)
-    {
-        Serial.printf("Error while opening file '%s'\n", filename);
-        return;
-    }
-    Serial.printf("%s with size %u bytes\n", filename, file.size());
-    if (hex)
-    {
-        while (file.available())
-        {
-            Serial.printf("%X", file.read());
-        }
-    }
-    else
-    {
-        while (file.available())
-        {
-            Serial.write(file.read());
-        }
-    }
-    Serial.print('\n');
-    file.close();
-    Serial.flush();
-}
-
-template <class T> void BaseCommands<T>::removeFile(const char* filename)
-{
-    if (!LittleFS.remove(filename))
-        Serial.printf("Could not delete the file '%s' because it does not exist.\n", filename);
-}
-
-template <class T> void BaseCommands<T>::touchFile(const char* filename)
-{
-    File touch{LittleFS.open(filename, "w", true)};
-    if (!touch)
-        Serial.printf("Could not create file '%s'.\n", filename);
-    touch.close();
 }
 #endif
