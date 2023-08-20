@@ -108,6 +108,7 @@ void MIRRAModule::deepSleep(uint32_t sleepTime)
     }
     esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.bootPin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     Log::info("Good night.");
+    this->end();
     esp_deep_sleep_start();
 }
 
