@@ -27,6 +27,7 @@ void MIRRAModule::end()
     Wire.end();
     digitalWrite(pins.peripheralPowerPin, LOW);
     gpio_hold_en(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    Serial.flush();
     Serial.end();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
