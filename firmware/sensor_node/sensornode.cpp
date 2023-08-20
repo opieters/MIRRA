@@ -23,10 +23,11 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
 {
     if (initialBoot)
     {
-        if (LittleFS.exists(DATA_FP))
-            LittleFS.remove(DATA_FP);
-        File dataFile = LittleFS.open(DATA_FP, FILE_WRITE, true);
-        dataFile.close();
+        if (!LittleFS.exists(DATA_FP))
+        {
+            File dataFile{LittleFS.open(DATA_FP, FILE_WRITE, true)};
+            dataFile.close();
+        }
         initSensors();
         clearSensors();
         discovery();

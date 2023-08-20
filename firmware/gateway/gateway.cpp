@@ -50,13 +50,12 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
     {
         Log::info("First boot.");
         // manage filesystem
-        if (LittleFS.exists(NODES_FP))
-            LittleFS.remove(NODES_FP);
         updateNodesFile();
-        if (LittleFS.exists(DATA_FP))
-            LittleFS.remove(DATA_FP);
-        File dataFile{LittleFS.open(DATA_FP, "w", true)};
-        dataFile.close();
+        if (!LittleFS.exists(DATA_FP))
+        {
+            File dataFile{LittleFS.open(DATA_FP, "w", true)};
+            dataFile.close();
+        }
 
         rtcUpdateTime();
         initialBoot = false;
