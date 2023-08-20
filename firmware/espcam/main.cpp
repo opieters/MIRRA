@@ -202,7 +202,7 @@ void takePicture(void)
             }
 
             // save picture
-            String path2 = "/" + datetimeString + "_" + b_s + String(1) + String(1) + "_" + ae_s + ".jpg";
+            String path2 = "/" + datetimeString + "_" + b_s + "11_" + ae_s + ".jpg";
 
             fs::FS& fs = SD_MMC;
             Log::debug("Picture file name: ", path2.c_str());
