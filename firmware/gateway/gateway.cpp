@@ -67,7 +67,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
 void Gateway::wake()
 {
     Log::debug("Running wake()...");
-    if (!nodes.empty() && rtc.getSysTime() >= WAKE_COMM_PERIOD(nodes[0].getNextCommTime()))
+    if (!nodes.empty() && rtc.getSysTime() >= (WAKE_COMM_PERIOD(nodes[0].getNextCommTime()) - 3))
         commPeriod();
     // send data to server only every UPLOAD_EVERY comm periods
     if (commPeriods >= UPLOAD_EVERY)
@@ -145,11 +145,11 @@ void Gateway::discovery()
 void Gateway::nodesFromFile()
 {
     Log::debug("Recovering nodes from file...");
-    File nodesFile = LittleFS.open(NODES_FP);
-    uint8_t size = nodesFile.read();
+    File nodesFile{LittleFS.open(NODES_FP)};
+    uint8_t size{nodesFile.read()};
     Log::debug(size, " nodes found in ", NODES_FP);
     nodes.resize(size);
-    nodesFile.read((uint8_t*)nodes.data(), size * sizeof(Node));
+    nodesFile.read((uint8_t*)nodes.data(), static_cast<size_t>(size) * sizeof(Node));
     nodesFile.close();
 }
 
@@ -212,7 +212,7 @@ uint32_t Gateway::nextScheduledCommTime()
 
 bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
 {
-    uint32_t cTime{static_cast<uint32_t>(rtc.getSysTime())};
+    uint32_t cTime{rtc.getSysTime()};
     if (cTime > n.getNextCommTime())
     {
         Log::error("Node ", n.getMACAddress().toString(),
