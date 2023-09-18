@@ -35,12 +35,6 @@ public:
     /// @param pins The pin configuration for the MIRRAModule.
     static void prepare(const MIRRAPins& pins);
 
-    class Commands : public BaseCommands<MIRRAModule>
-    {
-    public:
-        Commands(MIRRAModule* parent, uint8_t checkPin, bool invert = false) : BaseCommands(parent, checkPin, invert) {}
-    };
-
 protected:
     /// @brief Initialises the MIRRAModule, RTC, LoRa and logging modules.
     /// @param pins The pin configuration for the MIRRAModule.
@@ -78,11 +72,7 @@ protected:
     /// @brief LoRa module in use by this module.
     LoRaModule lora;
 
-private:
-    Commands commands;
-
-protected:
-    template <class T> constexpr typename T::Commands* getCommands() { return reinterpret_cast<typename T::Commands*>(&commands); }
+    CommandEntry commandEntry;
 };
 
 #endif

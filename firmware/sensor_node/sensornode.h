@@ -12,13 +12,23 @@ public:
     SensorNode(const MIRRAPins& pins);
     void wake();
 
-    class Commands : public BaseCommands<SensorNode>
+    struct Commands : CommonCommands
     {
-        void printSample();
-        void printSchedule();
+        SensorNode* parent;
+        Commands(SensorNode* parent) : parent{parent} {};
 
-    public:
-        CommandCode processCommands(char* command);
+        CommandCode discovery();
+        CommandCode sample();
+        CommandCode printSample();
+        CommandCode printSchedule();
+
+        static constexpr auto getCommands()
+        {
+            return std::tuple_cat(CommonCommands::getCommands(),
+                                  std::make_tuple(CommandAliasesPair(&Commands::discovery, "discovery"), CommandAliasesPair(&Commands::sample, "sample"),
+                                                  CommandAliasesPair(&Commands::printSample, "printsample"),
+                                                  CommandAliasesPair(&Commands::printSchedule, "printschedule")));
+        }
     };
 
 private:

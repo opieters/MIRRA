@@ -31,7 +31,7 @@ void MIRRAModule::end()
     Serial.end();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}, commands{this, pins.bootPin, true}
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}, commandEntry{pins.bootPin, true}
 {
     Log::log.setSerial(&Serial);
     Log::log.setLogfile(true);

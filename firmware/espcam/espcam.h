@@ -6,10 +6,8 @@
 class ESPCam
 {
 public:
-    class Commands : public BaseCommands<ESPCam>
+    struct Commands : CommonCommands
     {
-    public:
-        Commands(ESPCam* parent, bool flag) : BaseCommands(parent, flag) {}
     };
 };
 
