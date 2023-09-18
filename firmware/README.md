@@ -4,7 +4,7 @@ This folder contains all the firmwares necessary to set up a MIRRA installation.
 To initiate a firmware upload, hold the boot button and press the reset button (multiple tries may be necessary), then initiate the upload from the PlatformIO console.
 
 ## On RESET:
-Local filesystem data stored in the module will be cleared, but logs will remain intact. 
+Local filesystem data stored in the module will be cleared, but logs will remain intact. Data stored in attached SD cards is not removed (ESPCam picture data is always retained).
 
 Nodes will listen for any gateway discovery broadcasts for 5 minutes. If no gateway is found in this time, the node will default to a set sampling interval, but will never communicate. Manual `discovery` can always be initialised from the command line interface.
 
@@ -13,6 +13,7 @@ Gateways will attempt to connect to WiFi and configure their RTC on initial star
 ## Log Level
 
 The gateway and the sensor nodes publish log messages to both the serial monitor (if one is connected) and the local filesystem. These messages can be filtered according to log level.
+
 It is recommended to set the log level to either **INFO** or **ERROR**, as **DEBUG** tends to fill up the filesystem very quickly, rendering the system inoperable. Alternatively, logging to file can be disabled.
 
 ## Command Line Interface
@@ -31,11 +32,11 @@ The following commands are available to both gateway and nodes:
 
 - `ls` or `list`: Lists all the files currently housed in the filesystem.
 
-- `print ARG`: Prints a file with name `ARG` to the serial output.
+- `print ARG` or `printfile ARG`: Prints the file with name `ARG` to the serial output.
 
-- `printhex ARG`: Prints a file with name `ARG` to the serial output, interpreted in hexadecimal notation. Useful for pure binary files (ending in .dat).
+- `printhex ARG` or `printfilehex ARG`: Prints the file with name `ARG` to the serial output, interpreted in hexadecimal notation. Useful for pure binary files (ending in .dat).
 
-- `rm ARG`: Removes the file `ARG` from the filesystem if it exists and if it is not currently in use.
+- `remove ARG` or `rm ARG`: Removes the file `ARG` from the filesystem if it exists and if it is not currently in use.
 
 - `touch ARG`: Creates an empty file with the name `ARG` on the filesystem.
 
