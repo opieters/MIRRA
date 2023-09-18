@@ -48,7 +48,7 @@ void SensorNode::wake()
     cTime = rtc.getSysTime();
     Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ", nextCommTime - cTime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
-    getCommands<SensorNode>()->prompt();
+    commandEntry.prompt(Commands(this));
     cTime = rtc.getSysTime();
     if (cTime >= nextCommTime || cTime >= nextSampleTime)
         wake();
@@ -312,35 +312,18 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     }
 }
 
-SensorNode::Commands::CommandCode SensorNode::Commands::processCommands(char* command)
+CommandCode SensorNode::Commands::discovery()
 {
-    CommandCode code = BaseCommands<SensorNode>::processCommands(command);
-    if (code != CommandCode::COMMAND_NOT_FOUND)
-        return code;
-    if (strcmp(command, "discovery") == 0)
-    {
-        parent->discovery();
-    }
-    else if (strcmp(command, "sample") == 0)
-    {
-        parent->samplePeriod();
-    }
-    else if (strcmp(command, "printsample") == 0)
-    {
-        printSample();
-    }
-    else if (strcmp(command, "printschedule") == 0)
-    {
-        printSchedule();
-    }
-    else
-    {
-        return CommandCode::COMMAND_NOT_FOUND;
-    }
-    return CommandCode::COMMAND_FOUND;
-};
+    parent->discovery();
+    return COMMAND_SUCCESS;
+}
+CommandCode SensorNode::Commands::sample()
+{
+    parent->samplePeriod();
+    return COMMAND_SUCCESS;
+}
 
-void SensorNode::Commands::printSample()
+CommandCode SensorNode::Commands::printSample()
 {
     parent->initSensors();
     Message<SENSOR_DATA> message{parent->sampleAll()};
@@ -351,9 +334,10 @@ void SensorNode::Commands::printSample()
         Serial.printf("%u\t%f\n", values[i].tag, values[i].value);
     }
     parent->clearSensors();
+    return COMMAND_SUCCESS;
 }
 
-void SensorNode::Commands::printSchedule()
+CommandCode SensorNode::Commands::printSchedule()
 {
     parent->initSensors();
     constexpr size_t timeLength{sizeof("0000-00-00 00:00:00")};
@@ -368,4 +352,5 @@ void SensorNode::Commands::printSchedule()
         Serial.printf("%u\t%s\n", parent->sensors[i]->getID(), buffer);
     }
     parent->clearSensors();
+    return COMMAND_SUCCESS;
 }

@@ -259,13 +259,12 @@ void setup()
     {
         pictureSuccess = true;
         firstBoot = false;
+        CommandEntry(true).prompt(ESPCam::Commands());
     }
     sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
 
     Log::debug("Setup done.");
-
     Serial.flush();
-    ESPCam::Commands(nullptr, true).prompt();
 }
 
 void loop()

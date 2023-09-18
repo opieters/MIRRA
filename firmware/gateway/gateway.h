@@ -55,14 +55,25 @@ public:
     Gateway(const MIRRAPins& pins);
     void wake();
 
-    class Commands : public BaseCommands<Gateway>
+    struct Commands : CommonCommands
     {
-        CommandCode changeWifi();
-        void discoveryLoop(char* arg);
-        void printSchedule();
+        Gateway* parent;
+        Commands(Gateway* parent) : parent{parent} {};
 
-    public:
-        CommandCode processCommands(char* command);
+        CommandCode changeWifi();
+        CommandCode rtcUpdateTime();
+        CommandCode discovery();
+        CommandCode discoveryLoop(char* arg);
+        CommandCode printSchedule();
+
+        static constexpr auto getCommands()
+        {
+            return std::tuple_cat(CommonCommands::getCommands(),
+                                  std::make_tuple(CommandAliasesPair(&Commands::changeWifi, "wifi"), CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
+                                                  CommandAliasesPair(&Commands::discovery, "discovery"),
+                                                  CommandAliasesPair(&Commands::discoveryLoop, "discoveryloop"),
+                                                  CommandAliasesPair(&Commands::printSchedule, "printschedule")));
+        }
     };
 
 private:
@@ -89,7 +100,6 @@ private:
 
     void wifiConnect(const char* SSID, const char* password);
     void wifiConnect();
-    void rtcUpdateTime();
 };
 
 #endif

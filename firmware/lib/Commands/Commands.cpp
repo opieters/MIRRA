@@ -38,7 +38,7 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
     return std::make_optional(buffer);
 }
 
-CommandCode BaseCommands::listFiles()
+CommandCode CommonCommands::listFiles()
 {
     File root{LittleFS.open("/")};
     if (!root)
@@ -58,7 +58,7 @@ CommandCode BaseCommands::listFiles()
     return COMMAND_SUCCESS;
 }
 
-CommandCode BaseCommands::printFile(const char* filename, bool hex)
+CommandCode printFileImpl(const char* filename, bool hex)
 {
     if (!LittleFS.exists(filename))
     {
@@ -92,7 +92,11 @@ CommandCode BaseCommands::printFile(const char* filename, bool hex)
     return COMMAND_SUCCESS;
 }
 
-CommandCode BaseCommands::removeFile(const char* filename)
+CommandCode CommonCommands::printFile(const char* filename) { return printFileImpl(filename, false); }
+
+CommandCode CommonCommands::printFileHex(const char* filename) { return printFileImpl(filename, true); }
+
+CommandCode CommonCommands::removeFile(const char* filename)
 {
     if (!LittleFS.remove(filename))
     {
@@ -102,7 +106,7 @@ CommandCode BaseCommands::removeFile(const char* filename)
     return COMMAND_SUCCESS;
 }
 
-CommandCode BaseCommands::touchFile(const char* filename)
+CommandCode CommonCommands::touchFile(const char* filename)
 {
     File touch{LittleFS.open(filename, "w", true)};
     if (!touch)
@@ -113,3 +117,20 @@ CommandCode BaseCommands::touchFile(const char* filename)
     touch.close();
     return COMMAND_SUCCESS;
 }
+
+CommandCode CommonCommands::format()
+{
+    Serial.println("Formatting flash memory (this can take some time)...");
+    LittleFS.format();
+    Serial.println("Restarting ...");
+    ESP.restart();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode CommonCommands::echo(const char* arg)
+{
+    Serial.print(arg);
+    return COMMAND_SUCCESS;
+}
+
+CommandCode CommonCommands::exit() { return COMMAND_EXIT; }

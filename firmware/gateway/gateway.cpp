@@ -58,7 +58,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClie
         File dataFile{LittleFS.open(DATA_FP, "w", true)};
         dataFile.close();
 
-        rtcUpdateTime();
+        Commands(this).rtcUpdateTime();
         initialBoot = false;
     }
     nodesFromFile();
@@ -75,7 +75,7 @@ void Gateway::wake()
         uploadPeriod();
     }
     Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
-    getCommands<Gateway>()->prompt();
+    commandEntry.prompt(Commands(this));
     Log::debug("Entering deep sleep...");
     if (nodes.empty())
         deepSleep(commInterval);
@@ -291,33 +291,6 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
 
 void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
 
-void Gateway::rtcUpdateTime()
-{
-    wifiConnect();
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        sntp_setoperatingmode(SNTP_OPMODE_POLL);
-        sntp_setservername(0, NTP_URL);
-        sntp_init();
-        int64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
-        while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
-        {
-            if (esp_timer_get_time() > timeout)
-            {
-                Log::error("Failed to update system time within 10s timeout");
-                WiFi.disconnect();
-                return;
-            }
-        }
-        if (sntp_enabled())
-            sntp_stop();
-        Log::debug("Writing time to RTC...");
-        rtc.writeTime(rtc.getSysTime());
-        Log::info("RTC and system time updated.");
-    }
-    WiFi.disconnect();
-}
-
 bool Gateway::mqttConnect()
 {
     mqtt.setBufferSize(512);
@@ -436,48 +409,17 @@ void Gateway::parseUpdate(char* update)
     node->get().setSampleOffset(sampleOffset);
 }
 
-Gateway::Commands::CommandCode Gateway::Commands::processCommands(char* command)
-{
-    CommandCode code{BaseCommands<Gateway>::processCommands(command)};
-    if (code != CommandCode::COMMAND_NOT_FOUND)
-        return code;
-    if (strcmp(command, "discovery") == 0)
-    {
-        parent->discovery();
-    }
-    else if (strncmp(command, "discoveryloop ", 14) == 0)
-    {
-        discoveryLoop(&command[14]);
-    }
-    else if (strcmp(command, "rtc") == 0)
-    {
-        parent->rtcUpdateTime();
-    }
-    else if (strcmp(command, "wifi") == 0)
-    {
-        return changeWifi();
-    }
-    else if (strcmp(command, "printschedule") == 0)
-    {
-        printSchedule();
-    }
-    else
-    {
-        return CommandCode::COMMAND_NOT_FOUND;
-    }
-    return CommandCode::COMMAND_FOUND;
-};
-
-Gateway::Commands::CommandCode Gateway::Commands::changeWifi()
+CommandCode Gateway::Commands::changeWifi()
 {
     Serial.println("Enter WiFi SSID:");
-    auto ssid_buffer{readLine()};
+
+    auto ssid_buffer{CommandParser::readLine()};
     if (!ssid_buffer)
-        return COMMAND_EXIT;
+        return COMMAND_ERROR;
     Serial.println("Enter WiFi password:");
-    auto pass_buffer{readLine()};
+    auto pass_buffer{CommandParser::readLine()};
     if (!pass_buffer)
-        return COMMAND_EXIT;
+        return COMMAND_ERROR;
     parent->wifiConnect(ssid_buffer->data(), pass_buffer->data());
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -488,10 +430,44 @@ Gateway::Commands::CommandCode Gateway::Commands::changeWifi()
     {
         Serial.println("Could not connect to the supplied WiFi network.");
     }
-    return COMMAND_FOUND;
+    return COMMAND_SUCCESS;
 }
 
-void Gateway::Commands::discoveryLoop(char* arg)
+CommandCode Gateway::Commands::rtcUpdateTime()
+{
+    parent->wifiConnect();
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        sntp_setoperatingmode(SNTP_OPMODE_POLL);
+        sntp_setservername(0, NTP_URL);
+        sntp_init();
+        int64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
+        while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
+        {
+            if (esp_timer_get_time() > timeout)
+            {
+                Log::error("Failed to update system time within 10s timeout");
+                WiFi.disconnect();
+                return COMMAND_ERROR;
+            }
+        }
+        if (sntp_enabled())
+            sntp_stop();
+        Log::debug("Writing time to RTC...");
+        parent->rtc.writeTime(parent->rtc.getSysTime());
+        Log::info("RTC and system time updated.");
+    }
+    WiFi.disconnect();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::discovery()
+{
+    parent->discovery();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::discoveryLoop(char* arg)
 {
     size_t loops{strtoul(arg, nullptr, 10)};
     while (loops != 0)
@@ -505,14 +481,15 @@ void Gateway::Commands::discoveryLoop(char* arg)
         if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0)
         {
             Serial.println("Exiting discovery loop...");
-            return;
+            return COMMAND_SUCCESS;
         }
         parent->discovery();
         loops--;
     }
+    return COMMAND_SUCCESS;
 }
 
-void Gateway::Commands::printSchedule()
+CommandCode Gateway::Commands::printSchedule()
 {
     constexpr size_t timeLength{sizeof("0000-00-00 00:00:00")};
     char buffer[timeLength]{0};
@@ -525,4 +502,5 @@ void Gateway::Commands::printSchedule()
         strftime(buffer, timeLength, "%F %T", &time);
         Serial.printf("%s\t%s\t%u\t%u\n", n.getMACAddress().toString(), buffer, n.getSampleInterval(), n.getMaxMessages());
     }
+    return COMMAND_SUCCESS;
 }
