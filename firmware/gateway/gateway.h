@@ -60,10 +60,17 @@ public:
         Gateway* parent;
         Commands(Gateway* parent) : parent{parent} {};
 
+        /// @brief Prompts new credentials for the WiFi network to connect to.
         CommandCode changeWifi();
+        /// @brief Attempts to configure the local RTC to the correct time using NTP.
         CommandCode rtcUpdateTime();
+        /// @brief Forces a discovery period.
         CommandCode discovery();
+        /// @brief Sends a discovery message every 2.5 minutes for the specified amount of loops.
+        /// @arg The amount of times to loop.
         CommandCode discoveryLoop(char* arg);
+        /// @brief Prints scheduling information about the connected nodes, including MAC address, next comm time, sample interval and max number of messages
+        /// per comm period.
         CommandCode printSchedule();
 
         static constexpr auto getCommands()
