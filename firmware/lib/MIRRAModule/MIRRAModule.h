@@ -39,7 +39,8 @@ protected:
     /// @brief Initialises the MIRRAModule, RTC, LoRa and logging modules.
     /// @param pins The pin configuration for the MIRRAModule.
     MIRRAModule(const MIRRAPins& pins);
-    /// @brief Stores the given sensor data messages into the module's flash filesystem.
+    /// @brief Stores the given sensor data message into the module's flash filesystem. The first type byte of the message is replaced with an 'upload' flag, at
+    /// first set to 0.
     /// @param m The message to be stored.
     /// @param dataFile File object opened in append mode.
     void storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile);

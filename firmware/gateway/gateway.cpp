@@ -305,21 +305,12 @@ bool Gateway::mqttConnect()
     return false;
 }
 
-// (TOPIC_PREFIX)/(MAC address gateway)/(MAC address node)
 char* Gateway::createTopic(char* topic, const MACAddress& nodeMAC)
 {
     char macStringBuffer[MACAddress::stringLength];
-    snprintf(topic, topic_size, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(macStringBuffer));
+    snprintf(topic, topicSize, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(macStringBuffer));
     return topic;
 }
-
-/*
-Upload sensor data via MQTT
-data that needs to be sent is identified by a 0 (ref. storeSensorData)
-sensor data is formatted as follows: MAC node (6) | MAC gateway (6) | time (4) | n_values (1) | value_data (6) | ....
-value_data can be split up further in sensor_id (1) | data (4)
-total length of sensor data = 17 + 6 * n_values
-*/
 
 void Gateway::uploadPeriod()
 {
@@ -342,7 +333,7 @@ void Gateway::uploadPeriod()
         if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
         {
             auto& message{Message<SENSOR_DATA>::fromData(buffer)};
-            char topic[topic_size];
+            char topic[topicSize];
             createTopic(topic, message.getSource());
 
             if (mqtt.connected() || mqttConnect())
@@ -382,7 +373,7 @@ void Gateway::uploadPeriod()
     pruneSensorData(std::move(data), MAX_SENSORDATA_FILESIZE);
 }
 
-void Gateway::parseUpdate(char* update)
+void Gateway::parseNodeUpdate(char* update)
 {
     if (strlen(update) < (MACAddress::stringLength + 2 + 2 + 1))
     {
@@ -393,12 +384,12 @@ void Gateway::parseUpdate(char* update)
     auto node{macToNode(macString)};
     if (!node)
     {
-        Log::error("Could not deduce node from update.");
+        Log::error("Could not deduce node from update string.");
         return;
     }
-    char* timeString{&update[MACAddress::stringLength + 1]};
+    char* timeString{&update[MACAddress::stringLength - 1]};
     uint32_t sampleInterval, sampleRounding, sampleOffset;
-    if (sscanf(timeString, "%u %u %u", &sampleInterval, &sampleRounding, &sampleOffset) != 3)
+    if (sscanf(timeString, "/%u/%u/%u", &sampleInterval, &sampleRounding, &sampleOffset) != 3)
     {
         Log::error("Could not deduce updated timings from update string '", update, "'.");
         return;
