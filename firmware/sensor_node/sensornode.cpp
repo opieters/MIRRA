@@ -219,9 +219,9 @@ void SensorNode::commPeriod()
             nextCommTime += commInterval;
         return;
     }
-    MACAddress destMAC{gatewayMAC}; // avoid access to slow RTC memory
-    Log::info("Communicating with gateway ", destMAC.toString(), " ...");
-    uint32_t _maxMessages{maxMessages};
+    MACAddress _gatewayMAC{gatewayMAC}; // avoid access to slow RTC memory
+    Log::info("Communicating with gateway ", _gatewayMAC.toString(), " ...");
+    uint32_t _maxMessages{maxMessages}; // avoid access to slow RTC memory
     Log::debug("Max messages to send: ", _maxMessages);
     std::vector<Message<SENSOR_DATA>> messages;
     messages.reserve(_maxMessages);
@@ -252,7 +252,7 @@ void SensorNode::commPeriod()
     bool uploadSuccess[messages.size()];
     bool firstMessage{true};
     for (size_t i{0}; i < messages.size(); i++)
-        uploadSuccess[i] = sendSensorMessage(messages[i], destMAC, firstMessage);
+        uploadSuccess[i] = sendSensorMessage(messages[i], _gatewayMAC, firstMessage);
     for (size_t i{0}; i < messages.size(); i++)
     {
         if (uploadSuccess[i])
