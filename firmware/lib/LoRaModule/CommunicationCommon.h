@@ -1,132 +1,189 @@
 #ifndef __COMM_COMM_H__
 #define __COMM_COMM_H__
 
-#include <stdint.h>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
+#include <array>
 
 #include "Sensor.h"
 
-// TODO : move from internal structs to serializing directly from/to the class object
-
+/// @brief Wrapper around std::array that provides an interface for MAC address operations.
 class MACAddress
 {
 private:
-    uint8_t address[6]{};
+    std::array<uint8_t, 6> address{0};
 
 public:
+    /// @brief Constructs an empty (i.e. all bytes 0) MACAddress.
     MACAddress() = default;
-    MACAddress(const uint8_t *address);
-    uint8_t *getAddress() { return address; };
-    char *toString(char *string = str_buffer) const;
-    friend bool operator==(const MACAddress &mac1, const MACAddress &mac2);
-    friend bool operator!=(const MACAddress &mac1, const MACAddress &mac2) { return !(operator==(mac1, mac2)); };
+    /// @brief Construct a MACAddress from a raw byte pointer.
+    /// @param address Raw byte pointer to MACAddress.
+    MACAddress(const uint8_t* address) : address{*reinterpret_cast<const std::array<uint8_t, 6>*>(address)} {}
+    /// @brief Gets the raw byte pointer to the MAC address.
+    /// @return A raw byte pointer to the MAC address.
+    uint8_t* getAddress() { return address.data(); }
+    /// @brief Gives a hex string representation of this MAC address.
+    /// @param string Buffer to write the resulting string to. By default, this uses a static buffer.
+    /// @return The buffer to which the string was written.
+    char* toString(char* string = strBuffer) const;
+    bool operator==(const MACAddress& other) const { return this->address == other.address; }
+    bool operator!=(const MACAddress& other) const { return this->address != other.address; }
 
-    static const size_t length = sizeof(address);
-    static const size_t string_length = length * 3;
+    /// @brief Constructs a MAC address from a string.
+    /// @param string The hex string from which to construct the MAC address in the "00:00:00:00:00:00" format.
+    /// @return The constructed MAC address.
+    static MACAddress fromString(char* string);
+
+    /// @brief Size of the MAC address in bytes.
+    static constexpr size_t length = sizeof(address);
+    /// @brief Size of the string representation of a MAC address in bytes, including terminator.
+    static constexpr size_t stringLength = length * 3;
+    /// @brief Broadcast MAC address.
     static const MACAddress broadcast;
-    static char str_buffer[string_length];
+
+private:
+    /// @brief Internal static string buffer used by the toString method.
+    static char strBuffer[stringLength];
 } __attribute__((packed));
 
-class Message
+/// @brief Enum used to indicate the type of a message. Maximum of 128 available types.
+enum MessageType : uint8_t
 {
-public:
-    enum Type : uint8_t
-    {
-        ERROR = 0,
-        HELLO = 1,
-        HELLO_REPLY = 2,
-        TIME_CONFIG = 3,
-        ACK_TIME = 4,
-        SENSOR_DATA = 5,
-        DATA_ACK = 6,
-        REPEAT = 7,
-        ALL = 8
-    };
+    ERROR = 0,
+    HELLO = 1,
+    HELLO_REPLY = 2,
+    TIME_CONFIG = 3,
+    ACK_TIME = 4,
+    SENSOR_DATA = 5,
+    ACK_DATA = 6,
+    REPEAT = 7,
+    ALL = 8
+};
 
-    struct HeaderStruct
-    {
-        Message::Type type;
-        MACAddress src, dest;
-    } __attribute__((packed));
+/// @brief Base class providing a common interface between all message types and the header portion of the message.
+class MessageHeader
+{
+private:
+    /// @brief Type of the message
+    MessageType type : 7;
+    /// @brief Last flag
+    bool last : 1;
+    /// @brief The source MAC address of the message.
+    MACAddress src{};
+    /// @brief The destination MAC address of the message.
+    MACAddress dest{};
 
 protected:
-    HeaderStruct header{};
+    MessageHeader(MessageType type, const MACAddress& src, const MACAddress& dest) : type{type}, last{false}, src{src}, dest{dest} {}
 
 public:
-    Message() = default;
-    Message(HeaderStruct header) : header(header){};
-    Message(Message::Type type, MACAddress src, MACAddress dest) : header{static_cast<Message::Type>(type << 1), src, dest} {};
-    Message(uint8_t *data) : Message(*reinterpret_cast<HeaderStruct *>(data)){};
-    Message::Type getType() const { return static_cast<Message::Type>(header.type >> 1); };
-    MACAddress getSource() const { return header.src; };
-    MACAddress getDest() const { return header.dest; };
-    bool isLast() { return header.type & 0x01; }
-    void setLast() { header.type = static_cast<Message::Type>(header.type | 0x01); }
-    void setDest(MACAddress dest) { header.dest = dest; }
+    constexpr MessageType getType() const { return this->type; }
+    constexpr bool isType(MessageType type) const { return this->type == type; }
+    constexpr bool isLast() const { return last; }
+    constexpr const MACAddress& getSource() const { return src; }
+    constexpr const MACAddress& getDest() const { return dest; }
 
-    bool isType(Message::Type type) const { return getType() == type; };
+    /// @brief Forcibly sets the type of this message.
+    /// @param type The type to force-set this message to.
+    void setType(MessageType type) { this->type = type; }
+    /// @brief Sets the destination for this message.
+    void setDest(const MACAddress& dest) { this->dest = dest; }
+    /// @brief Sets the LAST flag of this message.
+    void setLast(bool last = true) { this->last = last; }
 
-    size_t getLength() const { return header_length; };
-    uint8_t *toData(uint8_t *data) const;
-    static Message from_data(uint8_t *data);
+    /// @brief Converts this message in-place to a byte buffer.
+    /// @return The pointer to the resulting byte buffer.
+    constexpr const uint8_t* toData() const { return reinterpret_cast<const uint8_t*>(this); }
 
-    static const size_t header_length = sizeof(HeaderStruct);
-    static const size_t max_length = 256;
-};
+    /// @brief The length of the header in bytes.
+    static constexpr size_t headerLength{1 + 2 * sizeof(MACAddress)};
+    /// @brief The maximum length of a message in bytes.
+    static constexpr size_t maxLength{256};
+} __attribute__((packed));
 
-class TimeConfigMessage : public Message
+constexpr size_t test{sizeof(MessageHeader)};
+
+/// @brief Final message class.
+/// @tparam T The message type of the message.
+template <MessageType T> class Message : public MessageHeader
 {
 public:
-    struct TimeConfigStruct
-    {
-        uint32_t cur_time, sample_time, sample_interval, comm_time, comm_interval, comm_duration;
-    } __attribute__((packed));
+    Message(const MACAddress& src, const MACAddress& dest) : MessageHeader(T, src, dest){};
+    /// @return The messages' length in bytes.
+    constexpr size_t getLength() const { return headerLength; }
+    /// @return Whether the message's type flag matches the desired type.
+    constexpr bool isValid() const { return isType(T); }
+    /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
+    /// @param data The byte buffer to interpret a message from.
+    /// @return The resulting message object.
+    constexpr static Message<T>& fromData(uint8_t* data) { return *reinterpret_cast<Message<T>*>(data); }
+} __attribute__((packed));
 
-private:
-    TimeConfigStruct body{};
-
-public:
-    TimeConfigMessage() = default;
-    TimeConfigMessage(HeaderStruct header, TimeConfigStruct body) : Message(header), body(body){};
-    TimeConfigMessage(MACAddress src, MACAddress dest, uint32_t cur_time, uint32_t sample_time, uint32_t sample_interval, uint32_t comm_time, uint32_t comm_interval, uint32_t comm_duration) : Message(Message::TIME_CONFIG, src, dest), body{cur_time, sample_time, sample_interval, comm_time, comm_interval, comm_duration} {};
-    TimeConfigMessage(uint8_t *data) : Message(data), body{*reinterpret_cast<TimeConfigStruct *>(&data[header_length])} {};
-    uint32_t getCTime() { return body.cur_time; };
-    uint32_t getSampleTime() { return body.sample_time; };
-    uint32_t getSampleInterval() { return body.sample_interval; };
-    uint32_t getCommTime() { return body.comm_time; };
-    uint32_t getCommInterval() { return body.comm_interval; };
-    uint32_t getCommDuration() { return body.comm_duration; };
-    size_t getLength() const { return Message::getLength() + sizeof(body); };
-    uint8_t *toData(uint8_t *data) const;
-};
-
-class SensorDataMessage : public Message
+template <> class Message<TIME_CONFIG> : public MessageHeader
 {
+private:
+    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, commTime, maxMessages;
+
 public:
-    struct SensorDataStruct
-    {
-        uint32_t time;
-        uint8_t n_values;
-    } __attribute__((packed));
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
+            uint32_t commInterval, uint32_t commTime, uint32_t maxMessages)
+        : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
+          commInterval{commInterval}, commTime{commTime}, maxMessages{maxMessages} {};
+
+    uint32_t getCTime() const { return curTime; };
+    uint32_t getSampleInterval() const { return sampleInterval; };
+    uint32_t getSampleRounding() const { return sampleRounding; };
+    uint32_t getSampleOffset() const { return sampleOffset; };
+    uint32_t getCommInterval() const { return commInterval; };
+    uint32_t getCommTime() const { return commTime; };
+    uint32_t getMaxMessages() const { return maxMessages; };
+
+    /// @return The messages' length in bytes.
+    constexpr size_t getLength() const { return sizeof(*this); };
+    /// @return Whether the message's type flag matches the desired type.
+    constexpr bool isValid() const { return isType(TIME_CONFIG); }
+    /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
+    /// @param data The byte buffer to interpret a message from.
+    /// @return The resulting message object.
+    constexpr static Message<TIME_CONFIG>& fromData(uint8_t* data) { return *reinterpret_cast<Message<TIME_CONFIG>*>(data); }
+} __attribute__((packed));
+
+template <> class Message<SENSOR_DATA> : public MessageHeader
+{
+private:
+    /// @brief The timestamp associated with the held values (UNIX epoch, seconds).
+    uint32_t time;
+    /// @brief The amount of values held in the messages' values array.
+    uint8_t nValues;
+
+public:
+    /// @brief The maximum amount of sensor values that can be held in a single sensor data message.
+    static const size_t maxNValues = (maxLength - headerLength - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue);
 
 private:
-    SensorDataStruct body{};
+    std::array<SensorValue, maxNValues> values{};
 
 public:
-    static const size_t max_n_values = (max_length - header_length - sizeof(body)) / sizeof(SensorValue);
+    Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues, const std::array<SensorValue, maxNValues> values)
+        : MessageHeader(SENSOR_DATA, src, dest), time{time}, nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{values} {};
 
-private:
-    SensorValue values[max_n_values]{};
+    uint32_t getCTime() const { return time; };
+    uint32_t getNValues() const { return nValues; };
+    std::array<SensorValue, maxNValues>& getValues() { return values; }
 
-public:
-    SensorDataMessage() = default;
-    SensorDataMessage(HeaderStruct header, SensorDataStruct body) : Message(header), body(body){};
-    SensorDataMessage(MACAddress src, MACAddress dest, uint32_t time, uint8_t n_values, SensorValue *sensor_values);
-    SensorDataMessage(uint8_t *data);
-    size_t getLength() const { return Message::getLength() + sizeof(body) + body.n_values * sizeof(SensorValue); };
-    uint8_t *toData(uint8_t *data) const;
-};
+    /// @return The messages' length in bytes.
+    constexpr size_t getLength() const { return headerLength + sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue); };
+    /// @return Whether the message's type flag matches the desired type.
+    constexpr bool isValid() const { return isType(SENSOR_DATA); }
+    /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
+    /// @param data The byte buffer to interpret a message from.
+    /// @return The resulting message object.
+    static constexpr Message<SENSOR_DATA>& fromData(uint8_t* data);
+} __attribute__((packed));
+
+constexpr Message<SENSOR_DATA>& Message<SENSOR_DATA>::fromData(uint8_t* data)
+{
+    Message<SENSOR_DATA>& m{*reinterpret_cast<Message<SENSOR_DATA>*>(data)};
+    m.nValues = std::min(m.nValues, static_cast<uint8_t>(maxNValues));
+    return m;
+}
 
 #endif

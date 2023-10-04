@@ -1,3 +1,0 @@
-[submodule "firmware/lib/RadioLib"]
-	path = firmware/lib/RadioLib
-	url = https://github.com/Olocool17/RadioLib

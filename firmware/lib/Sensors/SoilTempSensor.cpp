@@ -1,28 +1,13 @@
-#include <DallasTemperature.h>
 #include "SoilTempSensor.h"
+#include <DallasTemperature.h>
 
-void SoilTemperatureSensor::printAddress(DeviceAddress deviceAddress)
-{
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        // zero pad the address if necessary
-        if (deviceAddress[i] < 16)
-            Serial.print("0");
-        Serial.print(deviceAddress[i], HEX);
-    }
-}
+void SoilTemperatureSensor::startMeasurement() { dallas.begin(); }
 
-void SoilTemperatureSensor::startMeasurement()
-{
-    dallas.begin();
-}
-
-void SoilTemperatureSensor::readMeasurement()
+SensorValue SoilTemperatureSensor::getMeasurement()
 {
 
+    DeviceAddress longWireThermometer;
     dallas.getAddress(longWireThermometer, 0);
-    dallas.getAddress(shortWireThermometer, 1);
-
     dallas.requestTemperaturesByAddress(longWireThermometer);
-    this->measurement = dallas.getTempCByIndex(this->busIndex);
+    return SensorValue(getID(), dallas.getTempCByIndex(this->busIndex));
 }
