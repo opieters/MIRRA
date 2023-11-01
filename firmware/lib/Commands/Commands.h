@@ -18,7 +18,7 @@ enum CommandCode : uint8_t
 };
 
 template <size_t nAliases, class C, class... CommandArgs>
-struct CommandAliasesPair : std::pair<CommandCode (C::*)(CommandArgs...), std::array<const char*, nAliases>>
+struct CommandAliasesPair : private std::pair<CommandCode (C::*)(CommandArgs...), std::array<const char*, nAliases>>
 {
     typedef std::array<const char*, nAliases> AliasesArray;
     typedef CommandCode (C::*Command)(CommandArgs...);
