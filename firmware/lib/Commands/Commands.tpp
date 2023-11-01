@@ -45,7 +45,7 @@ template <class C, size_t I = 0> CommandCode CommandParser::parseLine(char* line
     constexpr auto commandsTuple{C::getCommands()};
     if constexpr (I >= std::tuple_size_v<decltype(commandsTuple)>)
     {
-        Serial.printf("Command '%s' not found.", command);
+        Serial.printf("Command '%s' not found.\n", command);
         return COMMAND_NOT_FOUND;
     }
     else
@@ -62,7 +62,7 @@ template <class C, size_t I = 0> CommandCode CommandParser::parseLine(char* line
                     commandArg = strtok(nullptr, " \r\n");
                     if (commandArg == nullptr)
                     {
-                        Serial.printf("Command '%s' expects %u arguments but received fewer.", alias, pair.getCommandArgCount());
+                        Serial.printf("Command '%s' expects %u argument(s) but received fewer.\n", alias, pair.getCommandArgCount());
                         return COMMAND_NOT_FOUND;
                     }
                 }
