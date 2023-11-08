@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "GEMS")(type "Legacy")(uri "${KIPRJMOD}/../gems_components/GEMS.lib")(options "")(descr ""))
+  (lib (name "radiation_shield_L-rescue")(type "Legacy")(uri "${KIPRJMOD}/radiation_shield_L-rescue.lib")(options "")(descr ""))
+)
