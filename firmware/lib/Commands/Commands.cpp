@@ -130,6 +130,7 @@ CommandCode CommonCommands::format()
 CommandCode CommonCommands::echo(const char* arg)
 {
     Serial.print(arg);
+    Serial.print('\n');
     return COMMAND_SUCCESS;
 }
 
